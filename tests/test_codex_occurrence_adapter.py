@@ -25,8 +25,9 @@ def _parse(record: object, *, ordinal: int = 4) -> object:
 def test_response_message_preserves_open_role_text_and_opaque_image_ref() -> None:
     private_text = "synthetic private body"
     image_data = base64.b64encode(b"synthetic image bytes").decode()
-    record = {"type": "response_item", "timestamp": "raw-time-value", "payload": {
+    record = {"type": "response_item", "timestamp": "raw-time-value", "ordinal": 123, "payload": {
         "type": "message", "id": "source-message-id", "role": "developer",
+        "phase": "commentary",
         "content": [
             {"type": "input_text", "text": private_text},
             {"type": "input_image", "image_url": f"data:image/png;base64,{image_data}"},
@@ -42,6 +43,7 @@ def test_response_message_preserves_open_role_text_and_opaque_image_ref() -> Non
     assert occurrence.conversation_ref is None
     assert occurrence.conversation_order is None
     assert occurrence.message_order is None
+    assert occurrence.unknown_field_refs == ("record:4",)
     assert occurrence.content_blocks[0].text == private_text
     assert occurrence.content_blocks[1].source_ref == "record:4/content:1"
     assert image_data not in repr(occurrence)

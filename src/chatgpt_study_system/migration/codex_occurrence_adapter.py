@@ -89,7 +89,8 @@ def parse_codex_occurrence_line(
         source_item_id = candidate_id if _is_safe_string(candidate_id, maximum=_MAX_ID_CHARS) else None
         has_opaque_values = (candidate_role is not None and role is None) \
             or (candidate_id is not None and source_item_id is None)
-        if set(record) - {"type", "timestamp", "payload", "ordinal"} \
+        if "ordinal" in record or "phase" in payload \
+                or set(record) - {"type", "timestamp", "payload", "ordinal"} \
                 or set(payload) - {"type", "id", "role", "content", "phase"}:
             has_opaque_values = True
         content = payload.get("content")
