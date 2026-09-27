@@ -1,6 +1,6 @@
 # 当前状态
 
-更新时间：2026-09-27。当前工作分支仍名为 `phase-3-readonly-mcp-spike`，P10 开始时的基线 HEAD 为 `c413b437`。Phase 1–9 本地实现已完成，P10 Release Hardening 正在进行。P10 bootstrap 自动化已实现；开发 checkout 全量测试为 308 passed、5 skipped。隔离 clean release candidate 默认与开发依赖安装不含 PyMuPDF，全量测试为 307 passed、6 skipped；发行物元数据、MCP initialize 和只读 `health_report` smoke 通过。详细证据见 [P10 Release Gate](p10-release-gate.md)。
+更新时间：2026-09-27。Phase 1–9 本地实现已完成，P10 Release Hardening 正在进行。P10 bootstrap 自动化已实现；开发 checkout 全量测试为 308 passed、5 skipped。隔离 clean release candidate 默认与开发依赖安装不含 PyMuPDF，全量测试为 307 passed、6 skipped；发行物元数据、MCP initialize 和只读 `health_report` smoke 通过。详细证据见 [P10 Release Gate](p10-release-gate.md)。
 
 真实错题与 retrieval E2E 的既有结果已同步到 [Real Wrong Answer E2E checkpoint](real-wrong-answer-e2e-checkpoint.md)；该文档同步没有重新导入真实资料。
 
