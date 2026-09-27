@@ -1,0 +1,15 @@
+# P12 Host Compatibility Checkpoint
+
+Checked: 2026-09-27. This is a documentation-only capability check; it does not inspect local host configuration or prove an active connection.
+
+| Host | Officially documented MCP client capability | Evidence | Local P12 state |
+|---|---|---|---|
+| WorkBuddy | The official MCP guide documents a local stdio server using `command`, `args`, and `env`, and describes UI-based server configuration and status. | [WorkBuddy MCP guide](https://www.workbuddy.ai/docs/zh/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/MCP-Guide) | Application is installed, but no user MCP config was read or changed; no Gateway call or E2E is verified. |
+| Hermes Agent | The official user guide documents local stdio MCP servers and the `mcp_servers` configuration with `command`, `args`, and `env`. | [Hermes MCP guide](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/mcp.md) | Application is installed, but no user MCP config was read or changed; no Gateway call or E2E is verified. |
+
+## Interpretation
+
+- Documentation establishes that both products describe a local stdio MCP client path. It does not establish compatibility with this repository's Gateway build, its Windows process launch, or private local settings.
+- Existing repository support remains Codex Desktop and a stdio MCP client. No product-specific adapter is required by the documented protocol, but each host still needs an explicit configuration and a real tool invocation to pass its local gate.
+- Do not copy configuration or credentials from another host, create an ad hoc override, or claim a Host PASS from documentation alone.
+- Next real-host gate: with the owner present, add the Gateway through each product's supported settings, confirm the actual server status, invoke `health_report`, and perform the approved read-only E2E. Keep write tools disabled until separately authorized and reviewed.

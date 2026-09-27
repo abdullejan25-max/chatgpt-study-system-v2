@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- Last safe implementation commit：`698213a2c756e912a1654e3a585ea81940bf1e39` (`fix: isolate private conversation registry directory`)
+- Last safe implementation commit：`0b0afc4d4e041ffeb6ac4fe2dc850df6ce672a91` (`docs: record Gemini export sign-in handoff`)
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有真实迁移、V2 业务写入或发布。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。
@@ -34,9 +34,9 @@ History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化
 
 ## P12 状态
 
-- **Step 1 — Obsidian**：真实 Vault/GUI 未检查，projection generator 未实现。实现设计等待用户选择：先做纯投影器、先补 Gateway 列表接口，或暂缓设计。
-- **Step 2 — WorkBuddy**：客户端已安装；本地存储、MCP 配置和真实 E2E 未验证，需用户启用/配置。
-- **Step 3 — Hermes**：客户端已安装；本地存储、MCP 配置和真实 E2E 未验证，需用户启用/配置。
+- **Step 1 — Obsidian**：已实现纯内存、合成 DTO 可测的 Markdown renderer（16 focused tests passed）；全量回归 **399 passed, 7 skipped**。它不连接 Gateway、不读取数据库、不写文件。真实 Vault/GUI 未检查；History 与错题全量枚举接口尚不存在，因此不能生成完整快照或宣称覆盖完整。P12 Step 1 release gate 仍未通过。
+- **Step 2 — WorkBuddy**：官方文档确认提供本地 stdio MCP 配置；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
+- **Step 3 — Hermes**：官方文档确认支持本地 stdio MCP；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 4 — Cross-Agent**：被前置真实 Host gate 阻断；无跨 Host 写读、版本或投影验证。
 
 ## WAITING_FOR_USER
@@ -45,12 +45,13 @@ History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化
 2. **History 目标**：在受信任的本机私有配置中配置 History store，并启用所需写能力。当前工作不会修改私有配置。
 3. **Obsidian GUI**：打开目标 Vault，确认可用于只读人类视图；工具当前未完成真实 GUI 检查。
 4. **WorkBuddy / Hermes**：按各 Host 的正式设置启用 MCP/Gateway 连接，并提供相应本机授权；未用临时配置或伪造 host PASS。
-5. **Obsidian 投影设计**：等待选择是否先做纯投影器、先补 Gateway 列表接口，或暂缓；收到选择前不实现投影代码。
+5. **Obsidian 全量投影前置条件**：需要一致且有界的 History/错题 Gateway 枚举、配置 History、确认私有 Vault 输出位置并完成人工 GUI 检查；当前实现只接受显式 DTO 输入，不尝试收集。
 6. **Gemini 导出下载**：官方归档已完成，但下载页要求 Google 登录。请在官方 Takeout 页面完成账户登录/验证后再下载；当前没有本地 raw archive，下载截止时间页面显示为 2026-10-04 16:06。
 
 ## 发布与隐私
 
 - `v0.1.0` 未改；没有创建 `v0.2.0` tag/Release，也没有 push。
 - 原始对话、导出、账号数据、真实路径、源哈希和私有 source registry 均未进入 Git。
+- WorkBuddy 与 Hermes 的 stdio 客户端能力已按官方文档确认；本机连接、工具调用和跨 Host E2E 仍未验证，详见 [P12 Host Compatibility Checkpoint](p12-host-compatibility.md)。
 - 应用内已安排本地线程每 6 小时续作一次，覆盖 72 小时；状态无变化时保持安静。
-- 下一安全步骤：Gemini archive 已就绪，等待人工登录后再取回并校验原始文件；不重复提交导出。继续不依赖人工输入的 P11/P12 compatibility prep。Obsidian 投影实现等待上述设计选择；不执行真实 History 写入或发布。
+- 下一安全步骤：Gemini archive 已就绪，等待人工登录后再取回并校验原始文件；不重复提交导出。继续独立的 P11/P12 compatibility prep；Obsidian renderer 保持纯函数边界，不执行真实 History 写入或发布。

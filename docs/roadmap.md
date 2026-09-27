@@ -19,6 +19,8 @@ Phase 4–9：Local Study Infrastructure ✅
 Phase 10：GitHub Release Hardening ✅ (`v0.1.0` published)
 ↓
 Phase 11：Legacy Migration ⏸ BLOCKED（只读 audit/dry-run 完成；History 与错题关系 gate 未通过）
+↓
+Phase 12：Agent Projection & Interoperability ⏸ PREPARATION（Obsidian 纯内存 renderer 已实现；全量枚举、Vault GUI 与多 Host Gate 未通过）
 ```
 
 Phase 1–9 已完成本地实现与回归验证。Secure MCP Tunnel / ChatGPT remote MCP 是未来可选 transport，不属于项目本地完成条件。
@@ -39,3 +41,5 @@ Phase 11：Legacy Migration ⏸ BLOCKED
 ```
 
 Each phase is gated by synthetic tests and a coherent local commit. Phase 9 verified an independent stdio MCP client against the same server/Core used by Codex. ChatGPT remote MCP remains deferred as an external capability and is not an exit gate.
+
+Phase 12 preparation currently includes a deterministic in-memory Obsidian Markdown renderer that consumes caller-supplied Gateway read DTOs. It does not query a complete corpus, access the database, or write a Vault. Full History and wrong-answer enumeration, a confirmed private Vault target, GUI review, and WorkBuddy/Hermes host checks remain prerequisites; no Phase 12 gate or release is claimed PASS.

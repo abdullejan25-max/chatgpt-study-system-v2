@@ -10,7 +10,7 @@ P10 release gates 已通过：项目使用 Apache-2.0，PyMuPDF 只在非默认 
 
 Phase 11 Legacy Migration 当前为 **BLOCKED**：权威 StudyVault 原地复用；55 个旧聊天 Markdown 只归档，7 个其它 Personal 项 skip；旧 Atomic Fact 因 History 未配置而 unresolved；28 条错题笔记和 70 张图片无法建立可信关系。新增 P11.3A 统一来源盘点已建立私有登记器（6 个来源条目）：ChatGPT 官方导出仍需登录，Gemini Takeout 导出已完成但下载再次要求 Google 登录，本地 Agent history 尚未验证；Gemini raw archive 尚未下载或检查，也没有统一 History 导入。只读 dry-run、私有 manifest 和 Study 检索验证已完成，当前续作增加的合成测试为 37 passed、2 skipped；未写入 V2 业务数据。详情与逐项 Gate 见 [Phase 11 Legacy Migration](phase-11-legacy-migration.md)。没有创建 v0.2.0 tag/Release，也未 push Phase 11 分支。
 
-P12 preparation is in progress. Obsidian, WorkBuddy and Hermes are installed, but Obsidian's real Vault view and all three real-host integrations are unverified. Current documented host support remains Codex Desktop with stdio MCP; no WorkBuddy/Hermes adapter or cross-agent E2E has been demonstrated. No P12 release gate is claimed PASS.
+P12 preparation is in progress. A deterministic in-memory Obsidian renderer now accepts explicit Gateway DTOs; its synthetic suite is **16 passed**, and the full suite is **399 passed, 7 skipped**. It does not collect a complete snapshot or write a Vault. Official WorkBuddy and Hermes documents describe local stdio MCP clients, but this machine's connections and E2E remain unverified. Obsidian's real Vault view is also unverified. No P12 release gate is claimed PASS; see [P12 Host Compatibility Checkpoint](p12-host-compatibility.md).
 
 架构不变量：外部 Agent 是唯一智能层；Gateway 只执行确定性操作。Tunnel/Responses API 不属于 Core，也不是项目完成条件。真实私人 History、错题和教材不用于自动化测试。Phase 10 发布复验只使用合成 Study 配置，没有迁移或导入真实数据。
 
