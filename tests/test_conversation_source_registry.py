@@ -73,7 +73,6 @@ def test_record_rejects_unbounded_or_malformed_metadata(overrides: dict) -> None
 
 def test_public_summary_contains_only_aggregate_statuses(tmp_path: Path) -> None:
     registry_path = tmp_path / "private" / "sources.sqlite3"
-    registry_path.parent.mkdir()
     synthetic_locator = "path:" + str((registry_path.parent / "export.zip").resolve())
     registry = ConversationSourceRegistry(registry_path)
     registry.upsert(_record(
@@ -111,7 +110,6 @@ def test_public_summary_contains_only_aggregate_statuses(tmp_path: Path) -> None
 
 def test_registry_round_trips_and_replaces_by_source_id(tmp_path: Path) -> None:
     registry_path = tmp_path / "private" / "sources.sqlite3"
-    registry_path.parent.mkdir()
     registry = ConversationSourceRegistry(registry_path)
     first = _record(source_id="source-" + "a" * 32)
     second = _record(source_id="source-" + "b" * 32, source_system="chatgpt")
@@ -140,6 +138,21 @@ def test_registry_storage_is_owner_only_on_posix(tmp_path: Path) -> None:
     assert stat.S_IMODE(registry.path.stat().st_mode) == 0o600
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission modes are not portable to Windows")
+def test_registry_rejects_shared_existing_directory_without_chmod(tmp_path: Path) -> None:
+    registry_dir = tmp_path / "shared"
+    registry_dir.mkdir()
+    os.chmod(registry_dir, 0o755)
+    before = stat.S_IMODE(registry_dir.stat().st_mode)
+    if before & 0o077 == 0:
+        pytest.skip("The test filesystem does not preserve shared permission bits")
+
+    with pytest.raises(ValueError, match="Invalid private conversation registry"):
+        ConversationSourceRegistry(registry_dir / "sources.sqlite3")
+
+    assert stat.S_IMODE(registry_dir.stat().st_mode) == before
+
+
 @pytest.mark.skipif(os.name != "nt", reason="Windows per-user state path restriction")
 def test_registry_rejects_windows_path_outside_user_state_root(tmp_path: Path) -> None:
     outside_user_state = Path(tmp_path.anchor) / "non-user-state" / "sources.sqlite3"
@@ -154,12 +167,14 @@ def test_default_registry_path_uses_only_configured_state_root(
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
     assert default_conversation_registry_path() == (
-        tmp_path / "local" / "ChatGPTStudySystemV2" / "migration" / "conversation-sources.sqlite3"
+        tmp_path / "local" / "ChatGPTStudySystemV2" / "migration" /
+        "conversation-source-registry" / "sources.sqlite3"
     )
 
     monkeypatch.delenv("LOCALAPPDATA")
     assert default_conversation_registry_path() == (
-        tmp_path / "xdg" / "ChatGPTStudySystemV2" / "migration" / "conversation-sources.sqlite3"
+        tmp_path / "xdg" / "ChatGPTStudySystemV2" / "migration" /
+        "conversation-source-registry" / "sources.sqlite3"
     )
 
     monkeypatch.delenv("XDG_STATE_HOME")

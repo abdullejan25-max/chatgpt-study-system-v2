@@ -135,6 +135,19 @@ def _restrict_private_permissions(path: Path, *, directory: bool) -> None:
         raise ValueError("Invalid private conversation registry") from None
 
 
+def _require_private_permissions(path: Path, *, directory: bool) -> None:
+    """Reject an existing POSIX registry directory unless it is already private."""
+    if os.name == "nt":
+        return
+    expected = stat.S_ISDIR if directory else stat.S_ISREG
+    try:
+        info = path.stat()
+        if not expected(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise ValueError
+    except OSError:
+        raise ValueError("Invalid private conversation registry") from None
+
+
 def _validate_windows_state_root(path: Path) -> None:
     """On Windows, confine storage to the configured per-user state directory."""
     if os.name != "nt":
@@ -219,7 +232,8 @@ def default_conversation_registry_path() -> Path:
     root = os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_STATE_HOME")
     if not root or not Path(root).is_absolute():
         raise RuntimeError("Private local registry location is not configured")
-    return Path(root) / "ChatGPTStudySystemV2" / "migration" / "conversation-sources.sqlite3"
+    return (Path(root) / "ChatGPTStudySystemV2" / "migration" /
+            "conversation-source-registry" / "sources.sqlite3")
 
 
 class ConversationSourceRegistry:
@@ -229,11 +243,19 @@ class ConversationSourceRegistry:
         try:
             candidate = validate_private_journal_path(Path(path))
             _validate_windows_state_root(candidate)
-            candidate.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if os.name == "nt":
+                candidate.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            else:
+                candidate.parent.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    candidate.parent.mkdir(mode=0o700)
+                except FileExistsError:
+                    _require_private_permissions(candidate.parent, directory=True)
+                else:
+                    _restrict_private_permissions(candidate.parent, directory=True)
             self.path = validate_private_journal_path(candidate)
             if not self.path.parent.is_dir():
                 raise ValueError
-            _restrict_private_permissions(self.path.parent, directory=True)
             if self.path.exists():
                 _restrict_private_permissions(self.path, directory=False)
             self._initialize()
