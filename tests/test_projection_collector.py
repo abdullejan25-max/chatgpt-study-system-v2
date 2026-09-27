@@ -1,0 +1,122 @@
+from pathlib import Path
+
+import pytest
+
+from chatgpt_study_system.adapters.documents import DocumentInput, SQLiteDocumentStore
+from chatgpt_study_system.adapters.history import SQLiteHistoryBackend
+from chatgpt_study_system.adapters.wrong_answers import SQLiteWrongAnswerStore
+from chatgpt_study_system.config import AppConfig
+from chatgpt_study_system.contracts import HistoryImportItem
+from chatgpt_study_system.gateway import Gateway
+from chatgpt_study_system.obsidian_projection import render_projection
+from chatgpt_study_system.projection_collector import (
+    ProjectionCollectionError,
+    collect_projection,
+)
+
+
+def _projection_gateway(tmp_path: Path, *, source_count: int = 21,
+                        analysis_count: int = 21) -> Gateway:
+    assets = tmp_path / "assets"
+    assets.mkdir()
+    document_store = SQLiteDocumentStore(assets, tmp_path / "documents.db")
+    document = document_store.ingest_documents([DocumentInput(
+        "Synthetic question source", "application/pdf", b"%PDF-1.4 synthetic",
+        ("Synthetic page",), "text_layer",
+    )])[0]
+    history = SQLiteHistoryBackend(tmp_path / "history.db")
+    for index in range(source_count):
+        source_id = f"history-{index:02d}"
+        history.register_source(source_id, f"Synthetic source {index}")
+        history.import_items(source_id, [HistoryImportItem(
+            f"item-{index:02d}", f"conversation-{index:02d}", "user",
+            f"Synthetic message {index}", "2026-09-01T00:00:00Z",
+        )])
+    wrong_store = SQLiteWrongAnswerStore(document_store)
+    first_wrong_source = None
+    for index in range(source_count):
+        created = wrong_store.register_source(
+            document.uri, f"Synthetic question {index}", "Synthetic wrong answer",
+        )
+        first_wrong_source = first_wrong_source or created
+    gateway = Gateway(
+        AppConfig("0.1.0", None, history_database=history.database_path),
+        None, history_backend=history, document_store=document_store,
+        capabilities=frozenset({"write", "projection"}), qmd_discoverable=lambda: False,
+    )
+    for version in range(analysis_count):
+        gateway.save_wrong_answer_analysis(
+            first_wrong_source["source_id"],
+            {"error_type": "synthetic", "knowledge_points": ["synthetic"],
+             "reasoning": f"Synthetic reasoning {version}",
+             "correct_solution": "Synthetic solution", "review_advice": "Synthetic review"},
+            [document.uri], [], f"collector-analysis-{version}", version,
+        )
+    gateway.capabilities = frozenset({"projection"})
+    return gateway
+
+
+def test_collector_pages_all_sources_reconciles_counts_and_builds_renderer_input(tmp_path: Path) -> None:
+    gateway = _projection_gateway(tmp_path)
+
+    result = collect_projection(gateway)
+
+    assert result.history_source_count == 21
+    assert result.history_item_count == 21
+    assert result.wrong_answer_source_count == 21
+    assert result.wrong_answer_analysis_count == 21
+    assert result.history_snapshot_token.startswith("history-v1:")
+    assert result.wrong_answer_snapshot_token.startswith("wrong-v1:")
+    assert len(result.snapshot.history_sources) == 21
+    assert len(result.snapshot.history_items) == 21
+    assert len(result.snapshot.wrong_answer_bundles) == 21
+    assert max(len(bundle["analyses"]) for bundle in result.snapshot.wrong_answer_bundles) == 21
+    assert render_projection(result.snapshot)
+
+
+def test_collector_rejects_domain_count_mismatch_without_returning_partial_snapshot(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    gateway = _projection_gateway(tmp_path, source_count=1, analysis_count=1)
+    original = gateway.projection_snapshot
+
+    def wrong_total(domain: str, operation: str, **kwargs):
+        page = original(domain, operation, **kwargs)
+        if domain == "history" and operation == "begin":
+            page["total_records"] += 1
+        return page
+
+    monkeypatch.setattr(gateway, "projection_snapshot", wrong_total)
+    with pytest.raises(ProjectionCollectionError):
+        collect_projection(gateway)
+
+
+def test_collector_rejects_nonadvancing_page_cursor(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    gateway = _projection_gateway(tmp_path, source_count=1, analysis_count=1)
+    original = gateway.projection_snapshot
+
+    def stuck_cursor(domain: str, operation: str, **kwargs):
+        page = original(domain, operation, **kwargs)
+        if domain == "history" and operation == "sources":
+            page["has_more"] = True
+            page["next_cursor"] = kwargs.get("cursor", 0)
+        return page
+
+    monkeypatch.setattr(gateway, "projection_snapshot", stuck_cursor)
+    with pytest.raises(ProjectionCollectionError):
+        collect_projection(gateway)
+
+
+def test_collector_rejects_boolean_count_metadata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    gateway = _projection_gateway(tmp_path, source_count=1, analysis_count=1)
+    original = gateway.projection_snapshot
+
+    def boolean_count(domain: str, operation: str, **kwargs):
+        page = original(domain, operation, **kwargs)
+        if domain == "wrong_answers" and operation == "records":
+            page["total_records"] = True
+        return page
+
+    monkeypatch.setattr(gateway, "projection_snapshot", boolean_count)
+    with pytest.raises(ProjectionCollectionError):
+        collect_projection(gateway)

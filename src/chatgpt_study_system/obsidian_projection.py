@@ -1,8 +1,8 @@
 """Deterministic, in-memory Obsidian projection from Gateway read DTOs.
 
 This module intentionally has no filesystem, database, network, or Gateway
-dependency. A separate collector must obtain a complete, bounded snapshot from
-the Gateway before any real-vault writer is introduced.
+dependency. The companion collector obtains and reconciles a complete, bounded
+Gateway snapshot before rendering.
 """
 
 from __future__ import annotations

@@ -16,7 +16,7 @@ History items and Wrong Answer sources/analyses are append-only through their su
 
 ## DTO and privacy boundary
 
-The Gateway reuses safe DTO handling, redacts local paths, checks source references, and reduces provenance to the categorical fields the renderer displays. It returns only bounded pages and logical IDs required for continuation. No absolute database path, SQL diagnostics, or private storage metadata is returned. The renderer remains a pure function over explicitly supplied DTOs, and the writer remains a separately invoked filesystem operation. A collector still needs to consume all pages and reconcile the per-source and domain totals before calling the renderer.
+The Gateway uses safe DTO handling, redacts local paths, checks logical source references, and reduces provenance to categorical fields used by the renderer. A separate collector consumes all pages and reconciles per-source and domain counts before building the existing `ProjectionSnapshot`. No absolute database path, SQL diagnostics, or private storage metadata is returned. The renderer remains a pure function over explicitly supplied DTOs, and the writer remains a separately invoked filesystem operation.
 
 ## Verification
 

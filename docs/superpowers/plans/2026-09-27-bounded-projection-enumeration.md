@@ -62,6 +62,14 @@
 - [x] Run focused tests, full suite, and `git diff --check`; update public/private checkpoints with exact evidence.
 - [x] Commit the implementation and checkpoint separately.
 
-## Remaining collector work
+## Task 4: Collect and reconcile complete renderer snapshots
 
-The adapter and MCP API provide per-source and per-domain counts, but a future collector must consume every page, reconcile all reported counts, and construct the renderer input before this can count as a complete projection snapshot. This plan does not claim cross-store atomicity or a real Host/Vault gate.
+**Files:**
+- Add: `src/chatgpt_study_system/projection_collector.py`
+- Test: `tests/test_projection_collector.py`
+
+- [x] Verify 21-source synthetic snapshots cross domain page boundaries and a 21-analysis source crosses the records page boundary.
+- [x] Reconcile per-source and domain totals; reject mismatched counts and nonadvancing cursors without returning a partial snapshot.
+- [x] Construct the existing pure `ProjectionSnapshot` input and render it in a synthetic end-to-end test.
+
+This does not claim cross-store atomicity or a real Host/Vault gate.
