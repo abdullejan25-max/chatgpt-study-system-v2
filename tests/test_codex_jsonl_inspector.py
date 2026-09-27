@@ -1,0 +1,170 @@
+from __future__ import annotations
+
+import base64
+import json
+from pathlib import Path
+
+import pytest
+
+import chatgpt_study_system.migration.codex_jsonl_inspector as inspector_module
+from chatgpt_study_system.migration.codex_jsonl_inspector import (
+    CodexJSONLInspectionError,
+    inspect_codex_snapshot,
+)
+from chatgpt_study_system.migration.codex_snapshot import PrivateCodexJSONLSnapshotStore
+
+
+def _line(record: object) -> bytes:
+    return json.dumps(record, separators=(",", ":")).encode() + b"\n"
+
+
+def _snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, files: dict[str, bytes]):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    source = tmp_path / "source"
+    source.mkdir()
+    for relative, payload in files.items():
+        path = source / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
+    store = PrivateCodexJSONLSnapshotStore(root=tmp_path / "private" / "snapshot")
+    result = store.snapshot_jsonl_tree(source)
+    return store, result
+
+
+def test_inspector_returns_only_aggregates_and_detects_semantic_conflicts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    text = "private synthetic sentinel"
+    image = "data:image/png;base64," + base64.b64encode(b"synthetic image").decode()
+    first = [
+        {"type": "session_meta", "payload": {"id": "session-one"}},
+        {"type": "session_meta", "payload": {"id": "session-two"}},
+        {"type": "response_item", "timestamp": "2026-01-01T00:00:00Z", "payload": {
+            "type": "message", "id": "message-one", "role": "user",
+            "content": [{"type": "input_text", "text": text}, {"type": "input_image", "image_url": image}],
+        }},
+        {"type": "response_item", "timestamp": "2026-01-02T00:00:00Z", "payload": {
+            "type": "message", "id": "message-one", "role": "user",
+            "content": [{"type": "input_text", "text": text}, {"type": "input_image", "image_url": image}],
+        }},
+        {"type": "event_msg", "payload": {"type": "task_started"}},
+        {"type": "response_item", "timestamp": "invalid", "payload": {
+            "type": "message", "id": "developer-one", "role": "developer",
+            "content": [{"type": "input_text", "text": "private developer sentinel"}],
+        }},
+    ]
+    second = [
+        {"type": "session_meta", "payload": {"id": "session-one"}},
+        {"type": "response_item", "timestamp": "2026-01-03T00:00:00Z", "payload": {
+            "type": "message", "id": "message-two", "role": "assistant",
+            "content": [{"type": "output_text", "text": "another synthetic private sentinel"}],
+        }},
+    ]
+    store, snapshot = _snapshot(tmp_path, monkeypatch, {
+        "one.jsonl": b"".join(_line(row) for row in first) + b"not-json\n[]\n",
+        "nested/two.jsonl": b"".join(_line(row) for row in second),
+    })
+
+    result = inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+    rendered = repr(result)
+
+    assert result.file_count == 2
+    assert result.line_count == 10
+    assert result.valid_json_record_count == 9
+    assert result.malformed_json_line_count == 1
+    assert result.non_object_record_count == 1
+    assert result.session_metadata_record_count == 3
+    assert result.session_metadata_id_count == 3
+    assert result.unique_session_metadata_id_count == 2
+    assert result.session_ids_repeated_across_files == 1
+    assert result.files_with_multiple_session_ids == 1
+    assert result.message_record_count == 4
+    assert result.message_id_count == 3
+    assert result.duplicate_message_id_groups == 1
+    assert result.duplicate_message_id_occurrences == 1
+    assert result.duplicate_groups_with_content_conflicts == 0
+    assert result.duplicate_groups_with_timestamp_conflicts == 1
+    assert result.duplicate_groups_crossing_files == 0
+    assert result.parseable_message_timestamp_count == 3
+    assert result.utc_message_timestamp_count == 3
+    assert result.inline_image_payload_count == 2
+    assert result.valid_inline_image_payload_count == 2
+    assert result.unique_inline_image_count == 1
+    assert result.unique_inline_image_bytes == len(b"synthetic image")
+    for private_value in (text, "private developer sentinel", "session-one", "message-one",
+                          "one.jsonl", str(tmp_path), snapshot.snapshot_sha256):
+        assert private_value not in rendered
+
+
+def test_inspector_counts_conflicting_duplicate_content_and_invalid_image(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first = {"type": "response_item", "timestamp": "2026-01-01T00:00:00Z", "payload": {
+        "type": "message", "id": "duplicate", "role": "assistant",
+        "content": [{"type": "output_text", "text": "first"}],
+    }}
+    second = {"type": "response_item", "timestamp": "2026-01-01T00:00:00Z", "payload": {
+        "type": "message", "id": "duplicate", "role": "assistant",
+        "content": [{"type": "input_image", "image_url": "data:image/png;base64,not-base64!"}],
+    }}
+    store, snapshot = _snapshot(tmp_path, monkeypatch, {
+        "one.jsonl": _line(first) + _line(second),
+    })
+
+    result = inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+
+    assert result.duplicate_groups_with_content_conflicts == 1
+    assert result.duplicate_groups_with_timestamp_conflicts == 0
+    assert result.invalid_inline_image_payload_count == 1
+
+
+def test_inspector_rejects_snapshot_tampering_without_path_bearing_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store, snapshot = _snapshot(tmp_path, monkeypatch, {"one.jsonl": _line({"type": "session_meta"})})
+    (snapshot.stored_path / "files" / "one.jsonl").write_bytes(b"tampered")
+
+    with pytest.raises(CodexJSONLInspectionError) as error:
+        inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+
+    assert error.value.code == "snapshot_invalid"
+    assert str(tmp_path) not in str(error.value)
+
+
+def test_inspector_enforces_record_and_line_limits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store, snapshot = _snapshot(tmp_path, monkeypatch, {"one.jsonl": b"{}\n{}\n"})
+    monkeypatch.setattr(inspector_module, "_MAX_RECORDS", 1)
+    with pytest.raises(CodexJSONLInspectionError) as error:
+        inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+    assert error.value.code == "record_limit_exceeded"
+
+    monkeypatch.setattr(inspector_module, "_MAX_RECORDS", 10)
+    monkeypatch.setattr(inspector_module, "_MAX_LINE_BYTES", 2)
+    result = inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+    assert result.oversized_line_count == 2
+
+
+def test_inspector_enforces_message_id_and_image_memory_limits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    message = lambda identifier, image: {"type": "response_item", "payload": {
+        "type": "message", "id": identifier, "role": "user",
+        "content": [{"type": "input_image", "image_url": "data:image/png;base64," +
+                    base64.b64encode(image).decode()}],
+    }}
+    store, snapshot = _snapshot(tmp_path, monkeypatch, {
+        "one.jsonl": _line(message("first", b"one")) + _line(message("second", b"two")),
+    })
+
+    monkeypatch.setattr(inspector_module, "_MAX_TRACKED_MESSAGE_IDS", 1)
+    with pytest.raises(CodexJSONLInspectionError) as error:
+        inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+    assert error.value.code == "message_id_limit_exceeded"
+
+    monkeypatch.setattr(inspector_module, "_MAX_TRACKED_MESSAGE_IDS", 10)
+    monkeypatch.setattr(inspector_module, "_MAX_INLINE_IMAGE_DECODED_BYTES", 5)
+    with pytest.raises(CodexJSONLInspectionError) as error:
+        inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+    assert error.value.code == "image_byte_limit_exceeded"
