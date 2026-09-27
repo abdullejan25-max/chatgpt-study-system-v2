@@ -54,11 +54,11 @@
 - Legacy Basic Memory 中既有的 55 个聊天 Markdown 仍是 archive-only：它们不能证明平台会话 ID、message role/author、event time 或原始消息边界，因此不被计作 55 个已验证 conversation，也不转成 raw History messages。
 - ChatGPT 官方导出尚未请求。Privacy Portal 在选择“下载我的数据”后要求账户登录；没有输入账号、密码、验证码或提交请求。此项为 `WAITING_FOR_USER: CHATGPT_EXPORT`。
 - Gemini 官方 Takeout 已只选择 `My Activity → Gemini Apps` 并提交一次性 ZIP 导出请求。官方页面现显示导出已完成（47.7 MB，页面列出的下载截止时间为 2026-10-04 16:06）；尝试下载后页面跳转到 Google 登录。没有输入凭据或验证码，归档尚未落到本地，也未读取或检查。未选择其它 Google 产品或活动类别。此项为 `WAITING_FOR_USER: GEMINI_EXPORT_SIGN_IN_DOWNLOAD`。
-- Codex、WorkBuddy、Hermes 客户端已在有界主机盘点中发现，但各自的本地聊天存储位置、可访问性和导出能力尚未验证。未读取浏览器凭据、cookie、token 或系统密钥库。
+- Codex 与 WorkBuddy 客户端已在有界主机盘点中发现，但本地聊天存储位置、可访问性和导出能力尚未验证。Hermes 官方 [Sessions 文档](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/sessions.md)说明 `state.db` 是会话存储，并支持 `HERMES_HOME`；在当前配置的数据根内发现该 SQLite 文件。通过迁移器的 DB+WAL 私有临时快照，检查了 schema、`quick_check` 和 `sessions`/`messages` 行数：**27 sessions、5,666 message rows**。未查询或输出会话/消息正文、标题、用户 ID、时间或附件；临时快照已清理。私有 registry 保存该快照的 manifest hash 和私有 locator，公共文档不保存。History target 未配置，尚未规范化、去重或导入，5,666 行均保持 unresolved。未读取浏览器凭据、cookie、token 或系统密钥库。
 - History 后端仍为 `not_configured`，当前 capability 仅为 `read`。没有 V2 History、Assets、Documents 或 Wrong Answer 业务写入；没有 raw archive、规范化记录或 retrieval E2E。
 - 新增私有 registry 的合成测试在 Windows 为 **18 passed, 2 skipped**（两个 POSIX 权限位断言不适用）；与现有 migration journal 测试合并运行共 **37 passed, 2 skipped**。历史完整回归 **365 passed, 5 skipped** 属于先前 checkpoint，本次没有重复运行。
 
-P11.3A subgates：Conversation Source Inventory、V1 Conversation Deduplication、Local Agent History Import、Gemini Export/Import、Raw Archive Integrity、Normalization、Attachments、Cross-source Dedupe、Ordering、Retrieval E2E 与 Coverage Report 均为 **BLOCKED**；ChatGPT Export/Import 为 **WAITING_FOR_USER**。任何导出只有在官方 archive 可用并校验原始格式后才进入解析；未知时间、role、identity、分支或附件关系继续保持 unknown。
+P11.3A subgates：Conversation Source Inventory、V1 Conversation Deduplication、Local Agent History Import（包括已发现的 Hermes store）、Gemini Export/Import、Raw Archive Integrity、Normalization、Attachments、Cross-source Dedupe、Ordering、Retrieval E2E 与 Coverage Report 均为 **BLOCKED**；ChatGPT Export/Import 为 **WAITING_FOR_USER**。任何导出只有在官方 archive 可用并校验原始格式后才进入解析；未知时间、role、identity、分支或附件关系继续保持 unknown。
 
 ## Manifest、事务和回滚
 
@@ -82,7 +82,7 @@ P11.3A subgates：Conversation Source Inventory、V1 Conversation Deduplication�
 | Legacy Inventory | PASS | 明确根目录完整盘点，摘要不含正文或路径 |
 | Study Strategy | PASS | 同一权威根原地复用，临时 QMD 重建和检索通过 |
 | History Migration | BLOCKED | History 未配置，旧 fact annotation contract 未实现；无业务写入 |
-| Unified Conversation Source Inventory | BLOCKED | 私有登记器记录 6 个来源条目；ChatGPT 需登录，Gemini 官方导出已完成但下载需登录，本地 Agent history 尚未验证 |
+| Unified Conversation Source Inventory | BLOCKED | 私有登记器记录 6 个来源条目；Hermes 本地 DB 仅确认 27 sessions/5,666 message rows；Codex 与 WorkBuddy 本地历史未核实；ChatGPT/Gemini 仍有登录阻断 |
 | Unified Conversation History | BLOCKED | 无 raw archive、规范化、跨源去重或检索证据；ChatGPT 子门槛为 WAITING_FOR_USER |
 | Assets/Documents | BLOCKED | Study PDF 可原地复用；70 张旧错题图均未能与 source 建立可信关系，4 个现有目标 hash 命中也仍属 unresolved |
 | Wrong Answers | BLOCKED | 28 条 note 与 70 张图的关系无法验证 |

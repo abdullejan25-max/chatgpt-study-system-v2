@@ -24,7 +24,6 @@ The collector now consumes every page for each source, verifies continuation und
 
 ## Remaining O1 and release gates
 
-- Human confirms the private Vault and reviews the view in Obsidian.
 - Human confirms the private Vault and reviews the rendered view in Obsidian; synthetic verification does not imply real-store collection.
 - Any eventual writer targets a confirmed private/ignored location and supports safe rebuilds.
 - Complete O1–O13 validation passes before `v0.3.0`.
