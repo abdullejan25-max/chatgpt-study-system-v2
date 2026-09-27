@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import stat
 
 from .manifest import validate_private_journal_path
 
@@ -117,6 +118,39 @@ def _valid_private_locator(value: str | None) -> bool:
     return False
 
 
+def _restrict_private_permissions(path: Path, *, directory: bool) -> None:
+    """Make POSIX registry storage owner-only; Windows inherits the user-state ACL."""
+    if os.name == "nt":
+        return
+    expected = stat.S_ISDIR if directory else stat.S_ISREG
+    mode = 0o700 if directory else 0o600
+    try:
+        info = path.stat()
+        if not expected(info.st_mode) or info.st_uid != os.getuid():
+            raise ValueError
+        os.chmod(path, mode)
+        if path.stat().st_mode & 0o077:
+            raise ValueError
+    except OSError:
+        raise ValueError("Invalid private conversation registry") from None
+
+
+def _validate_windows_state_root(path: Path) -> None:
+    """On Windows, confine storage to the configured per-user state directory."""
+    if os.name != "nt":
+        return
+    roots = (os.environ.get("LOCALAPPDATA"), os.environ.get("XDG_STATE_HOME"))
+    for root in roots:
+        if not root or not Path(root).is_absolute():
+            continue
+        try:
+            if path.is_relative_to(Path(root).resolve(strict=False)):
+                return
+        except OSError:
+            continue
+    raise ValueError("Invalid private conversation registry")
+
+
 def _validate_record(record: ConversationSourceRecord) -> None:
     valid = (
         type(record) is ConversationSourceRecord
@@ -194,11 +228,16 @@ class ConversationSourceRegistry:
     def __init__(self, path: Path) -> None:
         try:
             candidate = validate_private_journal_path(Path(path))
-            candidate.parent.mkdir(parents=True, exist_ok=True)
+            _validate_windows_state_root(candidate)
+            candidate.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
             self.path = validate_private_journal_path(candidate)
             if not self.path.parent.is_dir():
                 raise ValueError
+            _restrict_private_permissions(self.path.parent, directory=True)
+            if self.path.exists():
+                _restrict_private_permissions(self.path, directory=False)
             self._initialize()
+            _restrict_private_permissions(self.path, directory=False)
         except (OSError, ValueError, sqlite3.Error):
             raise ValueError("Invalid private conversation registry") from None
 
@@ -282,6 +321,7 @@ class ConversationSourceRegistry:
                 raise RuntimeError("Private conversation source registry could not be updated") from None
 
     def public_summary(self) -> dict[str, object]:
+        """Return aggregates; per-source totals may overlap across sources."""
         records = self.list_sources()
         export_counts = Counter(record.export_status for record in records)
         import_counts = Counter(record.import_status for record in records)
@@ -301,11 +341,11 @@ class ConversationSourceRegistry:
                 status: import_counts[status] for status in sorted(_IMPORT_STATUSES)
                 if import_counts[status]
             },
-            "conversation_count": sum(known_conversations),
+            "source_reported_conversation_count_sum": sum(known_conversations),
             "conversation_count_known_sources": len(known_conversations),
-            "message_count": sum(known_messages),
+            "source_reported_message_count_sum": sum(known_messages),
             "message_count_known_sources": len(known_messages),
-            "imported_count": sum(record.imported_count for record in records),
-            "deduplicated_count": sum(record.deduplicated_count for record in records),
-            "unresolved_count": sum(record.unresolved_count for record in records),
+            "source_reported_imported_item_count_sum": sum(record.imported_count for record in records),
+            "source_reported_deduplicated_item_count_sum": sum(record.deduplicated_count for record in records),
+            "source_reported_unresolved_item_count_sum": sum(record.unresolved_count for record in records),
         }

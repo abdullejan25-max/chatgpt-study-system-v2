@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import os
 from pathlib import Path
+import stat
 
 import pytest
 
@@ -72,13 +74,14 @@ def test_record_rejects_unbounded_or_malformed_metadata(overrides: dict) -> None
 def test_public_summary_contains_only_aggregate_statuses(tmp_path: Path) -> None:
     registry_path = tmp_path / "private" / "sources.sqlite3"
     registry_path.parent.mkdir()
+    synthetic_locator = "path:" + str((registry_path.parent / "export.zip").resolve())
     registry = ConversationSourceRegistry(registry_path)
     registry.upsert(_record(
         source_id="source-" + "b" * 32,
         stable_identity="opaque-" + "e" * 32,
         source_hash="c" * 64,
         manifest_hash="d" * 64,
-        private_locator="path:C:\\private\\export.zip",
+        private_locator=synthetic_locator,
         coverage_notes=("official_export_pending",),
     ))
 
@@ -90,18 +93,18 @@ def test_public_summary_contains_only_aggregate_statuses(tmp_path: Path) -> None
         "accessible_count": 0,
         "export_status_counts": {"processing": 1},
         "import_status_counts": {"not_started": 1},
-        "conversation_count": 0,
+        "source_reported_conversation_count_sum": 0,
         "conversation_count_known_sources": 0,
-        "message_count": 0,
+        "source_reported_message_count_sum": 0,
         "message_count_known_sources": 0,
-        "imported_count": 0,
-        "deduplicated_count": 0,
-        "unresolved_count": 0,
+        "source_reported_imported_item_count_sum": 0,
+        "source_reported_deduplicated_item_count_sum": 0,
+        "source_reported_unresolved_item_count_sum": 0,
     }
     rendered = repr(summary)
     for private_value in (
         "source-b", "opaque-" + "e" * 32, "c" * 64, "d" * 64,
-        "path:C:\\private\\export.zip", "gemini",
+        synthetic_locator, "gemini",
     ):
         assert private_value not in rendered
 
@@ -127,6 +130,21 @@ def test_registry_rejects_repository_path(tmp_path: Path) -> None:
     repository_root = Path(__file__).resolve().parents[1]
     with pytest.raises(ValueError, match="Invalid private conversation registry"):
         ConversationSourceRegistry(repository_root / "registry.sqlite3")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission modes are not portable to Windows")
+def test_registry_storage_is_owner_only_on_posix(tmp_path: Path) -> None:
+    registry_path = tmp_path / "private" / "sources.sqlite3"
+    registry = ConversationSourceRegistry(registry_path)
+    assert stat.S_IMODE(registry_path.parent.stat().st_mode) == 0o700
+    assert stat.S_IMODE(registry.path.stat().st_mode) == 0o600
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows per-user state path restriction")
+def test_registry_rejects_windows_path_outside_user_state_root(tmp_path: Path) -> None:
+    outside_user_state = Path(tmp_path.anchor) / "non-user-state" / "sources.sqlite3"
+    with pytest.raises(ValueError, match="Invalid private conversation registry"):
+        ConversationSourceRegistry(outside_user_state)
 
 
 def test_default_registry_path_uses_only_configured_state_root(

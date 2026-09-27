@@ -60,7 +60,7 @@ class ConversationSourceRecord:
 
 - `ConversationSourceRegistry(path).upsert(record)` atomically replaces one record by its opaque `source_id` and rejects malformed metadata or a path overlapping the repository.
 - `ConversationSourceRegistry(path).list_sources()` returns validated typed records only to local code.
-- `ConversationSourceRegistry(path).public_summary()` returns aggregate counts and fixed status codes only; it never returns source IDs, locators, hashes, account labels, titles, or conversation content.
+- `ConversationSourceRegistry(path).public_summary()` returns aggregate counts and fixed status codes only; any conversation/item totals are labeled as source-reported sums because sources may overlap. It never returns source IDs, locators, hashes, account labels, titles, or conversation content.
 - `default_conversation_registry_path()` resolves only to the configured per-user application state root and fails closed if no such root exists.
 
 ### Task 1: Define and validate registry records
@@ -86,6 +86,8 @@ class ConversationSourceRecord:
 - [x] Run the focused file and confirm the persistence tests fail before implementation.
 - [x] Implement bounded JSON payloads in transactional SQLite persistence and private path validation using the existing migration safety helper.
 - [x] Rerun the focused file and verify reopen, replacement, unsafe-path rejection, and summary redaction.
+- [x] Enforce owner-only POSIX registry directory/database modes; confine Windows registry paths to the configured per-user state root so its ACL is inherited.
+- [x] Verify synthetic private-locator tests use host-native absolute paths and mark per-source aggregate totals as sums.
 
 ### Task 3: Record the real source inventory and P11.3A gate
 
