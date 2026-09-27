@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- Last safe implementation commit：`d1158fe` (`feat: add bounded projection snapshot API`)
+- Last safe implementation commit：`64c91c2` (`feat: collect reconciled projection snapshots`)
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有真实迁移、V2 业务写入或发布。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。
@@ -19,7 +19,8 @@
 - 用只读主机盘点发现 Obsidian、WorkBuddy、Hermes 已安装；安装事实不代表聊天数据可访问或 MCP 集成通过。
 - 官方 Google Takeout 的 Gemini Apps 导出已完成；页面显示 47.7 MB，下载截止时间为 2026-10-04 16:06。尝试下载时跳转到 Google 登录；未输入凭据或验证码，未下载本地归档。相应 registry 状态已更新为 `available`，conversation/message 数仍未知。
 - 新增显式 `projection` capability 与只读 `projection_snapshot` MCP/Gateway 接口。History 与 Wrong Answer 分别使用独立 SQLite 高水位 token；支持来源/记录分页、每域 10,000 条与 32 MiB 上限、固定错误、逻辑 URI 校验和 provenance 分类字段白名单。普通 `read` 不显示也不能调用该工具。没有访问任何真实 History/Wrong Answer 数据库。
-- 合成验证：focused capability/store/MCP suite **86 passed, 1 skipped**；完整测试 **428 passed, 8 skipped**。包含读权限隔离、后续插入排除、页游标/总量限制、DTO 脱敏与读取不写审计记录。
+- 新增 projection collector：按独立 store 水位完整读取所有来源及记录页，核对来源数、来源记录数与 domain 总数，检测重复/不前进 cursor，并且只在完整核对后返回 renderer snapshot。没有跨 store 原子性保证。
+- 合成验证：focused enum/collector suite **90 passed, 1 skipped**；全量测试 **432 passed, 8 skipped**。测试涵盖读权限隔离、后续插入排除、21 条分页、数量核对、非法布尔计数、DTO 脱敏与读取不写审计记录。
 
 ## P11.3A 来源覆盖
 
@@ -36,7 +37,7 @@ History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化
 
 ## P12 状态
 
-- **Step 1 — Obsidian**：纯内存 renderer、History 时间线、独立 manifest-bounded writer 和 opt-in per-store Gateway 枚举接口均有合成验证；当前全量回归 **428 passed, 8 skipped**。接口已就绪，但完整 collector、逐来源与全域数量核对、完整 renderer 输入尚未实现；无完整 snapshot。writer 仅经 synthetic 目录验证。真实 Vault/GUI 未检查，O1–O13 和 P12 Step 1 release gate 仍未通过，详见 [Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
+- **Step 1 — Obsidian**：纯内存 renderer、History 时间线、独立 manifest-bounded writer、opt-in per-store Gateway 枚举接口及 reconciliation collector 均已实现并通过合成测试。collector 能构造完整合成 renderer snapshot；focused enum/collector suite **90 passed, 1 skipped**，全量回归 **432 passed, 8 skipped**。无个人 snapshot。writer 仅经 synthetic 目录验证。真实 Vault/GUI 未检查，O1–O13 和 P12 Step 1 release gate 仍未通过，详见 [Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
 - **Step 2 — WorkBuddy**：官方文档确认提供本地 stdio MCP 配置；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 3 — Hermes**：官方文档确认支持本地 stdio MCP；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 4 — Cross-Agent**：被前置真实 Host gate 阻断；无跨 Host 写读、版本或投影验证。
@@ -51,7 +52,7 @@ History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化
 
 ## 独立工程前置
 
-- **Projection collector 与 reconciliation**：bounded per-store Gateway/MCP enum API 已实现；还需实现 collector，通过它完整枚举每个来源的所有页面、验证每页 token/source/cursor 连续性、核对每来源记录数与 domain 总数，再构造 renderer 输入。History 与 Wrong Answer 位于不同 SQLite 数据库，不能声称存在跨库原子快照。此项是工程工作，不是 `WAITING_FOR_USER`。
+- **Projection snapshot consistency**：Gateway API 与 collector 已实现，并通过合成数据核对 per-source/per-domain counts。History 与 Wrong Answer 位于不同 SQLite 数据库，不能声称存在跨库原子快照；真实私有配置未启用 projection，因此个人快照与 Vault Gate 仍需等待用户配置/授权及 GUI。
 
 ## 发布与隐私
 
@@ -60,4 +61,4 @@ History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化
 - WorkBuddy 与 Hermes 的 stdio 客户端能力已按官方文档确认；本机连接、工具调用和跨 Host E2E 仍未验证，详见 [P12 Host Compatibility Checkpoint](p12-host-compatibility.md)。
 - Obsidian O1 contracts and missing facets are documented in [P12 Obsidian Reality Audit](p12-obsidian-reality-audit.md); private Vault selection and GUI remain user gates.
 - 应用内已安排本地线程每 6 小时续作一次，覆盖 72 小时；状态无变化时保持安静。
-- 下一安全步骤：实现并测试 projection collector/count reconciliation；接口尚未配置真实 Host，不拉取个人记录。Gemini archive 下载仍等待人工登录，不重复提交导出。Obsidian renderer/writer 保持一向投影边界，不执行真实 History 写入或发布。
+- 下一安全步骤：保持真实 History/错题读取禁用，直到用户完成私有配置；维护 WAITING_FOR_USER 清单，不重复提交 Gemini 导出。Obsidian renderer/writer 保持一向投影边界，不执行真实业务写入或发布。
