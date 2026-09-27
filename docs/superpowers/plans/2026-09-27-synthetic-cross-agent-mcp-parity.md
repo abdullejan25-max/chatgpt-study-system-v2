@@ -28,8 +28,8 @@
 **Test interface:** One test creates a synthetic document in `tmp_path`, writes a temporary MCP config for SQLite and `read`/`write`, and launches the repository Gateway module with the independent MCP SDK. It opens three sequential stdio sessions so writes must survive Gateway process shutdown/restart:
 
 1. Client A lists the `study-workflow://wrong-answer` resource, registers a synthetic source, and saves analysis version 1 through MCP.
-2. Client B lists the same workflow, reads/searches version 1, and saves version 2 with `expected_version=1` through MCP.
-3. Client A reconnects and reads version 2, including its `supersedes_analysis_id` and caller-reported/unverified provenance.
+2. Client B lists the same workflow, reads/searches version 1, saves version 2 with `expected_version=1`, replays the same idempotency request, and confirms a new request with stale `expected_version=1` conflicts.
+3. Client A reconnects and reads exactly versions 1 and 2, including `supersedes_analysis_id` and caller-reported/unverified provenance.
 
 - [x] Add the synthetic integration test with exact expected versions, source/analysis ID linkage, workflow equality, and provenance status.
 - [x] Run the test against the unchanged Gateway; the goal is host-neutral conformance evidence, so a passing test is expected if existing behavior already supports it. Observed **1 passed**.

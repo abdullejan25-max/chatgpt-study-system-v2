@@ -57,7 +57,7 @@ History 仍未配置，当前 capability 仅为 `read`。官方 ChatGPT/Gemini Z
 - **Step 2 — WorkBuddy**：官方文档确认提供本地 stdio MCP 配置；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 3 — Hermes**：官方文档确认支持本地 stdio MCP；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 4 — Cross-Agent**：被前置真实 Host gate 阻断；无跨 Host 写读、版本或投影验证。
-- 新增 Host-neutral parity 测试：两个独立 MCP SDK 客户端分别重启 Gateway stdio 子进程，通过同一临时 SQLite store 完成 source/version 1 写入、跨客户端检索/读取、expected_version=1 追加 version 2、重新连接 read-back；两端发现同一 workflow/tool set。与现有 Wrong Answer MCP 和 stdio process 测试 **5 passed**。不代表 WorkBuddy/Hermes 实机配置或 Cross-Agent Gate PASS。
+- 新增 Host-neutral parity 测试：两个独立 MCP SDK 客户端分别重启 Gateway stdio 子进程，通过同一临时 SQLite store 完成 source/version 1 写入、跨客户端检索/读取、expected_version=1 追加 version 2、幂等重放、stale-version conflict 及重新连接 read-back；两端发现同一 workflow/tool set。与现有 Wrong Answer MCP 和 stdio process 测试 **5 passed**。不代表 WorkBuddy/Hermes 实机配置或 Cross-Agent Gate PASS。
 - **Step 4 — Cross-Agent**：合成协议准备已覆盖共享 Gateway、版本冲突检查与重启持久性；真实 WorkBuddy/Hermes 双向 Host 验证及 Obsidian E2E 仍 `WAITING_FOR_USER`/未完成。
 
 ## WAITING_FOR_USER

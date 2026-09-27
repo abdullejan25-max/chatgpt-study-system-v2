@@ -114,7 +114,7 @@ def test_independent_stdio_clients_share_workflow_and_versioned_gateway_state(tm
         assert any(row["source_id"] == source_state["source_id"]
                    for row in searched.structuredContent["results"])
 
-        updated = await client.call_tool("update_wrong_answer_analysis", {
+        update_arguments = {
             "source_id": source_state["source_id"],
             "analysis": {
                 "error_type": "denominator",
@@ -128,12 +128,24 @@ def test_independent_stdio_clients_share_workflow_and_versioned_gateway_state(tm
             "idempotency_key": "synthetic-client-b-v2",
             "expected_version": 1,
             "provenance": {"reported_agent": "SyntheticClientB", "reported_client": "stdio-test"},
-        })
+        }
+        updated = await client.call_tool("update_wrong_answer_analysis", update_arguments)
         second = updated.structuredContent["analysis"]
         assert second["version"] == 2
         assert second["supersedes_analysis_id"] == source_state["analysis_v1_id"]
         assert second["write_provenance"]["reported_agent"] == "SyntheticClientB"
         assert second["write_provenance"]["identity_trust"] == "reported"
+
+        replay = await client.call_tool("update_wrong_answer_analysis", update_arguments)
+        assert replay.structuredContent["analysis"]["analysis_id"] == second["analysis_id"]
+        assert replay.structuredContent["analysis"]["version"] == 2
+
+        stale = await client.call_tool("update_wrong_answer_analysis", {
+            **update_arguments,
+            "idempotency_key": "synthetic-client-b-stale-v1",
+        })
+        assert stale.isError is True
+        assert stale.structuredContent["error"]["code"] == "CONFLICT"
 
     async def client_a_reads_after_restart(client, tools, workflow):
         assert set(tools) == source_state["tool_names"]
