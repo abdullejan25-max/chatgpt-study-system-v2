@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- Last safe implementation commit：`0b0afc4d4e041ffeb6ac4fe2dc850df6ce672a91` (`docs: record Gemini export sign-in handoff`)
+- Last safe implementation commit：`90bc0b08b29d6bc33c56a865add0e24b95324332` (`feat: add bounded in-memory Obsidian projection`)
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有真实迁移、V2 业务写入或发布。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。
