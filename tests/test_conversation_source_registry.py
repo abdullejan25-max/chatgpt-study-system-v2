@@ -124,6 +124,38 @@ def test_registry_round_trips_and_replaces_by_source_id(tmp_path: Path) -> None:
     assert reopened.list_sources() == (updated, second)
 
 
+def test_jsonl_source_round_trips_without_inventing_conversation_counts(tmp_path: Path) -> None:
+    registry = ConversationSourceRegistry(tmp_path / "private" / "sources.sqlite3")
+    source = _record(
+        source_system="codex",
+        source_type="local_history",
+        acquisition_method="bounded_local_inventory",
+        export_status="available",
+        import_status="blocked",
+        raw_format="jsonl",
+        conversation_count=None,
+        message_count=None,
+        unresolved_count=82,
+        source_hash="a" * 64,
+        manifest_hash="b" * 64,
+        private_locator="path:" + str((tmp_path / "private" / "snapshot").resolve()),
+    )
+    registry.upsert(source)
+
+    reopened = ConversationSourceRegistry(registry.path)
+    restored = reopened.list_sources()[0]
+    summary = reopened.public_summary()
+
+    assert restored == source
+    assert restored.raw_format == "jsonl"
+    assert restored.conversation_count is None
+    assert restored.message_count is None
+    assert summary["conversation_count_known_sources"] == 0
+    assert summary["message_count_known_sources"] == 0
+    assert "jsonl" not in repr(summary)
+    assert "a" * 64 not in repr(summary)
+
+
 def test_registry_rejects_repository_path(tmp_path: Path) -> None:
     repository_root = Path(__file__).resolve().parents[1]
     with pytest.raises(ValueError, match="Invalid private conversation registry"):

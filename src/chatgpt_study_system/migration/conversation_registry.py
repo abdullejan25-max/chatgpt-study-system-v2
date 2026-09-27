@@ -37,7 +37,7 @@ _EXPORT_STATUSES = frozenset({
 _IMPORT_STATUSES = frozenset({
     "not_started", "blocked", "archive_only", "normalized", "imported", "partial", "not_applicable",
 })
-_RAW_FORMATS = frozenset({"json", "html", "markdown", "sqlite", "zip", "plain_text", "unknown", "none"})
+_RAW_FORMATS = frozenset({"json", "jsonl", "html", "markdown", "sqlite", "zip", "plain_text", "unknown", "none"})
 _COVERAGE_NOTES = frozenset({
     "official_export_pending",
     "official_verification_required",

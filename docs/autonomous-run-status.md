@@ -19,7 +19,7 @@
 - 用只读主机盘点发现 Obsidian、WorkBuddy、Hermes 已安装；安装事实不代表聊天数据可访问或 MCP 集成通过。
 - 官方 Google Takeout 的 Gemini Apps 导出已完成；详情页显示 47.7 MB，下载截止时间为 2026-10-04 16:06。下载跳转到 Google 账号验证/reCAPTCHA；没有尝试求解或输入凭据，归档未落盘。私有 registry 状态为 `WAITING_FOR_USER`，conversation/message 数仍未知。
 - 根据 Hermes 官方 Sessions 文档定位 `HERMES_HOME/state.db`；仅对 DB+WAL 私有临时快照做 SQLite schema / `quick_check` 与表行数查询，确认 **27 sessions、5,666 message rows**，未查询会话/消息文本、title、用户 ID 或时间。私有 registry 保存 snapshot manifest hash 与 locator；临时副本已清理，V2 没有写入。
-- 在明确的 Codex sessions 数据目录仅盘点文件元数据：70 个 `.jsonl` 候选文件，合计约 307 MB；没有打开文件或推断会话/消息数。私有 registry 将 70 个候选文件记为未解析 source items，conversation/message counts 仍未知。
+- Codex sessions 目录的最新元数据盘点及字节快照复验为 82 个 `.jsonl` 候选文件、322,967,757 bytes；没有解析文件内容或推断会话/消息数。之前 checkpoint 的 70 个文件、306,937,852 bytes 与本次差异未解释。私有 registry 已记录 `raw_format=jsonl`、82 个 unresolved source items 及私有摘要；conversation/message counts 仍未知。
 - 新增显式 `projection` capability 与只读 `projection_snapshot` MCP/Gateway 接口。History 与 Wrong Answer 分别使用独立 SQLite 高水位 token；支持来源/记录分页、每域 10,000 条与 32 MiB 上限、固定错误、逻辑 URI 校验和 provenance 分类字段白名单。普通 `read` 不显示也不能调用该工具。没有访问任何真实 History/Wrong Answer 数据库。
 - 新增 projection collector：按独立 store 水位完整读取所有来源及记录页，核对来源数、来源记录数与 domain 总数，检测重复/不前进 cursor，并且只在完整核对后返回 renderer snapshot。没有跨 store 原子性保证。
 - 合成验证：projection/collector/writer suite **36 passed, 1 skipped**；全量测试 **433 passed, 8 skipped**。端到端覆盖 Gateway collection → renderer → manifest writer，并验证读取不新增 DB audit。流水线测试发现嵌套完整 SHA 路径在 Windows 临时根下超长；现已改为单一组合身份 SHA-256 路径。
@@ -35,10 +35,10 @@
 | Gemini | 官方导出已完成，详情页为 47.7 MB，截止 2026-10-04 16:06；下载跳转到 Google 账号验证/reCAPTCHA。没有输入凭据或解决挑战，归档未本地下载或检查。`WAITING_FOR_USER: GEMINI_EXPORT_VERIFICATION_DOWNLOAD` |
 | Legacy Markdown | 既有 55 项保持 archive-only；文件数不等于已验证的 conversation/message 数。 |
 | Hermes | 官方文档确认会话存入 `state.db`；当前配置位置的副本 integrity 为 `ok`，27 sessions、5,666 message rows。仅查 SQLite 结构、完整性与行数，没有查正文或时间。History target 未配置，仍 `BLOCKED`，全部 message rows 未导入。 |
-| Codex | 已发现 70 个 `.jsonl` 候选文件（不是已验证的 conversation 数）；没有读取内容，conversation/message counts 与 role、边界、身份仍未知，导入未开始。 |
+| Codex | 最新元数据盘点和已复验的私有字节快照包含 82 个 `.jsonl` 候选文件、322,967,757 bytes；此前记录的 70 个文件、306,937,852 bytes 差异未解释。JSONL 未解析，候选文件数不是 conversation 数；conversation/message counts 与 role、边界、身份仍未知，导入未开始。 |
 | WorkBuddy | 安装元数据报告版本 5.6.2；本地聊天存储和可访问的原始导出仍未验证。官方 [Conversation Memory 文档](https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Memory)说明记忆是从对话提取的摘要；[FAQ](https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/FQA)说诊断日志可能含对话记录；[跨设备任务文档](https://www.workbuddy.ai/document/cross-device-tasks)描述已授权连接设备可查看桌面任务对话历史。这只确认了文档所述的应用内查看路径，没有确认原始导出或本地存储格式。 |
 
-History 仍未配置，当前 capability 仅为 `read`。新增的私有 raw ZIP ingest 组件只用合成归档验证：精确保留、资源上限、重复校验和中断恢复；没有真实归档落盘。真实来源的 raw archive integrity、规范化、跨源去重、附件处理、History 导入、read-back 和 retrieval E2E 仍未完成。未知 role、author、时间、thread、message boundary、分支或附件关系保持 unknown。
+History 仍未配置，当前 capability 仅为 `read`。官方 ChatGPT/Gemini ZIP ingest 组件只用合成归档验证；没有真实官方 ZIP 导出落盘。Codex 原始 JSONL 候选已做私有字节快照，但未解析；真实会话 identity、规范化、跨源去重、附件处理、History 导入、read-back 和 retrieval E2E 仍未完成。未知 role、author、时间、thread、message boundary、分支或附件关系保持 unknown。
 
 ## P12 状态
 
@@ -60,7 +60,7 @@ History 仍未配置，当前 capability 仅为 `read`。新增的私有 raw ZIP
 ## 独立工程前置
 
 - **Projection snapshot consistency**：Gateway API 与 collector 已实现，并通过合成数据核对 per-source/per-domain counts。History 与 Wrong Answer 位于不同 SQLite 数据库，不能声称存在跨库原子快照；真实私有配置未启用 projection，因此个人快照与 Vault Gate 仍需等待用户配置/授权及 GUI。
-- **Private raw archive ingest**：新增仅接受 ChatGPT/Gemini ZIP 的仓库外私有存储组件；限制最大 512 MiB、50,000 entries、2 GiB 展开量和 200:1 单成员压缩比，不解压。重复 ingest 校验既有归档与 manifest；ZIP 已发布但 manifest 缺失时可在重试中恢复。合成定向测试为 **10 passed**，独立复审未发现阻断项。无真实归档、无解析、无 History 写入；P11 仍为 BLOCKED。
+- **Private raw snapshots**：ChatGPT/Gemini ZIP ingest 仍只通过合成归档验证，限制最大 512 MiB、50,000 entries、2 GiB 展开量和 200:1 单成员压缩比。新增 Codex JSONL-only 私有快照器，执行有界枚举、精确字节复制、清单/逐文件 SHA-256 复验和幂等校验；Windows 长路径复验已覆盖。Codex 快照有 82 个 unresolved 文件、322,967,757 bytes，登记器 conversation/message counts 保持未知；内容未解析，History 无写入。P11 仍为 BLOCKED。
 
 ## 发布与隐私
 
