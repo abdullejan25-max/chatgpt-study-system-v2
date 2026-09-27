@@ -35,6 +35,8 @@
 
 旧开发 history 的扫描曾发现历史开发提交包含机器账户安装路径；那些提交只保留在本地开发仓库，不会成为 public `main` 的祖先。发布采用单独的 release candidate Git repository，并从最终候选树创建无父提交的 root commit；不 rewrite、force-push 或上传旧 branches。public history 和所有 object 的复扫结果在下面的最终验证记录中更新。
 
+当前独立 release candidate 的 public `main` root 为 `cc2ee4e9477a266a047d803822ba82de86e81024`，该提交没有 parent。candidate repository 没有 remote；GitHub repository 与 push 均尚未发生。
+
 ## Security regression review
 
 只读审计与合成回归未发现 path traversal、capability bypass、source refs、idempotency、transaction、provenance 或 versioning 的核心缺陷。图片 MIME 按文件签名判断，不保证完全可解码。当前 Windows 权限限制了 inbox symlink / junction 测试；对应 skip 会记录在测试结果中。
@@ -47,7 +49,9 @@
 - clean candidate 全量测试：**307 passed, 6 skipped**。其中默认无 PyMuPDF 导致 OCR 专项用例跳过；Codex Host 与真实 QMD 是 opt-in；本机无法创建 NTFS junction / symlink。
 - clean candidate 的 wheel 与 sdist 均构建成功；两种发行物都含 Apache-2.0 SPDX metadata 与 LICENSE，且 PyMuPDF 仅通过 `extra == 'pdf-ocr'` 声明。
 - 使用生成配置启动实际 stdio server，MCP initialize 与 `health_report` 均通过；`ok: true`、合成 Study root 可读，History 为 `not_configured`，QMD 不可发现符合无 QMD 私有运行时的合成配置。
-- `uv lock --check`、候选树 Git 初始化后的全量测试和发行物检查通过；最终 public object scan 在建立独立 root commit 后记录。
+- 独立 public `main` 的 root commit 无 parent，旧开发 commit `c413b4375de807e1ff2f39c6e3b3b1b402fd9940` 不在 release candidate 的 Git objects 中；候选工作树与最终开发 HEAD 的 85 个文件 blob 一致。
+- public tree 和所有 Git objects 的隐私复扫通过：无凭证、真实账户路径、数据库/教材/图片/日志扩展名、本机配置或旧开发祖先。路径脱敏测试中的用户目录样例均为合成夹具。最终 clean clone 的对象数据库与 public refs 一致，并通过 `git fsck` 检查。
+- `uv lock --check`、候选树 Git 初始化后的全量测试和发行物检查通过。
 - 真实 Codex Desktop clean-candidate GUI 验证：待项目所有者完成；协议 smoke 不能替代此项。
 
 ## Release Gate
@@ -57,7 +61,7 @@
 - [x] 开发 checkout 当前完整测试通过。
 - [x] clean release candidate 默认安装确认没有 PyMuPDF；`pdf-ocr` optional dependency 可解析。
 - [x] clean release candidate 全量测试、package metadata/build 和 MCP initialize + `health_report` smoke 通过。
-- [ ] public `main` 是独立无父 root，且 public tree / objects / history 复扫通过。
+- [x] public `main` 是独立无父 root，且 public tree / objects / history 复扫通过。
 - [ ] 对该 clean release candidate 完成 Codex Desktop 新对话验证。
 - [ ] Desktop gate 通过前不创建 GitHub repository、不添加 remote、不 push。
 - [ ] Desktop gate 通过且发布后，fresh clone from GitHub 的最小复验。
