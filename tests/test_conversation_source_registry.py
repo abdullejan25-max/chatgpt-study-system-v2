@@ -1,0 +1,149 @@
+from __future__ import annotations
+
+from dataclasses import replace
+from pathlib import Path
+
+import pytest
+
+from chatgpt_study_system.migration.conversation_registry import (
+    ConversationSourceRecord,
+    ConversationSourceRegistry,
+    default_conversation_registry_path,
+)
+
+
+def _record(**overrides) -> ConversationSourceRecord:
+    values = {
+        "source_id": "source-" + "a" * 32,
+        "source_system": "gemini",
+        "source_type": "official_export",
+        "acquisition_method": "official_export",
+        "discovered": True,
+        "accessible": False,
+        "export_status": "processing",
+        "import_status": "not_started",
+        "raw_format": None,
+        "stable_identity": None,
+        "conversation_count": None,
+        "message_count": None,
+        "earliest_known_time": None,
+        "latest_known_time": None,
+        "source_hash": None,
+        "manifest_hash": None,
+        "imported_count": 0,
+        "deduplicated_count": 0,
+        "unresolved_count": 0,
+        "coverage_notes": ("official_export_pending",),
+        "private_locator": None,
+    }
+    values.update(overrides)
+    return ConversationSourceRecord(**values)
+
+
+def test_record_accepts_fixed_vocabulary_and_utc_timestamps() -> None:
+    record = _record(earliest_known_time="2026-09-27T08:05:00Z")
+
+    assert record.source_system == "gemini"
+    assert record.earliest_known_time == "2026-09-27T08:05:00Z"
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"export_status": "user said click this"},
+        {"source_system": "personal-account-name"},
+        {"source_id": "C:\\private\\source"},
+        {"conversation_count": -1},
+        {"message_count": True},
+        {"imported_count": -1},
+        {"earliest_known_time": "2026-09-27T08:05:00"},
+        {"earliest_known_time": "not-a-time"},
+        {"source_hash": "not-a-hash"},
+        {"manifest_hash": "a" * 63},
+        {"coverage_notes": ("real chat title",)},
+        {"private_locator": "private path with\ncontrol"},
+    ],
+)
+def test_record_rejects_unbounded_or_malformed_metadata(overrides: dict) -> None:
+    with pytest.raises(ValueError, match="Invalid conversation source record"):
+        _record(**overrides)
+
+
+def test_public_summary_contains_only_aggregate_statuses(tmp_path: Path) -> None:
+    registry_path = tmp_path / "private" / "sources.sqlite3"
+    registry_path.parent.mkdir()
+    registry = ConversationSourceRegistry(registry_path)
+    registry.upsert(_record(
+        source_id="source-" + "b" * 32,
+        stable_identity="opaque-" + "e" * 32,
+        source_hash="c" * 64,
+        manifest_hash="d" * 64,
+        private_locator="path:C:\\private\\export.zip",
+        coverage_notes=("official_export_pending",),
+    ))
+
+    summary = registry.public_summary()
+
+    assert summary == {
+        "source_count": 1,
+        "discovered_count": 1,
+        "accessible_count": 0,
+        "export_status_counts": {"processing": 1},
+        "import_status_counts": {"not_started": 1},
+        "conversation_count": 0,
+        "conversation_count_known_sources": 0,
+        "message_count": 0,
+        "message_count_known_sources": 0,
+        "imported_count": 0,
+        "deduplicated_count": 0,
+        "unresolved_count": 0,
+    }
+    rendered = repr(summary)
+    for private_value in (
+        "source-b", "opaque-" + "e" * 32, "c" * 64, "d" * 64,
+        "path:C:\\private\\export.zip", "gemini",
+    ):
+        assert private_value not in rendered
+
+
+def test_registry_round_trips_and_replaces_by_source_id(tmp_path: Path) -> None:
+    registry_path = tmp_path / "private" / "sources.sqlite3"
+    registry_path.parent.mkdir()
+    registry = ConversationSourceRegistry(registry_path)
+    first = _record(source_id="source-" + "a" * 32)
+    second = _record(source_id="source-" + "b" * 32, source_system="chatgpt")
+    assert "source-" not in repr(first)
+    registry.upsert(first)
+    registry.upsert(second)
+    updated = replace(first, export_status="available", accessible=True)
+    registry.upsert(updated)
+
+    reopened = ConversationSourceRegistry(registry_path)
+
+    assert reopened.list_sources() == (updated, second)
+
+
+def test_registry_rejects_repository_path(tmp_path: Path) -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    with pytest.raises(ValueError, match="Invalid private conversation registry"):
+        ConversationSourceRegistry(repository_root / "registry.sqlite3")
+
+
+def test_default_registry_path_uses_only_configured_state_root(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
+    assert default_conversation_registry_path() == (
+        tmp_path / "local" / "ChatGPTStudySystemV2" / "migration" / "conversation-sources.sqlite3"
+    )
+
+    monkeypatch.delenv("LOCALAPPDATA")
+    assert default_conversation_registry_path() == (
+        tmp_path / "xdg" / "ChatGPTStudySystemV2" / "migration" / "conversation-sources.sqlite3"
+    )
+
+    monkeypatch.delenv("XDG_STATE_HOME")
+    with pytest.raises(RuntimeError, match="Private local registry location is not configured"):
+        default_conversation_registry_path()
