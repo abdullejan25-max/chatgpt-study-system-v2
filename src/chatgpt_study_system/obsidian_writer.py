@@ -7,6 +7,8 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import secrets
+import shutil
 import tempfile
 
 
@@ -20,7 +22,9 @@ _WINDOWS_RESERVED = re.compile(r"(?i)(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..
 class ProjectionWriteError(ValueError):
     """Fixed-message error that does not expose file paths or content."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, recovery_required: bool = False, cleanup_required: bool = False) -> None:
+        self.recovery_required = recovery_required
+        self.cleanup_required = cleanup_required
         super().__init__("Invalid projection output")
 
 
@@ -88,6 +92,43 @@ def _reject_symlink_components(path: Path, stop: Path) -> None:
 
 def _replace_file(source: Path, destination: Path) -> None:
     os.replace(source, destination)
+
+
+def _restore_backup(backup: Path, destination: Path) -> None:
+    staged_restore = destination.parent / f".{destination.name}.{secrets.token_hex(16)}.restore"
+    os.link(backup, staged_restore)
+    try:
+        os.replace(staged_restore, destination)
+    finally:
+        staged_restore.unlink(missing_ok=True)
+
+
+def _cleanup_backup_files(backup_root: Path, backups: list[Path]) -> bool:
+    recovery_file = backup_root / "recovery.json"
+    try:
+        record = json.loads(recovery_file.read_bytes())
+        record["action"] = "cleanup_only"
+        _atomic_write(recovery_file, json.dumps(record, sort_keys=True).encode("utf-8"))
+        for backup in backups:
+            backup.unlink(missing_ok=True)
+        recovery_file.unlink()
+        backup_root.rmdir()
+        return True
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
+def _repository_root() -> Path:
+    for start in (Path.cwd().resolve(), Path(__file__).resolve().parent):
+        for candidate in (start, *start.parents):
+            if (candidate / ".git").exists():
+                return candidate
+    return Path(__file__).resolve().parents[2]
+
+
+def _set_private_directory_mode(path: Path) -> None:
+    if os.name != "nt":
+        os.chmod(path, 0o700)
 
 
 def _atomic_write(destination: Path, content: bytes) -> None:
@@ -165,6 +206,11 @@ def _write_projection(files: Mapping[str, str], projection_dir: Path) -> None:
     if not parent.is_dir():
         raise ProjectionWriteError
     _reject_symlink_components(root, Path(root.anchor))
+    repository = _repository_root().resolve(strict=False)
+    resolved_root = root.resolve(strict=False)
+    if (resolved_root == repository or resolved_root.is_relative_to(repository)
+            or repository.is_relative_to(resolved_root)):
+        raise ProjectionWriteError
     root_created = False
     if root.exists():
         if _is_reparse_point(root) or not root.is_dir():
@@ -209,38 +255,127 @@ def _write_projection(files: Mapping[str, str], projection_dir: Path) -> None:
 
     created_paths: list[Path] = []
     created_dirs: list[Path] = []
+    backup_root: Path | None = None
     try:
-        for relative in sorted(encoded):
-            target = _ensure_safe_parent(root, relative, create=True, created_dirs=created_dirs)
-            if relative not in old_set:
-                created_paths.append(target)
-            _atomic_write(target, encoded[relative])
-        for relative in sorted(old_set - set(encoded)):
-            target = root.joinpath(*relative.split("/"))
-            if _is_reparse_point(target):
-                raise ProjectionWriteError
-            if target.exists():
-                if not target.is_file():
-                    raise ProjectionWriteError
-                target.unlink()
-        _atomic_write(manifest_path, manifest_bytes)
-    except (OSError, ProjectionWriteError):
-        for path in reversed(created_paths):
+        backup_root = Path(tempfile.mkdtemp(dir=parent, prefix=".v2projection-rollback-"))
+        _set_private_directory_mode(backup_root)
+    except OSError:
+        cleanup_required = False
+        if backup_root is not None and backup_root.exists():
             try:
-                path.unlink(missing_ok=True)
+                shutil.rmtree(backup_root)
             except OSError:
-                pass
-        for directory in reversed(created_dirs):
-            try:
-                directory.rmdir()
-            except OSError:
-                pass
+                cleanup_required = True
         if root_created:
             try:
                 root.rmdir()
             except OSError:
-                pass
-        raise ProjectionWriteError from None
+                cleanup_required = True
+        raise ProjectionWriteError(cleanup_required=cleanup_required) from None
+
+    try:
+        backups: dict[str, Path] = {}
+        for index, relative in enumerate(old_files):
+            target = root.joinpath(*relative.split("/"))
+            if target.exists():
+                backup = backup_root / f"owned-{index}"
+                os.link(target, backup)
+                backups[relative] = backup
+        manifest_backup: Path | None = None
+        if manifest_path.exists():
+            manifest_backup = backup_root / "manifest"
+            os.link(manifest_path, manifest_backup)
+        recovery_record = {
+            "action": "restore_previous",
+            "files": {backup.name: relative for relative, backup in backups.items()},
+            "manifest": manifest_backup.name if manifest_backup is not None else None,
+            "schema_version": 1,
+        }
+        recovery_file = backup_root / "recovery.json"
+        recovery_bytes = json.dumps(recovery_record, sort_keys=True).encode("utf-8")
+        with recovery_file.open("xb") as stream:
+            if os.name != "nt":
+                os.chmod(recovery_file, 0o600)
+            stream.write(recovery_bytes)
+            stream.flush()
+            os.fsync(stream.fileno())
+
+        try:
+            for relative in sorted(encoded):
+                target = _ensure_safe_parent(root, relative, create=True, created_dirs=created_dirs)
+                if relative not in old_set or not target.exists():
+                    created_paths.append(target)
+                _atomic_write(target, encoded[relative])
+            for relative in sorted(old_set - set(encoded)):
+                target = root.joinpath(*relative.split("/"))
+                if _is_reparse_point(target):
+                    raise ProjectionWriteError
+                if target.exists():
+                    if not target.is_file():
+                        raise ProjectionWriteError
+                    target.unlink()
+            _atomic_write(manifest_path, manifest_bytes)
+        except (OSError, ProjectionWriteError):
+            recovery_required = False
+            for path in reversed(created_paths):
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    recovery_required = True
+            for relative, backup in backups.items():
+                if backup.exists():
+                    target = root.joinpath(*relative.split("/"))
+                    try:
+                        _restore_backup(backup, target)
+                    except OSError:
+                        recovery_required = True
+            if manifest_backup is not None and manifest_backup.exists():
+                try:
+                    _restore_backup(manifest_backup, manifest_path)
+                except OSError:
+                    recovery_required = True
+            elif manifest_path.exists():
+                try:
+                    manifest_path.unlink()
+                except OSError:
+                    recovery_required = True
+            for directory in reversed(created_dirs):
+                try:
+                    directory.rmdir()
+                except OSError:
+                    recovery_required = True
+            if root_created and not recovery_required:
+                try:
+                    root.rmdir()
+                except OSError:
+                    recovery_required = True
+            if not recovery_required:
+                cleanup_ok = _cleanup_backup_files(
+                    backup_root, [*backups.values(), *([manifest_backup] if manifest_backup else [])],
+                )
+                backup_root = None if cleanup_ok else backup_root
+                raise ProjectionWriteError(cleanup_required=not cleanup_ok) from None
+            raise ProjectionWriteError(recovery_required=True) from None
+    except (OSError, ProjectionWriteError) as error:
+        if isinstance(error, ProjectionWriteError) \
+                and (error.recovery_required or error.cleanup_required):
+            raise
+        cleanup_required = False
+        if backup_root is not None and backup_root.exists():
+            try:
+                shutil.rmtree(backup_root)
+            except OSError:
+                cleanup_required = True
+        if root_created:
+            try:
+                root.rmdir()
+            except OSError:
+                cleanup_required = True
+        raise ProjectionWriteError(cleanup_required=cleanup_required) from None
+    else:
+        if not _cleanup_backup_files(
+                backup_root, [*backups.values(), *([manifest_backup] if manifest_backup else [])]):
+            raise ProjectionWriteError(cleanup_required=True) from None
 
 
 def write_projection(files: Mapping[str, str], projection_dir: Path) -> None:

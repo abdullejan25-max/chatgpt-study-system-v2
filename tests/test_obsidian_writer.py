@@ -55,6 +55,26 @@ def test_unsafe_or_reserved_output_paths_fail_before_creating_directory(tmp_path
     assert not root.exists()
 
 
+def test_projection_inside_repository_is_rejected_before_writing(tmp_path: Path, monkeypatch) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    root = repository / "V2Projection"
+    monkeypatch.setattr(writer_module, "_repository_root", lambda: repository, raising=False)
+
+    with pytest.raises(ProjectionWriteError, match="Invalid projection output"):
+        write_projection({"History/index.md": "synthetic private history\n"}, root)
+
+    assert not root.exists()
+
+
+def test_repository_root_discovery_uses_active_checkout(tmp_path: Path, monkeypatch) -> None:
+    repository = tmp_path / "active-checkout"
+    (repository / ".git").mkdir(parents=True)
+    monkeypatch.chdir(repository)
+
+    assert writer_module._repository_root() == repository.resolve()
+
+
 def test_nonempty_directory_requires_an_existing_valid_manifest(tmp_path: Path) -> None:
     root = tmp_path / "V2Projection"
     root.mkdir()
@@ -118,7 +138,7 @@ def test_manifest_is_published_last_and_old_manifest_survives_failure(tmp_path: 
     root = tmp_path / "V2Projection"
     old_files = {"Dashboard.md": "old content\n", "Legacy/old.md": "retired\n"}
     write_projection(old_files, root)
-    old_manifest = (root / ".projection-manifest.json").read_bytes()
+    old_tree = _read_tree(root)
     original_replace = writer_module._replace_file
 
     def fail_manifest(source: Path, destination: Path) -> None:
@@ -130,10 +150,148 @@ def test_manifest_is_published_last_and_old_manifest_survives_failure(tmp_path: 
     with pytest.raises(ProjectionWriteError, match="Invalid projection output"):
         write_projection({"Dashboard.md": "new content\n", "History/index.md": "new\n"}, root)
 
-    assert (root / ".projection-manifest.json").read_bytes() == old_manifest
-    assert not (root / "History/index.md").exists()
-    assert not (root / "Legacy/old.md").exists()
+    assert _read_tree(root) == old_tree
 
     monkeypatch.setattr(writer_module, "_replace_file", original_replace)
     write_projection({"Dashboard.md": "new content\n", "History/index.md": "new\n"}, root)
-    assert _read_tree(root)[".projection-manifest.json"] != old_manifest
+    assert _read_tree(root)[".projection-manifest.json"] != old_tree[".projection-manifest.json"]
+
+
+def test_failed_rebuild_removes_file_missing_from_prior_manifest(tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "V2Projection"
+    write_projection({"Dashboard.md": "old content\n"}, root)
+    (root / "Dashboard.md").unlink()
+    previous_tree = _read_tree(root)
+    original_replace = writer_module._replace_file
+
+    def fail_manifest(source: Path, destination: Path) -> None:
+        if destination.name == ".projection-manifest.json":
+            raise OSError("simulated manifest publication failure")
+        original_replace(source, destination)
+
+    monkeypatch.setattr(writer_module, "_replace_file", fail_manifest)
+
+    with pytest.raises(ProjectionWriteError, match="Invalid projection output"):
+        write_projection({"Dashboard.md": "new content\n"}, root)
+
+    assert _read_tree(root) == previous_tree
+
+
+def test_failed_rollback_retains_backup_and_marks_recovery_required(
+        tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "V2Projection"
+    write_projection({"Dashboard.md": "old content\n", "History/old.md": "old history\n"}, root)
+    original_replace_file = writer_module._replace_file
+    original_os_replace = writer_module.os.replace
+
+    def fail_manifest(source: Path, destination: Path) -> None:
+        if destination.name == ".projection-manifest.json":
+            raise OSError("simulated manifest publication failure")
+        original_replace_file(source, destination)
+
+    def fail_dashboard_restore(source, destination) -> None:
+        if source.name.startswith(".Dashboard.md.") and Path(destination).name == "Dashboard.md":
+            raise OSError("simulated rollback failure")
+        original_os_replace(source, destination)
+
+    monkeypatch.setattr(writer_module, "_replace_file", fail_manifest)
+    monkeypatch.setattr(writer_module.os, "replace", fail_dashboard_restore)
+
+    with pytest.raises(ProjectionWriteError, match="Invalid projection output") as error:
+        write_projection({"Dashboard.md": "new content\n", "History/old.md": "new history\n"}, root)
+
+    assert error.value.recovery_required is True
+    retained = list(tmp_path.glob(".v2projection-rollback-*"))
+    assert len(retained) == 1
+    recovery = json.loads((retained[0] / "recovery.json").read_bytes())
+    assert recovery["files"] == {"owned-0": "Dashboard.md", "owned-1": "History/old.md"}
+    assert recovery["manifest"] == "manifest"
+    assert (retained[0] / "owned-0").read_bytes() == b"old content\n"
+    assert (retained[0] / "owned-1").read_bytes() == b"old history\n"
+
+
+def test_backup_setup_failure_removes_new_projection_directory(tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "V2Projection"
+
+    def fail_backup_directory(*args, **kwargs):
+        raise OSError("simulated backup setup failure")
+
+    monkeypatch.setattr(writer_module.tempfile, "mkdtemp", fail_backup_directory)
+
+    with pytest.raises(ProjectionWriteError, match="Invalid projection output"):
+        write_projection({"Dashboard.md": "synthetic\n"}, root)
+
+    assert not root.exists()
+
+
+def test_backup_cleanup_failure_is_reported_as_cleanup_not_recovery(
+    tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "V2Projection"
+    write_projection({"Dashboard.md": "old content\n"}, root)
+    original_unlink = Path.unlink
+
+    def fail_backup_unlink(path: Path, missing_ok: bool = False) -> None:
+        if path.name == "owned-0":
+            raise OSError("simulated backup cleanup failure")
+        original_unlink(path, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", fail_backup_unlink)
+
+    with pytest.raises(ProjectionWriteError, match="Invalid projection output") as error:
+        write_projection({"Dashboard.md": "new content\n"}, root)
+
+    assert error.value.cleanup_required is True
+    assert error.value.recovery_required is False
+    assert (root / "Dashboard.md").read_text(encoding="utf-8") == "new content\n"
+    retained = list(tmp_path.glob(".v2projection-rollback-*"))
+    assert len(retained) == 1
+    assert json.loads((retained[0] / "recovery.json").read_bytes())["action"] == "cleanup_only"
+
+
+def test_failed_empty_root_cleanup_is_reported(tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "V2Projection"
+
+    def fail_backup_directory(*args, **kwargs):
+        raise OSError("simulated backup setup failure")
+
+    original_rmdir = Path.rmdir
+
+    def fail_root_rmdir(path: Path) -> None:
+        if path == root:
+            raise OSError("simulated root cleanup failure")
+        original_rmdir(path)
+
+    monkeypatch.setattr(writer_module.tempfile, "mkdtemp", fail_backup_directory)
+    monkeypatch.setattr(Path, "rmdir", fail_root_rmdir)
+
+    with pytest.raises(ProjectionWriteError, match="Invalid projection output") as error:
+        write_projection({"Dashboard.md": "synthetic\n"}, root)
+
+    assert error.value.cleanup_required is True
+    assert root.is_dir()
+
+
+def test_backup_permission_setup_failure_cleans_staging_directory(tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "V2Projection"
+    original_mkdtemp = writer_module.tempfile.mkdtemp
+    staging_dirs = []
+
+    def track_mkdtemp(*args, **kwargs):
+        path = original_mkdtemp(*args, **kwargs)
+        staging_dirs.append(Path(path))
+        return path
+
+    def fail_private_mode_setup(path: Path) -> None:
+        raise OSError("simulated private-mode setup failure")
+
+    monkeypatch.setattr(writer_module.tempfile, "mkdtemp", track_mkdtemp)
+    monkeypatch.setattr(writer_module, "_set_private_directory_mode", fail_private_mode_setup,
+                        raising=False)
+
+    with pytest.raises(ProjectionWriteError, match="Invalid projection output") as error:
+        write_projection({"Dashboard.md": "synthetic\n"}, root)
+
+    assert error.value.cleanup_required is False
+    assert not root.exists()
+    assert len(staging_dirs) == 1
+    assert not staging_dirs[0].exists()
