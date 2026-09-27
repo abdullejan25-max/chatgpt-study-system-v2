@@ -60,7 +60,7 @@
 - [x] Filter it from tool listings unless `projection` or `admin` is enabled and enforce capability again at call time.
 - [x] Test schema limits, invalid arguments, `read` denial, and synthetic paging through the MCP transport.
 - [x] Run focused tests, full suite, and `git diff --check`; update public/private checkpoints with exact evidence.
-- [ ] Commit the implementation and checkpoint separately.
+- [x] Commit the implementation and checkpoint separately.
 
 ## Remaining collector work
 
