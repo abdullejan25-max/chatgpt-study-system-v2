@@ -10,7 +10,7 @@ History, document, asset, and wrong-answer data are private and some MCP tools p
 
 ## Decision
 
-Gateway permissions are explicit capabilities: `read`, `ingest`, `write`, and `admin`. Missing configuration fails closed to `read`. `ingest` is required for asset/document ingestion; `write` is required for wrong-answer source and analysis persistence; `admin` explicitly grants all capabilities. The MCP server advertises only operations enabled by the configured capabilities, and Gateway methods independently enforce authorization.
+Gateway permissions are explicit capabilities: `read`, `ingest`, `write`, `projection`, and `admin`. Missing configuration fails closed to `read`. `ingest` is required for asset/document ingestion; `write` is required for wrong-answer source and analysis persistence; `projection` is a separate opt-in for bounded bulk enumeration and is not implied by `read`; `admin` explicitly grants all capabilities. The MCP server advertises only operations enabled by the configured capabilities, and Gateway methods independently enforce authorization.
 
 All configured local roots and databases are explicit paths. Storage adapters reject symlink and Windows reparse-point components before database or blob access. Persistent mutations append audit metadata (operation, resource type, logical ID, UTC timestamp, outcome) in the same SQLite transaction. Audit rows contain no source text or absolute paths.
 

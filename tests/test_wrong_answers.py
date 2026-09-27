@@ -9,6 +9,7 @@ import sqlite3
 import pytest
 
 from chatgpt_study_system.adapters.documents import DocumentInput, SQLiteDocumentStore
+import chatgpt_study_system.adapters.wrong_answers as wrong_answer_adapter
 from chatgpt_study_system.config import AppConfig
 from chatgpt_study_system.contracts import GatewayError
 from chatgpt_study_system.gateway import Gateway
@@ -50,6 +51,143 @@ def test_source_is_immutable_and_idempotent(tmp_path: Path) -> None:
     changed = gateway.register_wrong_answer_source(**{**data, "student_answer": "1/5"})["source"]
     assert changed["source_id"] != first["source_id"]
     assert gateway.get_wrong_answer_bundle(first["source_id"])["source"] == first
+
+
+def test_projection_snapshot_watermark_paginates_sources_and_analysis_versions(tmp_path: Path) -> None:
+    gateway, doc_uri, _, study_ref = gateway_with_sources(tmp_path)
+    source_a = gateway.register_wrong_answer_source(doc_uri, "Synthetic A", "Answer A")["source"]
+    source_b = gateway.register_wrong_answer_source(doc_uri, "Synthetic B", "Answer B")["source"]
+    gateway.save_wrong_answer_analysis(
+        source_a["source_id"], analysis(), [doc_uri], [study_ref], "projection-analysis-a", 0,
+    )
+    store = gateway._wrong_answers()
+    started = store.projection_snapshot("begin")
+    gateway.register_wrong_answer_source(doc_uri, "Synthetic later", "Answer later")
+    gateway.save_wrong_answer_analysis(
+        source_a["source_id"], analysis(), [doc_uri], [study_ref], "projection-analysis-b", 1,
+    )
+
+    source_page = store.projection_snapshot("sources", snapshot_token=started["snapshot_token"], limit=1)
+    source_tail = store.projection_snapshot(
+        "sources", snapshot_token=started["snapshot_token"],
+        cursor=source_page["next_cursor"], limit=1,
+    )
+    analysis_page = store.projection_snapshot(
+        "records", snapshot_token=started["snapshot_token"], source_id=source_a["source_id"], limit=1,
+    )
+
+    assert started["total_sources"] == 2
+    assert started["total_records"] == 1
+    assert source_page["sources"][0]["source_id"] == source_a["source_id"]
+    assert source_page["sources"][0]["analysis_count"] == 1
+    assert source_tail["sources"][0]["source_id"] == source_b["source_id"]
+    assert source_tail["sources"][0]["analysis_count"] == 0
+    assert [row["version"] for row in analysis_page["analyses"]] == [1]
+    assert analysis_page["has_more"] is False
+
+
+def test_projection_snapshot_rejects_invalid_token_and_source(tmp_path: Path) -> None:
+    gateway, _, _, _ = gateway_with_sources(tmp_path)
+    store = gateway._wrong_answers()
+    with pytest.raises(GatewayError) as invalid_action:
+        store.projection_snapshot("all")
+    assert invalid_action.value.code == "INVALID_ARGUMENT"
+    started = store.projection_snapshot("begin")
+    with pytest.raises(GatewayError) as invalid_token:
+        store.projection_snapshot("sources", snapshot_token="wrong-v1:0:0:extra")
+    assert invalid_token.value.code == "INVALID_ARGUMENT"
+    with pytest.raises(GatewayError) as invalid_source:
+        store.projection_snapshot("records", snapshot_token=started["snapshot_token"], source_id="C:/private")
+    assert invalid_source.value.code == "INVALID_ARGUMENT"
+
+
+def test_projection_snapshot_rejects_noncontinuation_cursor_and_enforces_input_budget(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    gateway, doc_uri, _, study_ref = gateway_with_sources(tmp_path)
+    source = gateway.register_wrong_answer_source(doc_uri, "Synthetic question", "Synthetic answer")["source"]
+    gateway.save_wrong_answer_analysis(
+        source["source_id"], analysis(), [doc_uri], [study_ref], "projection-budget", 0,
+    )
+    store = gateway._wrong_answers()
+    started = store.projection_snapshot("begin")
+    with pytest.raises(GatewayError) as invalid_cursor:
+        store.projection_snapshot("records", snapshot_token=started["snapshot_token"],
+                                  source_id=source["source_id"], cursor=99)
+    assert invalid_cursor.value.code == "INVALID_ARGUMENT"
+
+    monkeypatch.setattr(wrong_answer_adapter, "_PROJECTION_MAX_BYTES", 1)
+    with pytest.raises(GatewayError) as oversized:
+        store.projection_snapshot("begin")
+    assert oversized.value.code == "PAYLOAD_TOO_LARGE"
+
+
+def test_gateway_projection_snapshot_reuses_safe_wrong_answer_serializers(tmp_path: Path) -> None:
+    gateway, doc_uri, _, study_ref = gateway_with_sources(tmp_path)
+    source = gateway.register_wrong_answer_source(
+        doc_uri, "C:\\private\\question.txt", "Synthetic answer",
+    )["source"]
+    supplied_analysis = analysis()
+    supplied_analysis["reasoning"] = "C:\\private\\analysis.txt"
+    gateway.save_wrong_answer_analysis(
+        source["source_id"], supplied_analysis, [doc_uri], [study_ref], "projection-safe-dto", 0,
+    )
+    with sqlite3.connect(gateway.document_store.database_path) as connection:
+        audit_count_before = connection.execute("SELECT COUNT(*) FROM operation_audit").fetchone()[0]
+    gateway.capabilities = frozenset({"projection"})
+
+    started = gateway.projection_snapshot("wrong_answers", "begin")
+    source_page = gateway.projection_snapshot(
+        "wrong_answers", "sources", snapshot_token=started["snapshot_token"],
+    )
+    result_source = source_page["sources"][0]
+    records = gateway.projection_snapshot(
+        "wrong_answers", "records", snapshot_token=started["snapshot_token"],
+        source_id=result_source["source_id"],
+    )
+
+    assert result_source["question_text"] == "[local path redacted]"
+    assert records["analyses"][0]["reasoning"] == "[local path redacted]"
+    with sqlite3.connect(gateway.document_store.database_path) as connection:
+        audit_count_after = connection.execute("SELECT COUNT(*) FROM operation_audit").fetchone()[0]
+    assert audit_count_after == audit_count_before
+
+
+def test_gateway_projection_redacts_provenance_identity_and_rejects_bad_stored_relations(
+        tmp_path: Path) -> None:
+    gateway, doc_uri, _, study_ref = gateway_with_sources(tmp_path)
+    source = gateway.register_wrong_answer_source(doc_uri, "Question", "Answer")['source']
+    gateway.save_wrong_answer_analysis(
+        source["source_id"], analysis(), [doc_uri], [study_ref], "projection-provenance", 0,
+        {"reported_agent": "SyntheticAgent"},
+    )
+    with sqlite3.connect(gateway.document_store.database_path) as connection:
+        connection.execute("DROP TRIGGER write_provenance_no_update")
+        connection.execute(
+            "UPDATE write_provenance SET reported_agent=? WHERE record_type='wrong_answer_analysis'",
+            ("C:\\private\\agent",),
+        )
+    gateway.capabilities = frozenset({"projection"})
+    started = gateway.projection_snapshot("wrong_answers", "begin")
+    result = gateway.projection_snapshot(
+        "wrong_answers", "records", snapshot_token=started["snapshot_token"],
+        source_id=source["source_id"],
+    )
+    provenance = result["analyses"][0]["write_provenance"]
+    assert provenance == {
+        "data_origin": "agent_generated", "actor_type": "external_client",
+        "identity_trust": "reported", "legacy_status": "native",
+    }
+
+    with sqlite3.connect(gateway.document_store.database_path) as connection:
+        connection.execute("DROP TRIGGER wrong_analyses_no_update")
+        connection.execute("UPDATE wrong_analyses SET study_relations='[\"study:../secret\"]'")
+    with pytest.raises(GatewayError) as error:
+        gateway.projection_snapshot(
+            "wrong_answers", "records", snapshot_token=started["snapshot_token"],
+            source_id=source["source_id"],
+        )
+    assert error.value.code == "BACKEND_BAD_OUTPUT"
 
 
 def test_source_evidence_must_have_a_verified_asset_blob(tmp_path: Path) -> None:

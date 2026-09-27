@@ -65,6 +65,113 @@ def test_history_import_persists_source_system_and_one_batch_identity(tmp_path: 
     assert records[0].imported_at == records[1].imported_at
 
 
+def test_projection_snapshot_watermark_paginates_stable_history_sources_and_items(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    store.register_source("synthetic-a", "Synthetic A")
+    first_ids = store.import_items("synthetic-a", [
+        _item("item-a", "chat-a", "Alpha synthetic record", "2026-01-01T00:00:00Z"),
+        _item("item-b", "chat-a", "Beta synthetic record", "2026-01-02T00:00:00Z"),
+    ])
+    store.register_source("synthetic-b", "Synthetic B")
+    started = store.projection_snapshot("begin")
+    store.register_source("synthetic-b", "Synthetic B")
+    store.import_items("synthetic-b", [
+        _item("item-c", "chat-b", "Later synthetic record", "2026-01-03T00:00:00Z"),
+    ])
+
+    source_page = store.projection_snapshot(
+        "sources", snapshot_token=started["snapshot_token"], limit=1,
+    )
+    source_tail = store.projection_snapshot(
+        "sources", snapshot_token=started["snapshot_token"],
+        cursor=source_page["next_cursor"], limit=1,
+    )
+    item_page = store.projection_snapshot(
+        "records", snapshot_token=started["snapshot_token"],
+        source_id="synthetic-a", limit=1,
+    )
+    item_tail = store.projection_snapshot(
+        "records", snapshot_token=started["snapshot_token"],
+        source_id="synthetic-a", cursor=item_page["next_cursor"], limit=1,
+    )
+
+    assert started["total_sources"] == 2
+    assert started["total_records"] == 2
+    assert started["stored_payload_bytes"] == len("Alpha synthetic recordBeta synthetic record".encode())
+    assert source_page["sources"] == [{"source_id": "synthetic-a", "label": "Synthetic A", "item_count": 2}]
+    assert source_tail["sources"] == [{"source_id": "synthetic-b", "label": "Synthetic B", "item_count": 0}]
+    assert item_page["items"][0].item_id == first_ids[0]
+    assert item_page["has_more"] is True
+    assert item_tail["items"][0].item_id == first_ids[1]
+    assert item_tail["has_more"] is False
+
+
+def test_projection_snapshot_rejects_bad_tokens_and_page_bounds(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    with pytest.raises(GatewayError) as invalid_action:
+        store.projection_snapshot("all")
+    assert invalid_action.value.code == "INVALID_ARGUMENT"
+    with pytest.raises(GatewayError) as invalid_token:
+        store.projection_snapshot("sources", snapshot_token="history-v1:0:0:extra")
+    assert invalid_token.value.code == "INVALID_ARGUMENT"
+    with pytest.raises(GatewayError) as unavailable:
+        store.projection_snapshot("begin")
+    assert unavailable.value.code == "HISTORY_UNAVAILABLE"
+    assert not store.database_path.exists()
+    store.register_source("synthetic", "Synthetic")
+    started = store.projection_snapshot("begin")
+    with pytest.raises(GatewayError) as invalid_cursor:
+        store.projection_snapshot("sources", snapshot_token=started["snapshot_token"], cursor=-1)
+    assert invalid_cursor.value.code == "INVALID_ARGUMENT"
+
+
+def test_projection_snapshot_rejects_noncontinuation_cursor_and_enforces_input_budget(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    store = _store(tmp_path)
+    store.register_source("synthetic", "Synthetic")
+    store.import_items("synthetic", [
+        _item("item-a", "chat-a", "Synthetic content", "2026-01-01T00:00:00Z"),
+    ])
+    started = store.projection_snapshot("begin")
+    with pytest.raises(GatewayError) as invalid_cursor:
+        store.projection_snapshot("records", snapshot_token=started["snapshot_token"],
+                                  source_id="synthetic", cursor=99)
+    assert invalid_cursor.value.code == "INVALID_ARGUMENT"
+
+    monkeypatch.setattr(history_adapter, "_PROJECTION_MAX_BYTES", 1)
+    with pytest.raises(GatewayError) as oversized:
+        store.projection_snapshot("begin")
+    assert oversized.value.code == "PAYLOAD_TOO_LARGE"
+
+
+def test_gateway_projection_snapshot_uses_safe_history_dto_serialization(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    store.register_source("synthetic", "Synthetic")
+    store.import_items("synthetic", [
+        _item("item-a", "chat-a", "C:\\private\\history.txt", "2026-01-01T00:00:00Z"),
+    ])
+    gateway = Gateway(AppConfig("0.1.0", tmp_path), None, history_backend=store,
+                      capabilities=frozenset({"projection"}), qmd_discoverable=lambda: False)
+    with sqlite3.connect(store.database_path) as connection:
+        audit_count_before = connection.execute("SELECT COUNT(*) FROM operation_audit").fetchone()[0]
+
+    started = gateway.projection_snapshot("history", "begin")
+    source_page = gateway.projection_snapshot(
+        "history", "sources", snapshot_token=started["snapshot_token"],
+    )
+    source_id = source_page["sources"][0]["source_id"]
+    records = gateway.projection_snapshot(
+        "history", "records", snapshot_token=started["snapshot_token"], source_id=source_id,
+    )
+
+    assert records["items"][0]["content"] == "[local path redacted]"
+    assert "C:\\private" not in str(records)
+    with sqlite3.connect(store.database_path) as connection:
+        audit_count_after = connection.execute("SELECT COUNT(*) FROM operation_audit").fetchone()[0]
+    assert audit_count_after == audit_count_before
+
+
 def test_gateway_rejects_malformed_history_provenance_from_replaceable_backend(tmp_path: Path) -> None:
     item = HistoryItem("history:" + "a" * 64, "source", "item", "conversation", "user",
                        "2026-01-01T00:00:00Z", "b" * 64, "Synthetic content",

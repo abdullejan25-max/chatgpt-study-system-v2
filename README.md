@@ -69,7 +69,7 @@ uv run --no-sync --project . --extra dev pytest -q
 ## 数据与安全边界
 
 - `config.local.toml`、`.codex/config.toml`、数据库及 SQLite sidecar、日志、缓存、真实图片和 PDF 都属于本机数据，不应提交。
-- Gateway 只访问本机配置显式指定的来源；Capability 控制 `read`、`write`、`ingest` 和 `admin` 操作。写入错题记录必须经 Gateway，不直接写数据库。
+- Gateway 只访问本机配置显式指定的来源；Capability 控制 `read`、`write`、`ingest`、`projection` 和 `admin` 操作。批量投影导出需要单独显式启用 `projection`，普通 `read` 不包含该权限。写入错题记录必须经 Gateway，不直接写数据库。
 - 项目运行时不会自动上传学习资料。首次安装 Python 依赖时，`uv` 会从配置的软件源下载软件包；这不是上传个人学习数据。
 - `.gitignore` 是防误提交措施，不是安全边界；提交前仍须检查 `git status` 和提交内容。
 - 不要把真实 StudyVault、History、教材、错题图片、聊天记录或数据库复制到仓库或测试夹具。

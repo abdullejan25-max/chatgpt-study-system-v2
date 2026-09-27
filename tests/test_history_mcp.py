@@ -57,6 +57,41 @@ def test_history_tools_roundtrip_and_reject_hidden_paths(tmp_path: Path) -> None
     anyio.run(check)
 
 
+def test_projection_snapshot_pages_history_only_with_projection_capability(tmp_path: Path) -> None:
+    store = SQLiteHistoryBackend(tmp_path / "private-history.db")
+    store.register_source("synthetic-projection", "Synthetic projection")
+    item_id = store.import_items("synthetic-projection", [HistoryImportItem(
+        "entry-1", "chat-1", "user", "Synthetic projection record", "2026-01-02T00:00:00Z",
+    )])[0]
+    gateway = Gateway(AppConfig("0.1.0", tmp_path), None, store,
+                      capabilities=frozenset({"projection"}), qmd_discoverable=lambda: False)
+
+    async def check():
+        async with create_connected_server_and_client_session(create_mcp_server(gateway)) as client:
+            tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+            assert set(tools) == {"projection_snapshot"}
+            validate({"domain": "history", "operation": "records", "snapshot_token": "history-v1:1:1",
+                      "source_id": "synthetic-projection", "cursor": 0, "limit": 20},
+                     tools["projection_snapshot"].inputSchema)
+            started = await client.call_tool("projection_snapshot", {
+                "domain": "history", "operation": "begin",
+            })
+            token = started.structuredContent["snapshot_token"]
+            sources = await client.call_tool("projection_snapshot", {
+                "domain": "history", "operation": "sources", "snapshot_token": token,
+            })
+            source_id = sources.structuredContent["sources"][0]["source_id"]
+            records = await client.call_tool("projection_snapshot", {
+                "domain": "history", "operation": "records", "snapshot_token": token,
+                "source_id": source_id,
+            })
+            assert started.structuredContent["total_records"] == 1
+            assert records.structuredContent["items"][0]["item_id"] == item_id
+            assert records.structuredContent["items"][0]["content"] == "Synthetic projection record"
+
+    anyio.run(check)
+
+
 def test_unconfigured_history_tools_fail_closed(tmp_path: Path) -> None:
     gateway = Gateway(AppConfig("0.1.0", tmp_path), None, qmd_discoverable=lambda: False)
 

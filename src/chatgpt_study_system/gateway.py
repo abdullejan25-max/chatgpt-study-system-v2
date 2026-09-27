@@ -42,6 +42,15 @@ _PUBLIC_BACKEND_MESSAGES = {
     "INTERNAL_ERROR": "Study search failed",
 }
 
+_PROJECTION_PROVENANCE_ENUMS = {
+    "data_origin": {"source", "deterministic_derived", "agent_generated", "imported", "system_generated"},
+    "actor_type": {"external_client", "importer", "system", "unknown"},
+    "identity_trust": {"reported", "unavailable"},
+    "legacy_status": {"native", "imported", "pre_provenance"},
+}
+_PROJECTION_SOURCE_REF = re.compile(r"(?:asset|document)://sha256/[0-9a-f]{64}\Z")
+_PROJECTION_WRONG_SOURCE = re.compile(r"wrong-answer://sha256/[0-9a-f]{64}\Z")
+
 _ABSOLUTE_PATH_START = re.compile(
     r"(?:[A-Za-z]:[\\/](?![\\/])|(?<![\w:/\\])//(?=[^/\s])|\\\\|"
     r"\\(?=(?:Users|Documents|ProgramData|Program Files|Windows)[\\/])|"
@@ -90,7 +99,9 @@ class Gateway:
         document_store: SQLiteDocumentStore | None = None,
         capabilities: frozenset[str] = frozenset({"read"}),
     ) -> None:
-        if type(capabilities) is not frozenset or not capabilities <= {"read", "write", "ingest", "admin"}:
+        if type(capabilities) is not frozenset or not capabilities <= {
+            "read", "write", "ingest", "projection", "admin",
+        }:
             raise ValueError("Invalid Gateway capabilities")
         self.config = config
         self.study_backend = study_backend
@@ -481,6 +492,85 @@ class Gateway:
         results, total = self._wrong_answers().search(query, limit, offset)
         return {"total": total, "has_more": offset + len(results) < total,
                 "results": [self._safe_wrong_source(source) for source in results]}
+
+    def projection_snapshot(self, domain: str, operation: str, *,
+                            snapshot_token: str | None = None, cursor: int = 0,
+                            source_id: str | None = None, limit: int = 20) -> dict:
+        """Read a bounded per-store projection page under its opt-in capability."""
+        self._require_capability("projection")
+        if type(domain) is not str or domain not in {"history", "wrong_answers"}:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        if domain == "history":
+            backend = self._history_backend()
+            reader = getattr(backend, "projection_snapshot", None)
+            if reader is None:
+                raise GatewayError("HISTORY_UNAVAILABLE", "History projection is unavailable")
+            page = reader(operation, snapshot_token=snapshot_token, cursor=cursor,
+                          source_id=source_id, limit=limit)
+            if operation == "records":
+                page["items"] = [self._history_item(item, full=True) for item in page["items"]]
+            elif operation == "sources":
+                for history_source in page["sources"]:
+                    history_source["label"] = self._history_text(history_source["label"], 120)
+            return page
+
+        page = self._wrong_answers().projection_snapshot(
+            operation, snapshot_token=snapshot_token, cursor=cursor,
+            source_id=source_id, limit=limit,
+        )
+        if operation == "sources":
+            page["sources"] = [self._safe_projection_source(source) for source in page["sources"]]
+        elif operation == "records":
+            for analysis in page["analyses"]:
+                if type(analysis) is not dict or any(
+                        type(analysis.get(field)) is not str
+                        for field in ("analysis_id", "source_id", "reasoning", "correct_solution",
+                                      "review_advice", "error_type")
+                ) or type(analysis.get("version")) is not int \
+                        or type(analysis.get("knowledge_points")) is not list:
+                    raise GatewayError("BACKEND_BAD_OUTPUT", "Projection analysis is invalid")
+                for field in ("reasoning", "correct_solution", "review_advice"):
+                    analysis[field] = self._history_text(analysis[field], 10_000)
+                analysis["error_type"] = self._history_text(analysis["error_type"], 200)
+                analysis["knowledge_points"] = [self._history_text(item, 200)
+                                                 for item in analysis["knowledge_points"]]
+                refs = analysis.get("source_refs")
+                if type(refs) is not list or len(refs) > 16 \
+                        or any(type(ref) is not str or not _PROJECTION_SOURCE_REF.fullmatch(ref)
+                               for ref in refs):
+                    raise GatewayError("BACKEND_BAD_OUTPUT", "Projection source references are invalid")
+                try:
+                    analysis["study_relations"] = self._validate_study_relation_shape(
+                        analysis.get("study_relations"),
+                    )
+                except GatewayError:
+                    raise GatewayError("BACKEND_BAD_OUTPUT", "Projection study references are invalid") from None
+                analysis["write_provenance"] = self._projection_provenance(
+                    analysis.get("write_provenance"),
+                )
+        return page
+
+    @classmethod
+    def _safe_projection_source(cls, source: dict) -> dict:
+        if type(source) is not dict or type(source.get("source_id")) is not str \
+                or not _PROJECTION_WRONG_SOURCE.fullmatch(source["source_id"]) \
+                or type(source.get("source_uri")) is not str \
+                or not _PROJECTION_SOURCE_REF.fullmatch(source["source_uri"]):
+            raise GatewayError("BACKEND_BAD_OUTPUT", "Projection source is invalid")
+        safe = cls._safe_wrong_source(source)
+        safe["write_provenance"] = cls._projection_provenance(source.get("write_provenance"))
+        return safe
+
+    @staticmethod
+    def _projection_provenance(value: object) -> dict | None:
+        """Expose only the categorical provenance fields consumed by the renderer."""
+        if value is None:
+            return None
+        if type(value) is not dict or any(type(value.get(field)) is not str
+                                          or value[field] not in allowed
+                                          for field, allowed in _PROJECTION_PROVENANCE_ENUMS.items()):
+            raise GatewayError("BACKEND_BAD_OUTPUT", "Projection provenance is invalid")
+        return {field: value[field] for field in _PROJECTION_PROVENANCE_ENUMS}
 
     def health_report(self) -> dict:
         self._require_capability("read")

@@ -21,6 +21,9 @@ _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}\Z")
 _ITEM_ID = re.compile(r"history:[0-9a-f]{64}\Z")
 _ROLES = frozenset({"user", "assistant", "system", "tool"})
 _SEARCH_CANDIDATE_LIMIT = 2048
+_PROJECTION_MAX_RECORDS = 10_000
+_PROJECTION_MAX_BYTES = 32 * 1024 * 1024
+_PROJECTION_PAGE_SIZE = 20
 
 
 def valid_logical_id(value: str) -> bool:
@@ -235,6 +238,118 @@ class SQLiteHistoryBackend:
                 "GROUP BY s.source_id ORDER BY s.source_id"
             ).fetchall()
             return tuple(HistorySource(*row) for row in rows)
+
+    def projection_snapshot(self, operation: str, *, snapshot_token: str | None = None,
+                            cursor: int = 0, source_id: str | None = None,
+                            limit: int = _PROJECTION_PAGE_SIZE) -> dict:
+        """Enumerate a bounded, append-only History watermark for projection only."""
+        if type(operation) is not str or operation not in {"begin", "sources", "records"} \
+                or type(cursor) is not int or cursor < 0 \
+                or type(limit) is not int or not 1 <= limit <= _PROJECTION_PAGE_SIZE:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        if operation == "begin":
+            if snapshot_token is not None or cursor != 0 or source_id is not None:
+                raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        elif type(snapshot_token) is not str:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        if operation == "records" and not valid_logical_id(source_id):
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        if operation != "records" and source_id is not None:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+
+        token_match = re.fullmatch(r"history-v1:(0|[1-9][0-9]{0,18}):(0|[1-9][0-9]{0,18})",
+                                   snapshot_token or "")
+        if operation != "begin" and token_match is None:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        try:
+            with closing(self._connect()) as connection:
+                connection.execute("BEGIN")
+                if operation == "begin":
+                    source_watermark = connection.execute(
+                        "SELECT COALESCE(MAX(rowid), 0) FROM history_sources"
+                    ).fetchone()[0]
+                    item_watermark = connection.execute(
+                        "SELECT COALESCE(MAX(rowid), 0) FROM history_items"
+                    ).fetchone()[0]
+                    total_sources = connection.execute(
+                        "SELECT COUNT(*) FROM history_sources WHERE rowid <= ?", (source_watermark,)
+                    ).fetchone()[0]
+                    total_records, input_bytes = connection.execute(
+                        "SELECT COUNT(*), COALESCE(SUM(length(CAST(c.content AS BLOB))), 0) "
+                        "FROM history_items i JOIN history_content c ON c.sha256=i.content_sha256 "
+                        "WHERE i.rowid <= ?", (item_watermark,),
+                    ).fetchone()
+                    if total_sources + total_records > _PROJECTION_MAX_RECORDS \
+                            or input_bytes > _PROJECTION_MAX_BYTES:
+                        raise GatewayError("PAYLOAD_TOO_LARGE", "History projection snapshot exceeds limits")
+                    return {
+                        "snapshot_token": f"history-v1:{source_watermark}:{item_watermark}",
+                        "total_sources": total_sources,
+                        "total_records": total_records,
+                        "stored_payload_bytes": input_bytes,
+                    }
+
+                source_watermark = int(token_match.group(1))
+                item_watermark = int(token_match.group(2))
+                if operation == "sources":
+                    if cursor > source_watermark:
+                        raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot cursor")
+                    if cursor and connection.execute(
+                        "SELECT 1 FROM history_sources WHERE rowid=? AND rowid <= ?", (cursor, source_watermark)
+                    ).fetchone() is None:
+                        raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot cursor")
+                    rows = connection.execute(
+                        "SELECT s.rowid AS projection_rowid, s.source_id, s.label "
+                        "FROM history_sources s WHERE s.rowid > ? AND s.rowid <= ? "
+                        "ORDER BY s.rowid LIMIT ?",
+                        (cursor, source_watermark, limit + 1),
+                    ).fetchall()
+                    page = rows[:limit]
+                    sources = []
+                    for row in page:
+                        count = connection.execute(
+                            "SELECT COUNT(*) FROM history_items WHERE source_id=? AND rowid <= ?",
+                            (row["source_id"], item_watermark),
+                        ).fetchone()[0]
+                        sources.append({"source_id": row["source_id"], "label": row["label"],
+                                        "item_count": count})
+                    next_cursor = page[-1]["projection_rowid"] if len(rows) > limit else None
+                    return {"snapshot_token": snapshot_token, "sources": sources,
+                            "next_cursor": next_cursor, "has_more": len(rows) > limit}
+
+                if cursor > item_watermark:
+                    raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot cursor")
+                if connection.execute(
+                    "SELECT 1 FROM history_sources WHERE source_id=? AND rowid <= ?",
+                    (source_id, source_watermark),
+                ).fetchone() is None:
+                    raise GatewayError("RESOURCE_NOT_FOUND", "History source was not found")
+                if cursor and connection.execute(
+                    "SELECT 1 FROM history_items WHERE source_id=? AND rowid=? AND rowid <= ?",
+                    (source_id, cursor, item_watermark),
+                ).fetchone() is None:
+                    raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot cursor")
+                total_for_source = connection.execute(
+                    "SELECT COUNT(*) FROM history_items WHERE source_id=? AND rowid <= ?",
+                    (source_id, item_watermark),
+                ).fetchone()[0]
+                rows = connection.execute(
+                    "SELECT i.rowid AS projection_rowid, i.*, c.content FROM history_items i "
+                    "JOIN history_content c ON c.sha256=i.content_sha256 "
+                    "WHERE i.source_id=? AND i.rowid > ? AND i.rowid <= ? "
+                    "ORDER BY i.rowid LIMIT ?",
+                    (source_id, cursor, item_watermark, limit + 1),
+                ).fetchall()
+                page = rows[:limit]
+                next_cursor = page[-1]["projection_rowid"] if len(rows) > limit else None
+                return {"snapshot_token": snapshot_token, "source_id": source_id,
+                        "total_records": total_for_source,
+                        "items": [self._item(row, connection) for row in page],
+                        "next_cursor": next_cursor, "has_more": len(rows) > limit}
+        except GatewayError:
+            raise
+        except sqlite3.Error:
+            raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable") from None
 
     @staticmethod
     def _item(row: sqlite3.Row, connection: sqlite3.Connection) -> HistoryItem:

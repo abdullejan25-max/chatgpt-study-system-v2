@@ -18,6 +18,9 @@ ASSET_URI = re.compile(r"asset://sha256/[0-9a-f]{64}\Z")
 DOCUMENT_URI = re.compile(r"document://sha256/[0-9a-f]{64}\Z")
 ANALYSIS_FIELDS = frozenset({"error_type", "knowledge_points", "reasoning",
                              "correct_solution", "review_advice"})
+_PROJECTION_MAX_RECORDS = 10_000
+_PROJECTION_MAX_BYTES = 32 * 1024 * 1024
+_PROJECTION_PAGE_SIZE = 20
 
 
 def _invalid() -> GatewayError:
@@ -362,6 +365,152 @@ class SQLiteWrongAnswerStore:
             source_result = self._source(source)
             source_result["write_provenance"] = get_provenance(con, "wrong_answer_source", source_id)
             return source_result, analyses, total
+
+    def projection_snapshot(self, operation: str, *, snapshot_token: str | None = None,
+                            cursor: int = 0, source_id: str | None = None,
+                            limit: int = _PROJECTION_PAGE_SIZE) -> dict:
+        """Enumerate a bounded, append-only Wrong Answer watermark for projection only."""
+        if type(operation) is not str or operation not in {"begin", "sources", "records"} \
+                or type(cursor) is not int or cursor < 0 \
+                or type(limit) is not int or not 1 <= limit <= _PROJECTION_PAGE_SIZE:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        if operation == "begin":
+            if snapshot_token is not None or cursor != 0 or source_id is not None:
+                raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        elif type(snapshot_token) is not str:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        if operation == "records" and (type(source_id) is not str or not SOURCE_ID.fullmatch(source_id)):
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        if operation != "records" and source_id is not None:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+
+        token_match = re.fullmatch(r"wrong-v1:(0|[1-9][0-9]{0,18}):(0|[1-9][0-9]{0,18})",
+                                   snapshot_token or "")
+        if operation != "begin" and token_match is None:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        try:
+            with closing(self.documents._connect()) as con:
+                con.execute("BEGIN")
+                if not self._has_table(con, "wrong_sources"):
+                    return {"snapshot_token": "wrong-v1:0:0", "total_sources": 0,
+                            "total_records": 0, "stored_payload_bytes": 0} \
+                        if operation == "begin" else self._empty_page(
+                                operation, snapshot_token, cursor)
+                if not self._has_table(con, "wrong_analyses"):
+                    raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable")
+                if operation == "begin":
+                    source_watermark = con.execute(
+                        "SELECT COALESCE(MAX(rowid), 0) FROM wrong_sources"
+                    ).fetchone()[0]
+                    analysis_watermark = con.execute(
+                        "SELECT COALESCE(MAX(rowid), 0) FROM wrong_analyses"
+                    ).fetchone()[0]
+                    total_sources = con.execute(
+                        "SELECT COUNT(*) FROM wrong_sources WHERE rowid <= ?", (source_watermark,)
+                    ).fetchone()[0]
+                    total_analyses, analysis_bytes = con.execute(
+                        "SELECT COUNT(*), COALESCE(SUM(length(CAST(body AS BLOB)) + "
+                        "length(CAST(source_refs AS BLOB)) + length(CAST(study_relations AS BLOB))), 0) "
+                        "FROM wrong_analyses WHERE rowid <= ?", (analysis_watermark,),
+                    ).fetchone()
+                    source_bytes = con.execute(
+                        "SELECT COALESCE(SUM(length(CAST(question_text AS BLOB)) + "
+                        "length(CAST(student_answer AS BLOB))), 0) FROM wrong_sources WHERE rowid <= ?",
+                        (source_watermark,),
+                    ).fetchone()[0]
+                    if total_sources > _PROJECTION_MAX_RECORDS \
+                            or total_analyses > _PROJECTION_MAX_RECORDS \
+                            or source_bytes + analysis_bytes > _PROJECTION_MAX_BYTES:
+                        raise GatewayError("PAYLOAD_TOO_LARGE", "Wrong Answer projection snapshot exceeds limits")
+                    return {"snapshot_token": f"wrong-v1:{source_watermark}:{analysis_watermark}",
+                            "total_sources": total_sources, "total_records": total_analyses,
+                            "stored_payload_bytes": source_bytes + analysis_bytes}
+
+                source_watermark = int(token_match.group(1))
+                analysis_watermark = int(token_match.group(2))
+                if operation == "sources":
+                    if cursor > source_watermark:
+                        raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot cursor")
+                    if cursor and con.execute(
+                        "SELECT 1 FROM wrong_sources WHERE rowid=? AND rowid <= ?",
+                        (cursor, source_watermark),
+                    ).fetchone() is None:
+                        raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot cursor")
+                    rows = con.execute(
+                        "SELECT s.rowid AS projection_rowid, s.* FROM wrong_sources s "
+                        "WHERE s.rowid > ? AND s.rowid <= ? ORDER BY s.rowid LIMIT ?",
+                        (cursor, source_watermark, limit + 1),
+                    ).fetchall()
+                    page = rows[:limit]
+                    sources = []
+                    for row in page:
+                        source = self._source(row)
+                        source["write_provenance"] = get_provenance(con, "wrong_answer_source", source["source_id"])
+                        source["analysis_count"] = con.execute(
+                            "SELECT COUNT(*) FROM wrong_analyses WHERE source_id=? AND rowid <= ?",
+                            (source["source_id"], analysis_watermark),
+                        ).fetchone()[0]
+                        sources.append(source)
+                    next_cursor = page[-1]["projection_rowid"] if len(rows) > limit else None
+                    return {"snapshot_token": snapshot_token, "sources": sources,
+                            "next_cursor": next_cursor, "has_more": len(rows) > limit}
+
+                source_exists = con.execute(
+                    "SELECT 1 FROM wrong_sources WHERE source_id=? AND rowid <= ?",
+                    (source_id, source_watermark),
+                ).fetchone()
+                if source_exists is None:
+                    raise GatewayError("RESOURCE_NOT_FOUND", "Wrong-answer source was not found")
+                max_version = con.execute(
+                    "SELECT COALESCE(MAX(version), 0) FROM wrong_analyses "
+                    "WHERE source_id=? AND rowid <= ?", (source_id, analysis_watermark),
+                ).fetchone()[0]
+                if cursor > max_version:
+                    raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot cursor")
+                if cursor and con.execute(
+                    "SELECT 1 FROM wrong_analyses WHERE source_id=? AND version=? AND rowid <= ?",
+                    (source_id, cursor, analysis_watermark),
+                ).fetchone() is None:
+                    raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot cursor")
+                total_for_source = con.execute(
+                    "SELECT COUNT(*) FROM wrong_analyses WHERE source_id=? AND rowid <= ?",
+                    (source_id, analysis_watermark),
+                ).fetchone()[0]
+                rows = con.execute(
+                    "SELECT * FROM wrong_analyses WHERE source_id=? AND rowid <= ? AND version > ? "
+                    "ORDER BY version LIMIT ?",
+                    (source_id, analysis_watermark, cursor, limit + 1),
+                ).fetchall()
+                page = rows[:limit]
+                analyses = []
+                for row in page:
+                    previous = con.execute(
+                        "SELECT analysis_id FROM wrong_analyses WHERE source_id=? AND version=? "
+                        "AND rowid <= ?", (source_id, row["version"] - 1, analysis_watermark),
+                    ).fetchone()
+                    analyses.append(self._analysis(
+                        row, get_provenance(con, "wrong_answer_analysis", row["analysis_id"], row["version"]),
+                        previous[0] if previous else None,
+                    ))
+                next_cursor = page[-1]["version"] if len(rows) > limit else None
+                return {"snapshot_token": snapshot_token, "source_id": source_id,
+                        "total_records": total_for_source, "analyses": analyses,
+                        "next_cursor": next_cursor, "has_more": len(rows) > limit}
+        except GatewayError:
+            raise
+        except sqlite3.Error:
+            raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable") from None
+
+    @staticmethod
+    def _empty_page(operation: str, snapshot_token: str | None, cursor: int) -> dict:
+        if not re.fullmatch(r"wrong-v1:0:0", snapshot_token or ""):
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot token")
+        if cursor != 0:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot cursor")
+        if operation == "sources":
+            return {"snapshot_token": snapshot_token, "sources": [], "next_cursor": None,
+                    "has_more": False}
+        raise GatewayError("RESOURCE_NOT_FOUND", "Wrong-answer source was not found")
 
     def search(self, query: str, limit: int = 5, offset: int = 0) -> tuple[list[dict], int]:
         query = _text(query, 500).casefold()

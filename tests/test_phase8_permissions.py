@@ -89,6 +89,8 @@ def test_config_capabilities_are_explicit_and_default_read_only(tmp_path: Path) 
     assert load_gateway_from_config(path).capabilities == frozenset({"read"})
     path.write_text(base + '[permissions]\ncapabilities=["read", "write"]\n', encoding="utf-8")
     assert load_gateway_from_config(path).capabilities == frozenset({"read", "write"})
+    path.write_text(base + '[permissions]\ncapabilities=["projection"]\n', encoding="utf-8")
+    assert load_gateway_from_config(path).capabilities == frozenset({"projection"})
     for invalid in ('[permissions]\ncapabilities=["read", "unknown"]\n',
                     '[permissions]\ncapabilities="read"\n',
                     '[permissions]\ncapabilities=["read", "read"]\n'):
@@ -102,6 +104,18 @@ def test_read_capability_is_required_at_gateway_not_only_discovery(tmp_path: Pat
     with pytest.raises(GatewayError) as error:
         gateway.search_documents("synthetic")
     assert error.value.code == "PERMISSION_DENIED"
+
+
+def test_bulk_projection_requires_its_separate_capability(tmp_path: Path) -> None:
+    read_gateway = _gateway(tmp_path, frozenset({"read"}))
+    with pytest.raises(GatewayError) as denied:
+        read_gateway.projection_snapshot("history", "begin")
+    assert denied.value.code == "PERMISSION_DENIED"
+
+    projection_gateway = _gateway(tmp_path, frozenset({"projection"}))
+    with pytest.raises(GatewayError) as unavailable:
+        projection_gateway.projection_snapshot("history", "begin")
+    assert unavailable.value.code == "HISTORY_UNAVAILABLE"
 
 
 def test_document_storage_rejects_windows_reparse_point_ancestors(tmp_path: Path, monkeypatch) -> None:

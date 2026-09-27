@@ -94,6 +94,38 @@ def test_mcp_source_analysis_and_retrieval_share_one_contract(tmp_path):
     anyio.run(check)
 
 
+def test_projection_snapshot_pages_wrong_answers_only_with_projection_capability(tmp_path):
+    gateway, document_uri, _, study_id = gateway_with_sources(tmp_path)
+    source = gateway.register_wrong_answer_source(document_uri, "Synthetic question", "Synthetic answer")["source"]
+    gateway.save_wrong_answer_analysis(
+        source["source_id"], analysis(), [document_uri], [study_id], "projection-mcp-analysis", 0,
+    )
+    gateway.capabilities = frozenset({"projection"})
+
+    async def check():
+        async with create_connected_server_and_client_session(create_mcp_server(gateway)) as client:
+            tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+            assert set(tools) == {"projection_snapshot"}
+            started = await client.call_tool("projection_snapshot", {
+                "domain": "wrong_answers", "operation": "begin",
+            })
+            token = started.structuredContent["snapshot_token"]
+            sources = await client.call_tool("projection_snapshot", {
+                "domain": "wrong_answers", "operation": "sources", "snapshot_token": token,
+            })
+            source_id = sources.structuredContent["sources"][0]["source_id"]
+            records = await client.call_tool("projection_snapshot", {
+                "domain": "wrong_answers", "operation": "records",
+                "snapshot_token": token, "source_id": source_id,
+            })
+            assert started.structuredContent["total_sources"] == 1
+            assert started.structuredContent["total_records"] == 1
+            assert records.structuredContent["analyses"][0]["version"] == 1
+            assert records.structuredContent["analyses"][0]["supersedes_analysis_id"] is None
+
+    anyio.run(check)
+
+
 def test_file_registered_original_image_can_be_saved_as_wrong_answer_source(tmp_path: Path) -> None:
     inbox = tmp_path / "inbox"
     assets = tmp_path / "assets"

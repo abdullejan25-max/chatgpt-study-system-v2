@@ -74,6 +74,44 @@ def test_protocol_lists_tools_with_narrow_inputs_and_correct_write_hints(tmp_pat
     anyio.run(check)
 
 
+def test_projection_snapshot_tool_is_hidden_from_read_and_gated_at_call_time(tmp_path: Path) -> None:
+    gateway, _ = _gateway(tmp_path)
+
+    async def check():
+        async with create_connected_server_and_client_session(create_mcp_server(gateway)) as client:
+            names = {tool.name for tool in (await client.list_tools()).tools}
+            assert "projection_snapshot" not in names
+            result = await client.call_tool("projection_snapshot", {
+                "domain": "history", "operation": "begin",
+            })
+            assert result.isError is True
+            assert result.structuredContent["error"]["code"] == "PERMISSION_DENIED"
+
+    anyio.run(check)
+
+
+def test_projection_snapshot_tool_requires_and_uses_projection_capability(tmp_path: Path) -> None:
+    gateway, _ = _gateway(tmp_path)
+    gateway.capabilities = frozenset({"projection"})
+
+    async def check():
+        async with create_connected_server_and_client_session(create_mcp_server(gateway)) as client:
+            listed = await client.list_tools()
+            tools = {tool.name: tool for tool in listed.tools}
+            assert set(tools) == {"projection_snapshot"}
+            tool = tools["projection_snapshot"]
+            assert tool.annotations.readOnlyHint is True
+            assert tool.inputSchema["additionalProperties"] is False
+            assert tool.inputSchema["properties"]["limit"]["maximum"] == 20
+            result = await client.call_tool("projection_snapshot", {
+                "domain": "history", "operation": "begin",
+            })
+            assert result.isError is True
+            assert result.structuredContent["error"]["code"] == "HISTORY_UNAVAILABLE"
+
+    anyio.run(check)
+
+
 def test_wrong_answer_workflow_is_discoverable_from_mcp_resource_and_prompt(tmp_path: Path) -> None:
     gateway, _ = _gateway(tmp_path)
 

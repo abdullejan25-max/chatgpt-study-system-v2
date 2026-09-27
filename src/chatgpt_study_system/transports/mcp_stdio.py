@@ -143,6 +143,21 @@ def create_mcp_server(gateway: Gateway) -> Server:
                 annotations=read_only,
             ),
             types.Tool(
+                name="projection_snapshot",
+                description=("Opt-in bounded bulk read for Obsidian projection. Requires the separate local "
+                             "projection capability; History and Wrong Answer watermarks are independent."),
+                inputSchema={"type": "object", "properties": {
+                    "domain": {"type": "string", "enum": ["history", "wrong_answers"]},
+                    "operation": {"type": "string", "enum": ["begin", "sources", "records"]},
+                    "snapshot_token": {"type": "string", "maxLength": 64,
+                                       "pattern": r"^(?:history|wrong)-v1:(?:0|[1-9][0-9]{0,18}):(?:0|[1-9][0-9]{0,18})$"},
+                    "cursor": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+                    "source_id": {"type": "string", "maxLength": 128},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 20, "default": 20},
+                }, "required": ["domain", "operation"], "additionalProperties": False},
+                annotations=read_only,
+            ),
+            types.Tool(
                 name="search_study",
                 description="Read-only search of the configured Study collection; returns safe relative sources.",
                 inputSchema={
@@ -326,12 +341,14 @@ def create_mcp_server(gateway: Gateway) -> Server:
                         "process_document_ocr_pages"}
         write_tools = {"register_wrong_answer_source", "save_wrong_answer_analysis",
                        "update_wrong_answer_analysis"}
-        read_tools = {tool.name for tool in tools} - ingest_tools - write_tools
+        projection_tools = {"projection_snapshot"}
+        read_tools = {tool.name for tool in tools} - ingest_tools - write_tools - projection_tools
         capabilities = getattr(gateway, "capabilities", frozenset({"read"}))
         return [tool for tool in tools
                 if (tool.name not in read_tools or "read" in capabilities or "admin" in capabilities)
                 and (tool.name not in ingest_tools or "ingest" in capabilities or "admin" in capabilities)
-                and (tool.name not in write_tools or "write" in capabilities or "admin" in capabilities)]
+                and (tool.name not in write_tools or "write" in capabilities or "admin" in capabilities)
+                and (tool.name not in projection_tools or "projection" in capabilities or "admin" in capabilities)]
 
     @server.list_resources()
     async def list_resources() -> list[types.Resource]:
@@ -460,6 +477,22 @@ def create_mcp_server(gateway: Gateway) -> Server:
     @server.call_tool(validate_input=False)
     async def call_tool(name: str, arguments: dict) -> dict | types.CallToolResult:
         try:
+            if name == "projection_snapshot":
+                allowed = {"domain", "operation", "snapshot_token", "cursor", "source_id", "limit"}
+                if set(arguments) - allowed or not {"domain", "operation"} <= set(arguments) \
+                        or any(type(arguments[key]) is not str for key in ("domain", "operation")) \
+                        or ("snapshot_token" in arguments and type(arguments["snapshot_token"]) is not str) \
+                        or ("cursor" in arguments and type(arguments["cursor"]) is not int) \
+                        or ("source_id" in arguments and type(arguments["source_id"]) is not str) \
+                        or ("limit" in arguments and type(arguments["limit"]) is not int):
+                    raise GatewayError("INVALID_ARGUMENT", "Invalid tool arguments")
+                result = gateway.projection_snapshot(
+                    arguments["domain"], arguments["operation"],
+                    snapshot_token=arguments.get("snapshot_token"),
+                    cursor=arguments.get("cursor", 0), source_id=arguments.get("source_id"),
+                    limit=arguments.get("limit", 20),
+                )
+                return {"ok": True, **result}
             if name == "health_report":
                 if arguments:
                     raise GatewayError("INVALID_ARGUMENT", "Invalid tool arguments")

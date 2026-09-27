@@ -81,7 +81,7 @@ def load_gateway_from_config(config_file: Path) -> Gateway:
     configured_capabilities = permissions["capabilities"]
     if type(configured_capabilities) is not list or any(type(item) is not str for item in configured_capabilities) \
             or len(set(configured_capabilities)) != len(configured_capabilities) \
-            or not set(configured_capabilities) <= {"read", "write", "ingest", "admin"}:
+            or not set(configured_capabilities) <= {"read", "write", "ingest", "projection", "admin"}:
         raise ValueError("Invalid local configuration")
 
     config = AppConfig(version, Path(root), collection, qmd_version, history_database,
