@@ -47,4 +47,4 @@
 - [x] Run the new tests and confirm the new fields/wrapper are missing.
 - [x] Add the paired private locator fields and span wrapper with fixed errors; do not change direct line-parser behavior.
 - [x] Run DTO, span, adapter, inspector, and History contract tests; run `git diff --check`. Observed **56 passed**.
-- [ ] Update public-safe status and the ignored checkpoint, then commit this synthetic-only binding.
+- [x] Update public-safe status and the ignored checkpoint, then commit this synthetic-only binding. Commit: `8a74bdc`.
