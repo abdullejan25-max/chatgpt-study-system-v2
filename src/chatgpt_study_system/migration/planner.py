@@ -79,18 +79,8 @@ def plan_records(records: Iterable[SourceRecord], *,
             continue
 
         target_fingerprint = (record.target_type, record.source_fingerprint)
-        if target_fingerprint in existing_targets:
-            result.append(_make_item(
-                record, action="skip", status="skipped", dedup_decision="content_hash",
-                reason_code="existing_target_match",
-            ))
-            continue
-        if record.target_type == "asset" and target_fingerprint in seen_asset_hashes:
-            result.append(_make_item(
-                record, action="skip", status="skipped", dedup_decision="content_hash",
-                reason_code="duplicate_legacy_content",
-            ))
-            continue
+        matches_existing = target_fingerprint in existing_targets
+        matches_legacy = record.target_type == "asset" and target_fingerprint in seen_asset_hashes
         if record.target_type == "asset":
             seen_asset_hashes.add(target_fingerprint)
 
@@ -109,7 +99,21 @@ def plan_records(records: Iterable[SourceRecord], *,
                 error_code = "incomplete_source_metadata"
             result.append(_make_item(
                 record, action=record.intended_action, status="unresolved",
+                dedup_decision="content_hash" if matches_existing or matches_legacy else "none",
                 validation_state="unresolved", error_code=error_code,
+            ))
+            continue
+
+        if matches_existing:
+            result.append(_make_item(
+                record, action="skip", status="skipped", dedup_decision="content_hash",
+                reason_code="existing_target_match",
+            ))
+            continue
+        if matches_legacy:
+            result.append(_make_item(
+                record, action="skip", status="skipped", dedup_decision="content_hash",
+                reason_code="duplicate_legacy_content",
             ))
             continue
 
@@ -148,8 +152,9 @@ def plan_records(records: Iterable[SourceRecord], *,
 
 
 def _validate_source_record(record: SourceRecord) -> None:
-    if type(record) is not SourceRecord or record.intended_action not in _ACTIONS \
-            or record.validation_state not in _VALIDATION_STATES \
+    if type(record) is not SourceRecord \
+            or type(record.intended_action) is not str or record.intended_action not in _ACTIONS \
+            or type(record.validation_state) is not str or record.validation_state not in _VALIDATION_STATES \
             or type(record.source_fingerprint) is not str \
             or not _HEX_256.fullmatch(record.source_fingerprint):
         raise ValueError("Invalid migration source record")

@@ -14,8 +14,15 @@ from .inventory import (
     scan_native_memory_db,
     scan_personal_root,
     scan_study_root,
+    validate_legacy_project_root,
 )
-from .manifest import MigrationJournal, estimate_storage, summarize
+from .manifest import (
+    MigrationJournal,
+    estimate_storage,
+    summarize,
+    validate_cli_run_id,
+    validate_private_journal_path,
+)
 from .planner import plan_records
 
 
@@ -42,11 +49,36 @@ def _default_journal_path() -> Path:
     if not root:
         raise InventoryError("Private local journal location is not configured")
     directory = Path(root) / "ChatGPTStudySystemV2" / "migration"
+    return directory / "phase-11-manifest.sqlite3"
+
+
+def _prepare_journal_parent(path: Path) -> None:
     try:
-        directory.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
     except OSError:
         raise InventoryError("Private local journal location is not writable") from None
-    return directory / "phase-11-manifest.sqlite3"
+
+
+def _protected_paths(args: argparse.Namespace, gateway, *,
+                     legacy_project_root: Path) -> tuple[Path, ...]:
+    protected: list[Path] = [
+        Path(args.config), gateway.config.study_root, Path(args.personal_root),
+        legacy_project_root,
+    ]
+    if args.legacy_memory_database is not None:
+        database = Path(args.legacy_memory_database)
+        protected.extend((database, database.parent))
+    if gateway.config.history_database is not None:
+        database = gateway.config.history_database
+        protected.extend((database, database.parent))
+    if gateway.config.asset_root is not None:
+        protected.append(gateway.config.asset_root)
+    if gateway.config.asset_database is not None:
+        database = gateway.config.asset_database
+        protected.extend((database, database.parent))
+    if gateway.config.asset_ingest_root is not None:
+        protected.append(gateway.config.asset_ingest_root)
+    return tuple(path for path in protected if path is not None)
 
 
 def _batched(values: tuple, batch_size: int = 250):
@@ -62,12 +94,29 @@ def _run_dry_run(args: argparse.Namespace) -> dict:
     study_root = gateway.config.study_root
     if study_root is None:
         raise InventoryError("Study source is not configured")
+    legacy_project_root = validate_legacy_project_root(args.legacy_project_root)
+    protected_paths = _protected_paths(args, gateway, legacy_project_root=legacy_project_root)
+    journal_path = args.journal or _default_journal_path()
+    try:
+        journal_path = validate_private_journal_path(
+            journal_path, protected_paths=protected_paths,
+        )
+    except ValueError:
+        raise InventoryError("Invalid private migration journal") from None
+    run_id = args.run_id
+    if run_id is None:
+        raise InventoryError("Invalid private migration run token")
+    if not validate_cli_run_id(run_id):
+        raise InventoryError("Invalid private migration run token")
+    _prepare_journal_parent(journal_path)
+
     records = list(scan_study_root(study_root))
     records.extend(scan_personal_root(args.personal_root))
 
     if args.legacy_memory_database is not None:
         records.extend(scan_native_memory_db(
-            args.legacy_memory_database, project_root=args.legacy_project_root,
+            args.legacy_memory_database, project_root=legacy_project_root,
+            protected_paths=protected_paths,
         ))
 
     target_health = {"history": "not_configured", "assets": "not_configured"}
@@ -78,14 +127,16 @@ def _run_dry_run(args: argparse.Namespace) -> dict:
     existing_targets: set[tuple[str, str]] = set()
     if gateway.document_store is not None:
         asset_database = gateway.document_store.database_path
-        existing_targets = read_existing_asset_hashes(asset_database)
+        existing_targets = read_existing_asset_hashes(
+            asset_database, protected_paths=protected_paths,
+        )
         target_health["assets"] = "ready"
 
     planned = plan_records(records, existing_targets=existing_targets,
                            target_health=target_health)
-    journal_path = args.journal or _default_journal_path()
-    run_id = args.run_id or "migration-" + uuid4().hex
-    journal = MigrationJournal(journal_path, run_id=run_id)
+    journal = MigrationJournal(
+        journal_path, run_id=run_id, protected_paths=protected_paths,
+    )
     try:
         for batch_number, batch in _batched(planned):
             journal.add_batch(batch, batch_number=batch_number)
@@ -112,6 +163,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command != "dry-run":
             raise InventoryError("Unsupported migration operation")
+        run_id = args.run_id or "migration-" + uuid4().hex
+        if not validate_cli_run_id(run_id):
+            raise InventoryError("Invalid private migration run token")
+        args.run_id = run_id
+        print(f"Migration run token: {run_id}", file=sys.stderr, flush=True)
         result = _run_dry_run(args)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0 if result["status"] == "DRY_RUN_PASS" else 1

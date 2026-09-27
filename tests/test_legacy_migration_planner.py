@@ -134,13 +134,15 @@ def test_unresolved_wrong_answer_relation_is_preserved_as_unresolved() -> None:
     assert item.error_code == "source_relation_unresolved"
 
 
-def test_unresolved_asset_relation_can_still_dedupe_exact_existing_bytes() -> None:
+def test_existing_asset_bytes_do_not_hide_unresolved_wrong_answer_relation() -> None:
     source = _record(category="Assets", legacy_source_type="legacy_wrong_answer_image",
                      target_type="asset", intended_action="archive",
                      validation_state="unresolved", reason_code="unpaired_evidence",
                      requires_backend=None)
     item = plan_records([source], existing_targets={("asset", "a" * 64)},
                         target_health={})[0]
-    assert item.action == "skip"
-    assert item.status == "skipped"
+    assert item.action == "archive"
+    assert item.status == "unresolved"
     assert item.dedup_decision == "content_hash"
+    assert item.error_code == "source_relation_unresolved"
+    assert item.reason_code == "unpaired_evidence"
