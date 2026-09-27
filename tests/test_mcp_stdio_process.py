@@ -63,6 +63,13 @@ def test_independent_stdio_client_uses_configured_gateway_and_resources(tmp_path
         '[permissions]\ncapabilities=["read", "ingest", "projection"]\n',
         encoding="utf-8",
     )
+    read_only_config = tmp_path / "read-only.toml"
+    read_only_config.write_text(
+        config.read_text(encoding="utf-8").replace(
+            'capabilities=["read", "ingest", "projection"]', 'capabilities=["read"]',
+        ),
+        encoding="utf-8",
+    )
     repository = Path(__file__).resolve().parents[1]
     env = os.environ.copy()
     env["PYTHONPATH"] = str(repository / "src") + os.pathsep + env.get("PYTHONPATH", "")
@@ -72,9 +79,21 @@ def test_independent_stdio_client_uses_configured_gateway_and_resources(tmp_path
         env=env,
         cwd=repository,
     )
+    read_only_params = StdioServerParameters(
+        command=sys.executable,
+        args=["-B", "-m", "chatgpt_study_system.transports.mcp_stdio", "--config", str(read_only_config)],
+        env=env,
+        cwd=repository,
+    )
 
     async def check() -> None:
-        with anyio.fail_after(20):
+        with anyio.fail_after(40):
+            async with stdio_client(read_only_params) as (read_stream, write_stream):
+                async with ClientSession(read_stream, write_stream) as client:
+                    await client.initialize()
+                    read_only_tools = {tool.name for tool in (await client.list_tools()).tools}
+                    assert "projection_snapshot" not in read_only_tools
+
             async with stdio_client(params) as (read_stream, write_stream):
                 async with ClientSession(read_stream, write_stream) as client:
                     await client.initialize()
@@ -87,6 +106,9 @@ def test_independent_stdio_client_uses_configured_gateway_and_resources(tmp_path
                     assert {"document_page", "document_page_image"} <= {
                         item.name for item in (await client.list_resource_templates()).resourceTemplates
                     }
+                    assert tools["projection_snapshot"].annotations.readOnlyHint is True
+                    validate({"domain": "history", "operation": "begin"},
+                             tools["projection_snapshot"].inputSchema)
                     workflow = next(item for item in (await client.list_resources()).resources
                                     if str(item.uri) == "study-workflow://wrong-answer")
                     workflow_body = (await client.read_resource(str(workflow.uri))).contents[0].text
