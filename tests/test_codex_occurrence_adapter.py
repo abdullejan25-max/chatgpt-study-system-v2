@@ -37,6 +37,7 @@ def test_response_message_preserves_open_role_text_and_opaque_image_ref() -> Non
     occurrence = _parse(record)
 
     assert occurrence.kind == "message"
+    assert occurrence.record_ordinal == 4
     assert occurrence.role == "developer"
     assert occurrence.source_item_id == "source-message-id"
     assert occurrence.source_created_at == "raw-time-value"

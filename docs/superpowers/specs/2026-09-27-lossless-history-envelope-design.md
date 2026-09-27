@@ -47,6 +47,14 @@ Use a versioned `ImportedHistoryOccurrence` envelope with these conceptual parts
 
 The shared envelope should not duplicate entire raw records into the History database. The verified snapshot remains the lossless source of truth; envelope fields are an index/projection with enough private provenance to re-read exact source bytes. If the source snapshot is unavailable or its integrity check fails, the envelope cannot be treated as independently lossless.
 
+## Exact raw-member locator contract
+
+For JSONL, `record_ordinal` means the zero-based physical line index within one manifest member. Every LF-delimited span advances it, including blank, malformed, non-object, and over-limit lines; a final unterminated non-empty span also advances it. LF belongs to that span, so CRLF retains both terminator bytes. A trailing LF does not invent an additional empty span. The adapter's caller supplies this physical locator index; it is never copied from the source JSON object's own `ordinal` property. That source property remains opaque until its semantics are independently established.
+
+A durable raw locator should bind the verified snapshot identity and private manifest member reference to `record_ordinal`, zero-based `byte_start`, and exclusive `byte_end`. The byte span includes any LF/CRLF terminator. A resolver must verify snapshot and member integrity before reading, require the requested span to align with a complete physical line, and fail with a fixed error if bytes or manifest identity differ. Malformed and over-limit spans remain addressable evidence but are not passed to the occurrence adapter. Conversation order and message order remain separate optional source-declared relations; neither physical line position nor the source `ordinal` property is promoted to either semantic order without evidence.
+
+The current in-memory DTO prototype carries member reference and physical `record_ordinal`, while its compact block references use that ordinal only. It does not yet implement byte-span locators or raw-byte resolution and must not be described as independently lossless without the verified immutable snapshot.
+
 ## Mapping rules for current evidence
 
 1. **Conversation identity:** JSONL member count and distinct `session_meta` ID count are observations, not canonical conversation counts. No conversation reference is assigned until record-to-session linkage is evidenced.
