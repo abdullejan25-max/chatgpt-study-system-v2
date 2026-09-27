@@ -62,52 +62,43 @@ git add tests/test_private_raw_archive.py src/chatgpt_study_system/migration/raw
 git commit -m "feat: add private raw archive ingest"
 ```
 
-### Task 2: Stream and verify a new private raw ZIP
+### Task 2: Make resource ceilings non-overridable
 
 **Files:**
 - Modify: `tests/test_private_raw_archive.py`
 - Modify: `src/chatgpt_study_system/migration/raw_archive.py`
 
 **Interfaces:**
-- New archives are stored as `<root>/<source_system>/<sha256>.zip` with a sibling `<sha256>.manifest.json`.
-- Manifest fields are limited to source system, SHA-256, byte count, member count, declared uncompressed byte count, and UTC ingest time.
-- `ingest_zip` streams in bounded chunks and creates its staging file exclusively below the private root.
+- `RawArchiveLimits` may lower but never raise the hard maxima: 512 MiB archive bytes, 50,000 members, 2 GiB expanded bytes, 200:1 member ratio.
+- All limit fields must be plain integers; booleans, negative values, and over-limit values are rejected during construction.
 
-- [ ] **Step 1: Add path, size, and source allowlist tests**
+- [ ] **Step 1: Write a failing non-overridable-limits test**
 
-Assert `obsidian` is rejected with `unsupported_source`; a non-ZIP file and a `.zip` with corrupt central directory return `invalid_zip`; a source exceeding `max_archive_bytes` returns `archive_too_large`; and a symlink/reparse source returns `unsafe_path` without creating a target file.
+Assert each hard maximum plus one is rejected and each negative, boolean, or non-integer limit is rejected with a fixed path-free configuration error. Assert a limit at or below its hard maximum is accepted, including zero members to support safe edge-boundary tests.
 
 - [ ] **Step 2: Run the new tests and confirm each fails for missing behavior**
 
-Run: `uv run --offline --extra dev pytest -q tests/test_private_raw_archive.py -p no:cacheprovider`
+Run: `uv run --offline --extra dev pytest -q tests/test_private_raw_archive.py::test_limits_cannot_raise_hard_resource_ceilings -p no:cacheprovider`
 
-Expected: failures are limited to absent ingest/path/ZIP validation behavior.
+Expected: FAIL because `RawArchiveLimits` currently accepts over-limit and malformed values.
 
-- [ ] **Step 3: Implement private root and safe source validation**
+- [ ] **Step 3: Implement strict limit construction**
 
-Use existing `validate_private_journal_path` and Windows user-state containment checks. Create source-specific storage directories with owner-only POSIX permissions; on Windows require the configured per-user state root. Reject repository overlap, reparse points, non-regular files, relative paths, and sources inside the destination root. Return only fixed `RawArchiveError` codes.
+Add `RawArchiveLimits.__post_init__` with a fixed mapping from field to hard maximum. Reject booleans, non-ints, negatives, and values above those maxima with `ValueError("Invalid raw archive limits")`; do not include supplied values in the exception. Preserve zero only for `max_members` and `max_uncompressed_bytes`, and require positive compressed-byte and ratio limits.
 
-- [ ] **Step 4: Implement bounded stream-copy and source-stability checks**
+- [ ] **Step 4: Add a tightening-limit integration test**
 
-Open the source once, capture `fstat` before copying, stream at most `max_archive_bytes + 1` into an exclusive `.partial` file while hashing, then compare size and high-resolution timestamps from the same source handle. Flush the destination and verify copied size and digest before ZIP checks. Remove only this call's partial file on failure.
+Construct a valid synthetic ZIP with one member, use `RawArchiveLimits(max_members=0)`, and assert ingest returns `too_many_members` without publishing an archive, manifest, or leftover partial file. This is an integration regression test for the existing tightening behavior; the constructor test above is the required red-green change in this task.
 
-- [ ] **Step 5: Implement ZIP metadata limits and CRC verification**
-
-Open the staged ZIP without extraction. Reject encrypted members; enforce member count, declared total uncompressed bytes, and per-member compression ratio. Run `ZipFile.testzip()` only after these checks. Never include entry names in an exception or return value.
-
-- [ ] **Step 6: Atomically publish the archive and redacted manifest**
-
-Promote the verified partial file to `<source_system>/<sha256>.zip` without replacing an existing target. Write manifest bytes to an exclusive sibling partial, flush, and atomically rename to `<sha256>.manifest.json`. Ensure JSON contains only the specified fields.
-
-- [ ] **Step 7: Run focused tests and commit the verified new-archive path**
+- [ ] **Step 5: Run the complete focused suite and commit strict bounds**
 
 Run: `uv run --offline --extra dev pytest -q tests/test_private_raw_archive.py -p no:cacheprovider`
 
-Expected: all tests for exact bytes, path safety, source allowlist, size bound, ZIP structure, CRC, and redacted manifest pass.
+Expected: all current tests plus strict-limit and lower-limit tests pass.
 
 ```powershell
 git add tests/test_private_raw_archive.py src/chatgpt_study_system/migration/raw_archive.py
-git commit -m "feat: preserve verified private conversation archives"
+git commit -m "fix: prevent loosening archive resource limits"
 ```
 
 ### Task 3: Make retries idempotent and crash-recoverable
