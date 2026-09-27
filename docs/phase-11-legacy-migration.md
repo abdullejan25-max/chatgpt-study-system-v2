@@ -60,6 +60,7 @@
 - synthetic-only History occurrence DTO 与 Codex 单行 adapter，加上 inspector 和 History contract 回归 **46 passed**；覆盖任意层级重复 JSON 键的失败关闭。内容只来自合成 fixture，未运行个人快照、连接 Gateway 或写入 History；本次未运行全量测试。
 - locator 设计将物理 `record_ordinal`、source JSON `ordinal` 与语义 conversation/message order 分开，并规定原始 byte span 边界；只完成设计及 synthetic adapter 区分断言，尚无 span iterator，也未解析私人快照。
 - synthetic-only JSONL span iterator 与 adapter 定向回归 **12 passed**；覆盖 LF/CRLF、空/畸形行、末尾无换行、无 phantom record、oversized 分块 drain 与精确偏移。未接入私有 snapshot 或 History。
+- DTO/span/adapter/inspector/History 合约定向回归 **56 passed**；adapter 将正常 span 的物理 ordinal 和 byte 边界保存在内存 occurrence 中，对 oversized span 失败关闭。合成 only，未遍历私人快照、连接 Gateway 或写入业务数据。
 
 P11.3A subgates：Conversation Source Inventory、V1 Conversation Deduplication、Local Agent History Import（包括已发现的 Hermes store）、Gemini Export/Import（需用户完成账号验证并下载）、真实 Raw Archive Integrity、Normalization、Attachments、Cross-source Dedupe、Ordering、Retrieval E2E 与 Coverage Report 均为 **BLOCKED**；ChatGPT Export/Import 为 **WAITING_FOR_USER**（需用户完成 Privacy Portal 安全验证）。Codex 本地 JSONL 快照的原始完整性 Gate 已验证；这不等于官方 ZIP 归档、规范化或统一 History Gate 通过。任何导出只有在官方 archive 可用并校验原始格式后才进入解析；未知时间、role、identity、分支或附件关系继续保持 unknown。
 

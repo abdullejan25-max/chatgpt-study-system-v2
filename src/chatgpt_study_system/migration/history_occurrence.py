@@ -62,6 +62,8 @@ class ImportedHistoryOccurrence:
     kind: str
     role: str | None
     content_blocks: tuple[HistoryOccurrenceBlock, ...]
+    source_byte_start: int | None = field(default=None, repr=False)
+    source_byte_end: int | None = field(default=None, repr=False)
     source_item_id: str | None = field(default=None, repr=False)
     conversation_ref: str | None = field(default=None, repr=False)
     conversation_title: str | None = field(default=None, repr=False)
@@ -84,6 +86,7 @@ class ImportedHistoryOccurrence:
         )
         timestamps = (self.source_created_at, self.source_updated_at, self.imported_at)
         orders = (self.record_ordinal, self.conversation_order, self.message_order)
+        byte_range = (self.source_byte_start, self.source_byte_end)
         if type(self.schema_version) is not int or self.schema_version != 1 \
                 or type(self.source_system) is not str or not self.source_system \
                 or len(self.source_system) > _MAX_LABEL_CHARS or _has_control(self.source_system) \
@@ -91,6 +94,11 @@ class ImportedHistoryOccurrence:
                 or not _valid_optional_string(self.source_member_ref, maximum=_MAX_PRIVATE_REF_CHARS) \
                 or not self.source_member_ref \
                 or type(self.record_ordinal) is not int or self.record_ordinal < 0 \
+                or (byte_range[0] is None) != (byte_range[1] is None) \
+                or (byte_range[0] is not None and (
+                    type(byte_range[0]) is not int or type(byte_range[1]) is not int
+                    or byte_range[0] < 0 or byte_range[1] <= byte_range[0]
+                )) \
                 or type(self.kind) is not str or not self.kind or len(self.kind) > _MAX_LABEL_CHARS \
                 or _has_control(self.kind) \
                 or not _valid_optional_string(self.role, maximum=_MAX_LABEL_CHARS) \

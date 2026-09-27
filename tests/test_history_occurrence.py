@@ -42,7 +42,7 @@ def _occurrence(**overrides: object) -> ImportedHistoryOccurrence:
 
 
 def test_occurrence_preserves_open_values_boundaries_and_distinct_order() -> None:
-    occurrence = _occurrence()
+    occurrence = _occurrence(source_byte_start=125, source_byte_end=190)
 
     assert occurrence.schema_version == 1
     assert occurrence.kind == "message"
@@ -51,6 +51,8 @@ def test_occurrence_preserves_open_values_boundaries_and_distinct_order() -> Non
     assert occurrence.content_blocks[0].text == "private body sentinel"
     assert occurrence.content_blocks[1].source_ref == "private/image-ref"
     assert occurrence.record_ordinal == 14
+    assert occurrence.source_byte_start == 125
+    assert occurrence.source_byte_end == 190
     assert occurrence.conversation_order == 2
     assert occurrence.message_order == 8
     assert occurrence.source_created_at == "raw-time-spelling"
@@ -74,7 +76,7 @@ def test_occurrence_repr_hides_private_values_and_content() -> None:
         "private/member.jsonl", "private body sentinel", "private/image-ref",
         "private-message-id", "private-conversation-id", "private title sentinel",
         "private author sentinel", "private model sentinel", "private-branch-ref",
-        "private-extension/path",
+        "private-extension/path", "125", "190",
     )
 
     assert all(sentinel not in rendered for sentinel in sentinels)
@@ -85,6 +87,10 @@ def test_occurrence_repr_hides_private_values_and_content() -> None:
     {"schema_version": 2},
     {"snapshot_sha256": "private bad hash"},
     {"record_ordinal": True},
+    {"source_byte_start": 3},
+    {"source_byte_start": True, "source_byte_end": 10},
+    {"source_byte_start": -1, "source_byte_end": 10},
+    {"source_byte_start": 10, "source_byte_end": 10},
     {"conversation_order": -1},
     {"source_member_ref": "private/path\nsecret"},
     {"content_blocks": [HistoryOccurrenceBlock(kind="text", text="not tuple")]},

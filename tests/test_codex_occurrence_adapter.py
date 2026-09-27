@@ -1,13 +1,16 @@
 import base64
 import json
+from io import BytesIO
 
 import pytest
 
 import chatgpt_study_system.migration.codex_occurrence_adapter as adapter_module
 from chatgpt_study_system.migration.codex_occurrence_adapter import (
     CodexOccurrenceParseError,
+    parse_codex_occurrence_span,
     parse_codex_occurrence_line,
 )
+from chatgpt_study_system.migration.codex_jsonl_spans import iter_jsonl_record_spans
 
 
 _SNAPSHOT = "b" * 64
@@ -102,6 +105,37 @@ def test_parser_rejects_duplicate_json_keys_at_any_object_depth(line: bytes) -> 
     assert error.value.code == "duplicate_json_key"
     assert "response_item" not in str(error.value)
     assert "assistant" not in str(error.value)
+
+
+def test_span_adapter_preserves_physical_ordinal_byte_span_and_source_order_separately() -> None:
+    raw = b"malformed\n" + (
+        b'{"type":"response_item","ordinal":123,"payload":{"type":"message",'
+        b'"role":"developer","content":[{"type":"input_text","text":"body"}]}}\r\n'
+    )
+    span = list(iter_jsonl_record_spans(BytesIO(raw), max_line_bytes=256))[1]
+
+    occurrence = parse_codex_occurrence_span(
+        span, snapshot_sha256=_SNAPSHOT, source_member_ref="private/member.jsonl",
+    )
+
+    assert occurrence.record_ordinal == 1
+    assert occurrence.source_byte_start == len(b"malformed\n")
+    assert occurrence.source_byte_end == len(raw)
+    assert occurrence.message_order is None
+    assert occurrence.content_blocks[0].text == "body"
+
+
+def test_span_adapter_rejects_oversized_line_without_exposing_its_content() -> None:
+    sentinel = b"private oversized record content"
+    span = next(iter_jsonl_record_spans(BytesIO(sentinel), max_line_bytes=3))
+
+    with pytest.raises(CodexOccurrenceParseError) as error:
+        parse_codex_occurrence_span(
+            span, snapshot_sha256=_SNAPSHOT, source_member_ref="private/member.jsonl",
+        )
+
+    assert error.value.code == "oversized_record"
+    assert "private oversized" not in str(error.value)
 
 
 def test_parser_rejects_non_object_records_and_excess_content_blocks(

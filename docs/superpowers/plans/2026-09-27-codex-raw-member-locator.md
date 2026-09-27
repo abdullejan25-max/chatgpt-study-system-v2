@@ -43,8 +43,8 @@
 - Add `parse_codex_occurrence_span(span: JSONLRecordSpan, *, snapshot_sha256: str, source_member_ref: str) -> ImportedHistoryOccurrence`.
 - The wrapper accepts only a normal span with retained raw bytes, passes its physical `record_ordinal` and byte boundaries to the existing line parser, and raises fixed `oversized_record` for over-limit spans. It does not verify a real snapshot or assign semantic order.
 
-- [ ] Write failing synthetic tests for paired offset validation, adapter preservation of ordinal/start/end when a malformed span precedes a valid line, source JSON `ordinal` remaining opaque, and fixed rejection of an oversized span.
-- [ ] Run the new tests and confirm the new fields/wrapper are missing.
-- [ ] Add the paired private locator fields and span wrapper with fixed errors; do not change direct line-parser behavior.
-- [ ] Run DTO, span, adapter, inspector, and History contract tests; run `git diff --check`.
+- [x] Write failing synthetic tests for paired offset validation, adapter preservation of ordinal/start/end when a malformed span precedes a valid line, source JSON `ordinal` remaining opaque, and fixed rejection of an oversized span.
+- [x] Run the new tests and confirm the new fields/wrapper are missing.
+- [x] Add the paired private locator fields and span wrapper with fixed errors; do not change direct line-parser behavior.
+- [x] Run DTO, span, adapter, inspector, and History contract tests; run `git diff --check`. Observed **56 passed**.
 - [ ] Update public-safe status and the ignored checkpoint, then commit this synthetic-only binding.

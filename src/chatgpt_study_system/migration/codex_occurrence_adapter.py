@@ -6,6 +6,7 @@ import json
 import re
 
 from .history_occurrence import HistoryOccurrenceBlock, ImportedHistoryOccurrence
+from .codex_jsonl_spans import JSONLRecordSpan
 
 
 _MAX_LINE_BYTES = 16 * 1024 * 1024
@@ -54,6 +55,8 @@ def parse_codex_occurrence_line(
     snapshot_sha256: str,
     source_member_ref: str,
     record_ordinal: int,
+    source_byte_start: int | None = None,
+    source_byte_end: int | None = None,
 ) -> ImportedHistoryOccurrence:
     """Map only explicit source fields; opaque data stays addressable in the raw snapshot."""
     if type(raw_line) is not bytes:
@@ -62,7 +65,13 @@ def parse_codex_occurrence_line(
         raise CodexOccurrenceParseError("line_limit_exceeded")
     if type(snapshot_sha256) is not str or _HEX_256.fullmatch(snapshot_sha256) is None \
             or not _is_safe_string(source_member_ref, maximum=_MAX_ID_CHARS) \
-            or type(record_ordinal) is not int or record_ordinal < 0:
+            or type(record_ordinal) is not int or record_ordinal < 0 \
+            or (source_byte_start is None) != (source_byte_end is None) \
+            or (source_byte_start is not None and (
+                type(source_byte_start) is not int or type(source_byte_end) is not int
+                or source_byte_start < 0 or source_byte_end <= source_byte_start
+                or source_byte_end - source_byte_start != len(raw_line)
+            )):
         raise CodexOccurrenceParseError("invalid_provenance")
     try:
         record = json.loads(raw_line, object_pairs_hook=_reject_duplicate_json_keys)
@@ -82,6 +91,8 @@ def parse_codex_occurrence_line(
             snapshot_sha256=snapshot_sha256,
             source_member_ref=source_member_ref,
             record_ordinal=record_ordinal,
+            source_byte_start=source_byte_start,
+            source_byte_end=source_byte_end,
             kind="unknown_record",
             role=None,
             content_blocks=(_opaque_record_ref(record_ordinal),),
@@ -153,6 +164,8 @@ def parse_codex_occurrence_line(
             snapshot_sha256=snapshot_sha256,
             source_member_ref=source_member_ref,
             record_ordinal=record_ordinal,
+            source_byte_start=source_byte_start,
+            source_byte_end=source_byte_end,
             kind=kind,
             role=role,
             content_blocks=tuple(content_blocks),
@@ -162,3 +175,32 @@ def parse_codex_occurrence_line(
         )
     except ValueError:
         raise CodexOccurrenceParseError("invalid_record") from None
+
+
+def parse_codex_occurrence_span(
+    span: JSONLRecordSpan,
+    *,
+    snapshot_sha256: str,
+    source_member_ref: str,
+) -> ImportedHistoryOccurrence:
+    """Adapt one retained synthetic line span without guessing source order."""
+    if type(span) is not JSONLRecordSpan:
+        raise CodexOccurrenceParseError("invalid_record_span")
+    if type(span.oversized) is not bool:
+        raise CodexOccurrenceParseError("invalid_record_span")
+    if span.oversized:
+        raise CodexOccurrenceParseError("oversized_record")
+    if type(span.raw_line) is not bytes \
+            or type(span.record_ordinal) is not int or span.record_ordinal < 0 \
+            or type(span.byte_start) is not int or span.byte_start < 0 \
+            or type(span.byte_end) is not int or span.byte_end <= span.byte_start \
+            or span.byte_end - span.byte_start != len(span.raw_line):
+        raise CodexOccurrenceParseError("invalid_record_span")
+    return parse_codex_occurrence_line(
+        span.raw_line,
+        snapshot_sha256=snapshot_sha256,
+        source_member_ref=source_member_ref,
+        record_ordinal=span.record_ordinal,
+        source_byte_start=span.byte_start,
+        source_byte_end=span.byte_end,
+    )
