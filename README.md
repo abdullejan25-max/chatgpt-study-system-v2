@@ -83,4 +83,4 @@ uv run --no-sync --project . --extra dev pytest -q
 
 ## 状态
 
-P1–P9 的本地功能已完成；P10 Release Hardening 的验收状态和当前测试基线见 [当前状态](docs/current-state.md) 与 [P10 Release Gate](docs/p10-release-gate.md)。仓库不会自动配置 GitHub remote 或推送内容。
+P1–P9 的本地功能已完成；P10 Release Hardening 的验收状态和当前测试基线见 [当前状态](docs/current-state.md) 与 [P10 Release Gate](docs/p10-release-gate.md)。项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
