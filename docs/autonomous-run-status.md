@@ -17,7 +17,7 @@
 - 根据只读代码审查修复目录权限问题：默认数据库改放专用目录；若 POSIX 上该目录已存在但权限对 group/other 开放，则初始化失败且不改原权限。6 条旧 registry 记录已复制并逐条回读验证，摘要一致；旧 registry 哈希未变，作为恢复副本保留。复审未发现新问题。
 - 运行新增 registry 与现有 migration journal 的定向测试：**37 passed, 2 skipped**（两个 POSIX 权限位断言不适用于 Windows）。先前完整回归记录为 **365 passed, 5 skipped**；本次未重跑。
 - 用只读主机盘点发现 Obsidian、WorkBuddy、Hermes 已安装；安装事实不代表聊天数据可访问或 MCP 集成通过。
-- 已通过官方 Google Takeout 提交一次性 Gemini Apps 导出请求，仅选择 `My Activity → Gemini Apps`。平台仍在处理，尚无 archive。
+- 官方 Google Takeout 的 Gemini Apps 导出已完成；页面显示 47.7 MB，下载截止时间为 2026-10-04 16:06。尝试下载时跳转到 Google 登录；未输入凭据或验证码，未下载本地归档。相应 registry 状态已更新为 `available`，conversation/message 数仍未知。
 
 ## P11.3A 来源覆盖
 
@@ -26,7 +26,7 @@
 | 来源 | 当前证据与状态 |
 |---|---|
 | ChatGPT | 官方 Privacy Portal 的“下载我的数据”流程要求账户登录；未提交导出请求。`WAITING_FOR_USER: CHATGPT_EXPORT` |
-| Gemini | 官方导出请求已提交，状态仍为 processing；未收到或检查 archive。 |
+| Gemini | 官方导出已完成，可下载 47.7 MB，截止 2026-10-04 16:06；下载跳转到 Google 登录。归档未本地下载或检查，`WAITING_FOR_USER: GEMINI_EXPORT_SIGN_IN_DOWNLOAD`。 |
 | Legacy Markdown | 既有 55 项保持 archive-only；文件数不等于已验证的 conversation/message 数。 |
 | Codex、WorkBuddy、Hermes | 已发现客户端安装；本地聊天存储、导出能力与可访问性未验证。 |
 
@@ -46,10 +46,11 @@ History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化
 3. **Obsidian GUI**：打开目标 Vault，确认可用于只读人类视图；工具当前未完成真实 GUI 检查。
 4. **WorkBuddy / Hermes**：按各 Host 的正式设置启用 MCP/Gateway 连接，并提供相应本机授权；未用临时配置或伪造 host PASS。
 5. **Obsidian 投影设计**：等待选择是否先做纯投影器、先补 Gateway 列表接口，或暂缓；收到选择前不实现投影代码。
+6. **Gemini 导出下载**：官方归档已完成，但下载页要求 Google 登录。请在官方 Takeout 页面完成账户登录/验证后再下载；当前没有本地 raw archive，下载截止时间页面显示为 2026-10-04 16:06。
 
 ## 发布与隐私
 
 - `v0.1.0` 未改；没有创建 `v0.2.0` tag/Release，也没有 push。
 - 原始对话、导出、账号数据、真实路径、源哈希和私有 source registry 均未进入 Git。
 - 应用内已安排本地线程每 6 小时续作一次，覆盖 72 小时；状态无变化时保持安静。
-- 下一安全步骤：只在官方 archive 已就绪且可通过现有页面检查时核验，不重复提交导出；继续不依赖人工输入的 P11/P12 compatibility prep。Obsidian 投影实现等待上述设计选择；不执行真实 History 写入或发布。
+- 下一安全步骤：Gemini archive 已就绪，等待人工登录后再取回并校验原始文件；不重复提交导出。继续不依赖人工输入的 P11/P12 compatibility prep。Obsidian 投影实现等待上述设计选择；不执行真实 History 写入或发布。

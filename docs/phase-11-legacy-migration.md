@@ -53,7 +53,7 @@
 - 本地私有 conversation-source registry 已创建，当前有 6 个来源条目：ChatGPT 官方导出、Gemini 官方导出、Legacy Markdown archive，以及 Codex、WorkBuddy、Hermes 三个已发现客户端。POSIX 存储目录/数据库为 owner-only；Windows 默认落在用户状态目录。公共摘要只包含聚合数量与固定状态码，跨来源总数明确标为来源报告之和；账号、标识、私有路径和哈希留在本地。
 - Legacy Basic Memory 中既有的 55 个聊天 Markdown 仍是 archive-only：它们不能证明平台会话 ID、message role/author、event time 或原始消息边界，因此不被计作 55 个已验证 conversation，也不转成 raw History messages。
 - ChatGPT 官方导出尚未请求。Privacy Portal 在选择“下载我的数据”后要求账户登录；没有输入账号、密码、验证码或提交请求。此项为 `WAITING_FOR_USER: CHATGPT_EXPORT`。
-- Gemini 官方 Takeout 已只选择 `My Activity → Gemini Apps` 并提交一次性 ZIP 导出请求；当前仍在平台处理，尚未收到或读取 archive。未选择其它 Google 产品或活动类别。
+- Gemini 官方 Takeout 已只选择 `My Activity → Gemini Apps` 并提交一次性 ZIP 导出请求。官方页面现显示导出已完成（47.7 MB，页面列出的下载截止时间为 2026-10-04 16:06）；尝试下载后页面跳转到 Google 登录。没有输入凭据或验证码，归档尚未落到本地，也未读取或检查。未选择其它 Google 产品或活动类别。此项为 `WAITING_FOR_USER: GEMINI_EXPORT_SIGN_IN_DOWNLOAD`。
 - Codex、WorkBuddy、Hermes 客户端已在有界主机盘点中发现，但各自的本地聊天存储位置、可访问性和导出能力尚未验证。未读取浏览器凭据、cookie、token 或系统密钥库。
 - History 后端仍为 `not_configured`，当前 capability 仅为 `read`。没有 V2 History、Assets、Documents 或 Wrong Answer 业务写入；没有 raw archive、规范化记录或 retrieval E2E。
 - 新增私有 registry 的合成测试在 Windows 为 **18 passed, 2 skipped**（两个 POSIX 权限位断言不适用）；与现有 migration journal 测试合并运行共 **37 passed, 2 skipped**。历史完整回归 **365 passed, 5 skipped** 属于先前 checkpoint，本次没有重复运行。
