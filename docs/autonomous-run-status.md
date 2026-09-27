@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- 当前工程检查点：`d69cd91`（Obsidian projection writer 仓库边界与失败恢复加固）。
+- 当前工程检查点：`a4d039d`（Codex JSONL 私有快照、复验和来源登记支持）。
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有真实导出归档、真实迁移、V2 业务写入或发布。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。

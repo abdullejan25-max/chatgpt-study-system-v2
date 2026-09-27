@@ -82,7 +82,7 @@ P11.3A subgates：Conversation Source Inventory、V1 Conversation Deduplication�
 | Legacy Inventory | PASS | 明确根目录完整盘点，摘要不含正文或路径 |
 | Study Strategy | PASS | 同一权威根原地复用，临时 QMD 重建和检索通过 |
 | History Migration | BLOCKED | History 未配置，旧 fact annotation contract 未实现；无业务写入 |
-| Unified Conversation Source Inventory | BLOCKED | 私有登记器记录 7 个来源条目；Hermes 本地 DB 仅确认 27 sessions/5,666 message rows；Codex 有 70 个未解析 JSONL 候选文件（不等于会话数）；WorkBuddy 文档提示应用内可查看任务对话历史，但原始导出/本地来源未核实；ChatGPT/Gemini 仍有登录阻断 |
+| Unified Conversation Source Inventory | BLOCKED | 私有登记器记录 7 个来源条目；Hermes 本地 DB 仅确认 27 sessions/5,666 message rows；Codex 私有快照保留 82 个未解析 JSONL 候选文件（不等于会话数），与此前 70 个候选的差异尚未解释；WorkBuddy 文档提示应用内可查看任务对话历史，但原始导出/本地来源未核实；ChatGPT/Gemini 仍有登录阻断 |
 | Unified Conversation History | BLOCKED | 无 raw archive、规范化、跨源去重或检索证据；ChatGPT 子门槛为 WAITING_FOR_USER |
 | Assets/Documents | BLOCKED | Study PDF 可原地复用；70 张旧错题图均未能与 source 建立可信关系，4 个现有目标 hash 命中也仍属 unresolved |
 | Wrong Answers | BLOCKED | 28 条 note 与 70 张图的关系无法验证 |
