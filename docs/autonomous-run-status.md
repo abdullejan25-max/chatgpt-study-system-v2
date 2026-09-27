@@ -36,7 +36,7 @@
 | Legacy Markdown | 既有 55 项保持 archive-only；文件数不等于已验证的 conversation/message 数。 |
 | Hermes | 官方文档确认会话存入 `state.db`；当前配置位置的副本 integrity 为 `ok`，27 sessions、5,666 message rows。仅查 SQLite 结构、完整性与行数，没有查正文或时间。History target 未配置，仍 `BLOCKED`，全部 message rows 未导入。 |
 | Codex | 已发现 70 个 `.jsonl` 候选文件（不是已验证的 conversation 数）；没有读取内容，conversation/message counts 与 role、边界、身份仍未知，导入未开始。 |
-| WorkBuddy | 安装元数据报告版本 5.6.2；本地聊天存储和可访问的原始导出仍未验证。官方 [Conversation Memory 文档](https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Memory)说明记忆是从对话提取的摘要；[FAQ](https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/FQA)说诊断日志可能含对话记录。这些资料没有证明存在可用的原始聊天导出。 |
+| WorkBuddy | 安装元数据报告版本 5.6.2；本地聊天存储和可访问的原始导出仍未验证。官方 [Conversation Memory 文档](https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Memory)说明记忆是从对话提取的摘要；[FAQ](https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/FQA)说诊断日志可能含对话记录；[跨设备任务文档](https://www.workbuddy.ai/document/cross-device-tasks)描述已授权连接设备可查看桌面任务对话历史。这只确认了文档所述的应用内查看路径，没有确认原始导出或本地存储格式。 |
 
 History 仍未配置，当前 capability 仅为 `read`。新增的私有 raw ZIP ingest 组件只用合成归档验证：精确保留、资源上限、重复校验和中断恢复；没有真实归档落盘。真实来源的 raw archive integrity、规范化、跨源去重、附件处理、History 导入、read-back 和 retrieval E2E 仍未完成。未知 role、author、时间、thread、message boundary、分支或附件关系保持 unknown。
 
@@ -53,7 +53,8 @@ History 仍未配置，当前 capability 仅为 `read`。新增的私有 raw ZIP
 2. **History 目标**：在受信任的本机私有配置中配置 History store，并启用所需写能力。当前工作不会修改私有配置。
 3. **Obsidian GUI**：打开目标 Vault，确认可用于只读人类视图；工具当前未完成真实 GUI 检查。
 4. **WorkBuddy / Hermes**：按各 Host 的正式设置启用 MCP/Gateway 连接，并提供相应本机授权；未用临时配置或伪造 host PASS。
-5. **Gemini 导出下载**：官方归档已完成，但下载跳转到 Google 账号验证/reCAPTCHA。请在官方 Takeout 页面由用户本人完成验证并下载；当前没有本地 raw archive，下载截止时间页面显示为 2026-10-04 16:06。
+5. **WorkBuddy 历史来源**：在桌面端确认任务/对话历史是否提供正式原始导出或明确的本地来源。官方文档仅证明已授权连接设备可查看历史；没有访问本机 UI 或诊断日志。
+6. **Gemini 导出下载**：官方归档已完成，但下载跳转到 Google 账号验证/reCAPTCHA。请在官方 Takeout 页面由用户本人完成验证并下载；当前没有本地 raw archive，下载截止时间页面显示为 2026-10-04 16:06。
 
 ## 独立工程前置
 
@@ -67,4 +68,4 @@ History 仍未配置，当前 capability 仅为 `read`。新增的私有 raw ZIP
 - WorkBuddy 与 Hermes 的 stdio 客户端能力已按官方文档确认；本机连接、工具调用和跨 Host E2E 仍未验证，详见 [P12 Host Compatibility Checkpoint](p12-host-compatibility.md)。
 - Obsidian O1 contracts and missing facets are documented in [P12 Obsidian Reality Audit](p12-obsidian-reality-audit.md); private Vault selection and GUI remain user gates.
 - 应用内已安排本地线程每 6 小时续作一次，覆盖 72 小时；状态无变化时保持安静。
-- 下一安全步骤：继续核实 WorkBuddy 的正式聊天来源，或推进其它 Host-neutral P12 合成兼容工作；Codex 候选文件在取得受限格式证据前不解析。保持 V2 私有 History/错题读取禁用，直到受信任配置明确启用。维护 WAITING_FOR_USER 清单，不重复提交 Gemini 导出；不执行真实业务写入或发布。
+- 下一安全步骤：WorkBuddy 需用户在桌面端核实官方文档提到的历史入口及是否有原始导出；同时可继续 Host-neutral P12 准备。Codex 候选文件在取得受限格式证据前不解析。保持 V2 私有 History/错题读取禁用，直到受信任配置明确启用。维护 WAITING_FOR_USER 清单，不重复提交 Gemini 导出；不执行真实业务写入或发布。
