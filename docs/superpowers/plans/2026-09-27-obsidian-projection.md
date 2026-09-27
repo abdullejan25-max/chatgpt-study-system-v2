@@ -35,7 +35,7 @@ Build a deterministic, one-way renderer from explicitly supplied V2 Gateway read
 ### Task 2 — Pure projection renderer
 
 - [x] Add typed snapshot/view DTOs and deterministic Markdown rendering.
-- [x] Generate dashboard with recent supplied Wrong Answers, History index/conversation pages, Wrong Answer index/source pages, and Agent-reported Knowledge Point/Error Type indexes.
+- [x] Generate dashboard with recent supplied Wrong Answers, History index/conversation pages and cross-conversation timeline, Wrong Answer index/source pages, and Agent-reported Knowledge Point/Error Type indexes.
 - [x] Use JSON-compatible quoted YAML frontmatter; include `generated: true`, IDs, event/import times, type, and safe provenance summary. Render subject as unavailable because the current Wrong Answer DTO has no subject field.
 - [x] Hash logical IDs for output path components and cap the complete rendered payload.
 
@@ -50,5 +50,5 @@ Build a deterministic, one-way renderer from explicitly supplied V2 Gateway read
 - A consistent, bounded Gateway enumeration contract for complete History and Wrong Answer snapshots.
 - History configuration and real source availability.
 - Human confirmation of the Obsidian Vault and GUI review.
-- A private, ignored generation target and a writer with safe rebuild/stale-file handling.
+- A confirmed private, ignored real-Vault target; the separate synthetic writer has manifest-bounded rebuild/stale-file handling, but has not been run against a real Vault.
 - Full O1–O13 validation and P12 Step 1 release gate before `v0.3.0`.
