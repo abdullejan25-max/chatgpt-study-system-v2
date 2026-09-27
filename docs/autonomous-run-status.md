@@ -43,6 +43,7 @@ History 仍未配置，当前 capability 仅为 `read`。新增的私有 raw ZIP
 ## P12 状态
 
 - **Step 1 — Obsidian**：纯内存 renderer、History 时间线、独立 manifest-bounded writer、opt-in per-store Gateway 枚举接口及 reconciliation collector 均已实现并通过合成测试。原 synthetic end-to-end **36 passed, 1 skipped**；本次 writer 安全修复后的三个相关模块 **44 passed, 1 skipped**。先前全量回归 **433 passed, 8 skipped**，本次未重跑。无个人 snapshot。writer 仅经 synthetic 目录验证。真实 Vault/GUI 未检查，O1–O13 和 P12 Step 1 release gate 仍未通过，详见 [Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
+- 新增的 Host-neutral process smoke 通过独立 MCP SDK 启动真实 stdio 子进程并分页读取合成 History projection；与 History/Wrong Answer MCP capability 测试合计 **24 passed**。这不是 WorkBuddy/Hermes Host E2E。
 - **Step 2 — WorkBuddy**：官方文档确认提供本地 stdio MCP 配置；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 3 — Hermes**：官方文档确认支持本地 stdio MCP；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 4 — Cross-Agent**：被前置真实 Host gate 阻断；无跨 Host 写读、版本或投影验证。

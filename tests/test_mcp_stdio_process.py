@@ -60,7 +60,7 @@ def test_independent_stdio_client_uses_configured_gateway_and_resources(tmp_path
         f'root={json.dumps(assets.as_posix())}\n'
         f'database={json.dumps(asset_db.as_posix())}\n'
         f'ingest_root={json.dumps(source_root.as_posix())}\n'
-        '[permissions]\ncapabilities=["read", "ingest"]\n',
+        '[permissions]\ncapabilities=["read", "ingest", "projection"]\n',
         encoding="utf-8",
     )
     repository = Path(__file__).resolve().parents[1]
@@ -83,6 +83,7 @@ def test_independent_stdio_client_uses_configured_gateway_and_resources(tmp_path
                             "ingest_documents", "ingest_document_file", "search_documents",
                             "fetch_document_page", "list_document_ocr_candidates",
                             "process_document_ocr_pages"} <= set(tools)
+                    assert "projection_snapshot" in tools
                     assert {"document_page", "document_page_image"} <= {
                         item.name for item in (await client.list_resource_templates()).resourceTemplates
                     }
@@ -105,6 +106,22 @@ def test_independent_stdio_client_uses_configured_gateway_and_resources(tmp_path
                     assert study_error.structuredContent["error"]["code"] == "QMD_NOT_FOUND"
                     history_result = await client.call_tool("search_history", {"query": "quadratic"})
                     assert history_result.structuredContent["results"][0]["source_id"] == "synthetic-export"
+
+                    started = await client.call_tool("projection_snapshot", {
+                        "domain": "history", "operation": "begin",
+                    })
+                    token = started.structuredContent["snapshot_token"]
+                    sources = await client.call_tool("projection_snapshot", {
+                        "domain": "history", "operation": "sources", "snapshot_token": token,
+                    })
+                    source_id = sources.structuredContent["sources"][0]["source_id"]
+                    records = await client.call_tool("projection_snapshot", {
+                        "domain": "history", "operation": "records", "snapshot_token": token,
+                        "source_id": source_id,
+                    })
+                    assert started.structuredContent["total_records"] == 1
+                    assert records.structuredContent["items"][0]["source_item_id"] == "entry-1"
+                    assert records.structuredContent["items"][0]["content"] == "Synthetic quadratic question"
 
                     document = await client.call_tool("ingest_documents", {"documents": [{
                         "title": "Synthetic chapter", "media_type": "text/plain",
