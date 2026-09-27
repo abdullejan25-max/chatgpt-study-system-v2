@@ -7,6 +7,9 @@ license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = ["mcp>=1,<2", "pypdf>=6.18,<7"]
 
+[project.scripts]
+study-migrate = "chatgpt_study_system.migration.cli:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
 pdf-ocr = ["PyMuPDF>=1.24,<2"]
