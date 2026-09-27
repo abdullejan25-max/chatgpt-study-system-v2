@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- 最近功能提交：`bcb76d6`（新增仅经合成 fixture 验证的 Codex occurrence adapter，不接真实快照或数据库）。
+- 最近功能提交：`8644406`（Codex occurrence adapter 保留未映射字段引用；仅合成 fixture 验证）。
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有官方导出 ZIP、规范化、真实迁移、V2 业务写入或发布；Codex 候选完成私有原始快照和 aggregate-only 结构检查，不代表 canonical 计数或迁移。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。
@@ -28,6 +28,7 @@
 - 独立 Codex JSONL 结构检查器、私有 snapshot/registry 与 History 合约回归 **57 passed, 4 skipped**；没有运行全量套件。检查器兼容已观察到的外层与嵌套 session metadata ID 字段，并在两者冲突时失败关闭。基于结构观察新增 lossless History envelope 设计提案；仅为文档，不改 schema、Gateway 或业务数据。
 - 合成-only History occurrence DTO 已加入：保留 typed block 边界、open role/kind、原始时间字符串、record ordinal 与可选 source-declared ordering，敏感字段从 `repr()` 隐藏。与 inspector 和 History 合约回归 **36 passed**；DTO 未接入真实 importer、Gateway 或数据库。
 - 合成-only Codex line adapter 已加入：仅映射明确 role、ID、原始 timestamp 和 text block；图片、音频、工具/事件及未知结构通过 snapshot locator 保留。未知 conversation/order/title/model/branch 不补猜。adapter/DTO/inspector/History 定向回归 **42 passed**；没有运行个人快照或真实数据库。
+- 复核发现 source `ordinal` 与 message `phase` 尚无迁移映射；adapter 现在将其标记为原始记录引用，不推断 message order 或丢弃原值。定向回归仍为 **42 passed**。
 
 ## P11.3A 来源覆盖
 

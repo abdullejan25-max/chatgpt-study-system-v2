@@ -48,4 +48,4 @@ parse_codex_occurrence_line(
 - [x] **Step 2: Run the focused tests and confirm the expected failure.** The initial run failed at collection because the module did not yet exist.
 - [x] **Step 3: Implement the bounded pure parser** with a 16 MiB line cap and only the mappings listed above.
 - [x] **Step 4: Run adapter, DTO, inspector, and History contract tests.** Observed **42 passed** in 5.63s.
-- [x] **Step 5: Run `git diff --check` and commit the synthetic-only adapter, tests, spec, and plan** (`bcb76d6`).
+- [x] **Step 5: Run `git diff --check` and commit the synthetic-only adapter, tests, spec, and plan** (`bcb76d6`). Follow-up to preserve unmapped `ordinal` / `phase` values is `8644406`.
