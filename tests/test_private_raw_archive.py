@@ -34,6 +34,10 @@ def test_limits_cannot_raise_hard_resource_ceilings() -> None:
             with pytest.raises(ValueError, match="^Invalid raw archive limits$"):
                 RawArchiveLimits(**{field: value})
 
+    for field in ("max_archive_bytes", "max_member_compression_ratio"):
+        with pytest.raises(ValueError, match="^Invalid raw archive limits$"):
+            RawArchiveLimits(**{field: 0})
+
     RawArchiveLimits(max_archive_bytes=1, max_members=1,
                      max_uncompressed_bytes=1, max_member_compression_ratio=1)
     RawArchiveLimits(max_members=0, max_uncompressed_bytes=0)
