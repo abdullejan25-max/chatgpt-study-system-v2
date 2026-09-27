@@ -31,9 +31,9 @@
 2. Client B lists the same workflow, reads/searches version 1, and saves version 2 with `expected_version=1` through MCP.
 3. Client A reconnects and reads version 2, including its `supersedes_analysis_id` and caller-reported/unverified provenance.
 
-- [ ] Add the synthetic integration test with exact expected versions, source/analysis ID linkage, workflow equality, and provenance status.
-- [ ] Run the test against the unchanged Gateway; the goal is host-neutral conformance evidence, so a passing test is expected if existing behavior already supports it.
-- [ ] If the test fails, isolate the Gateway behavior before changing production code; implement only the test harness unless a genuine product defect is demonstrated.
-- [ ] Run the parity test plus existing Wrong Answer MCP and independent stdio process tests.
-- [ ] Review the diff for temporary-only data and fixed privacy boundaries; run `git diff --check`.
+- [x] Add the synthetic integration test with exact expected versions, source/analysis ID linkage, workflow equality, and provenance status.
+- [x] Run the test against the unchanged Gateway; the goal is host-neutral conformance evidence, so a passing test is expected if existing behavior already supports it. Observed **1 passed**.
+- [x] If the test fails, isolate the Gateway behavior before changing production code; implement only the test harness unless a genuine product defect is demonstrated. Existing Gateway behavior passed; no production change was needed.
+- [x] Run the parity test plus existing Wrong Answer MCP and independent stdio process tests. Observed **5 passed**.
+- [x] Review the diff for temporary-only data and fixed privacy boundaries; run `git diff --check`.
 - [ ] Update public P12 docs and ignored checkpoint, commit locally, and leave all real host gates `WAITING_FOR_USER`.
