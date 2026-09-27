@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- 最近功能提交：`3cdcca5`（合成双 stdio 客户端跨进程读写/版本 parity 测试；不代表真实 Hosts）。
+- 最近功能提交：`35cb513`（合成双 stdio 客户端覆盖幂等重试和 stale-version 冲突；不代表真实 Hosts）。
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有官方导出 ZIP、规范化、真实迁移、V2 业务写入或发布；Codex 候选完成私有原始快照和 aggregate-only 结构检查，不代表 canonical 计数或迁移。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。

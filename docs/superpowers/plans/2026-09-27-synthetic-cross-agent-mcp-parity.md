@@ -36,4 +36,4 @@
 - [x] If the test fails, isolate the Gateway behavior before changing production code; implement only the test harness unless a genuine product defect is demonstrated. Existing Gateway behavior passed; no production change was needed.
 - [x] Run the parity test plus existing Wrong Answer MCP and independent stdio process tests. Observed **5 passed**.
 - [x] Review the diff for temporary-only data and fixed privacy boundaries; run `git diff --check`.
-- [x] Update public P12 docs and ignored checkpoint, commit locally, and leave all real host gates `WAITING_FOR_USER`. Commit: `3cdcca5`.
+- [x] Update public P12 docs and ignored checkpoint, commit locally, and leave all real host gates `WAITING_FOR_USER`. Commit: `35cb513`.
