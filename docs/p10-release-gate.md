@@ -1,7 +1,7 @@
 # Phase 10 — GitHub Release Gate
 
 更新时间：2026-09-27
-状态：**自动门禁收尾中；clean release candidate 的 Codex Desktop GUI 验证尚未完成。** 未创建 GitHub repository、未添加 remote、未 push，也未发布 tag/Release。
+状态：**Codex Desktop Host gate 已通过；GitHub 首次公开与真实 remote fresh-clone 复验待完成。** 尚未创建 GitHub repository、添加 remote 或 push，也未发布 tag/Release。
 
 ## Repository snapshot
 
@@ -15,7 +15,8 @@
 - `.codex/config.example.toml` 仅有占位符；`.codex/setup_mcp.py` 从脚本位置定位 checkout，生成带显式 `cwd`、`uv --project`、`PYTHONPATH` 和私有 Gateway config 路径的本机配置。
 - `required = true` 保留；未知的本机配置不会被 setup 覆盖。
 - setup 测试覆盖空格/非 ASCII 路径、移动 checkout、未知配置保护和 Git 忽略边界。
-- 项目所有者已报告开发 checkout 的真实 Desktop 新对话能加载 `study_system`、`health_report` 返回 `ok: true` 且 Study 可读；History `not_configured` 是配置状态。本轮仍需验证最终 clean release candidate 的 GUI Host。
+- 项目所有者已报告开发 checkout 的真实 Desktop 新对话能加载 `study_system`、`health_report` 返回 `ok: true` 且 Study 可读；History `not_configured` 是配置状态。
+- 最终稳定 clean release candidate 的 Codex Desktop 新对话验证已通过：`study_system` 已加载，`health_report.ok = true`，`study.configured/root_exists/readable = true`，没有 MCP 启动、initialize 或 Study 配置错误。合成配置中的 `history.status = not_configured` 与 `qmd.discoverable = false` 是预期状态；验证未修改文件或数据，候选工作区保持干净。
 
 ## License 和 PyMuPDF
 
@@ -45,10 +46,10 @@
 
 - 开发 checkout 完整测试：**308 passed, 5 skipped**。跳过项是 Codex CLI/真实 QMD opt-in，以及当前 host 的 NTFS junction / symlink 权限限制。
 - Bootstrap + metadata 有专项测试；安全边界合成测试的既有审计结果为 **58 passed, 1 skipped**。
-- clean release candidate 位于带空格和中文的临时路径；按 README 完成默认安装及 `dev` extra 后，PyMuPDF 模块和 distribution 均不存在。`pdf-ocr` extra 的 dry-run 解析成功，计划仅额外安装 PyMuPDF 1.28.2。
+- 先前一次性 clean release candidate 位于带空格和中文的路径；按 README 完成默认安装及 `dev` extra 后，PyMuPDF 模块和 distribution 均不存在。`pdf-ocr` extra 的 dry-run 解析成功，计划仅额外安装 PyMuPDF 1.28.2。
 - clean candidate 全量测试：**307 passed, 6 skipped**。其中默认无 PyMuPDF 导致 OCR 专项用例跳过；Codex Host 与真实 QMD 是 opt-in；本机无法创建 NTFS junction / symlink。
 - clean candidate 的 wheel 与 sdist 均构建成功；两种发行物都含 Apache-2.0 SPDX metadata 与 LICENSE，且 PyMuPDF 仅通过 `extra == 'pdf-ocr'` 声明。
-- 使用生成配置启动实际 stdio server，MCP initialize 与 `health_report` 均通过；`ok: true`、合成 Study root 可读，History 为 `not_configured`，QMD 不可发现符合无 QMD 私有运行时的合成配置。
+- 使用生成配置启动实际 stdio server，MCP initialize 与 `health_report` 均通过；`ok: true`、合成 Study root 可读，History 为 `not_configured`，QMD 不可发现符合无 QMD 私有运行时的合成配置。稳定 clean candidate 上再次完成默认依赖安装、`setup_mcp.py` 和协议 smoke；生成配置针对该 checkout 且保留 `required = true`。
 - 独立 public `main` 的 root commit 无 parent，旧开发 commit `c413b4375de807e1ff2f39c6e3b3b1b402fd9940` 不在 release candidate 的 Git objects 中；候选工作树与最终开发 HEAD 的 85 个文件 blob 一致。
 - public tree 和所有 Git objects 的隐私复扫通过：无凭证、真实账户路径、数据库/教材/图片/日志扩展名、本机配置或旧开发祖先。路径脱敏测试中的用户目录样例均为合成夹具。最终 clean clone 的对象数据库与 public refs 一致，并通过 `git fsck` 检查。
 - `uv lock --check`、候选树 Git 初始化后的全量测试和发行物检查通过。
@@ -62,10 +63,10 @@
 - [x] clean release candidate 默认安装确认没有 PyMuPDF；`pdf-ocr` optional dependency 可解析。
 - [x] clean release candidate 全量测试、package metadata/build 和 MCP initialize + `health_report` smoke 通过。
 - [x] public `main` 是独立无父 root，且 public tree / objects / history 复扫通过。
-- [ ] 对该 clean release candidate 完成 Codex Desktop 新对话验证。
-- [ ] Desktop gate 通过前不创建 GitHub repository、不添加 remote、不 push。
-- [ ] Desktop gate 通过且发布后，fresh clone from GitHub 的最小复验。
+- [x] 对稳定 clean release candidate 完成 Codex Desktop 新对话验证；MCP 已加载，`health_report.ok = true`，合成 Study 可读。
+- [ ] 在目标账号身份确认及全部发布前 gate 通过后，创建 public GitHub repository，仅 push clean public `main`。
+- [ ] 从真实 GitHub remote fresh clone，并复验安装、setup、测试、MCP initialize 与 `health_report`。
 
 ## Clean candidate Desktop verification
 
-打开本次提供的 clean release candidate 目录，在 Codex Desktop 信任该项目后新建对话。确认 `study_system` ready，调用只读 `health_report` 并确认 `ok: true`。合成配置不包含真实 Study/History/Asset 数据，也不启用写能力。
+**PASS。** 项目所有者已在最终稳定 clean release candidate 目录中信任项目并新建 Codex Desktop 对话。`study_system` 已加载；只读 `health_report` 返回 `ok = true`，Study 已配置且 root 存在、可读。`history.status = not_configured` 与 `qmd.discoverable = false` 符合不配置真实 History/QMD 的合成验证环境。没有修改文件或数据，候选工作区无未提交改动。该 GUI Host 验证不替代 push 后从 GitHub fresh clone 的复验。
