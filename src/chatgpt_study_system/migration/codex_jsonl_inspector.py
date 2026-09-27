@@ -52,6 +52,7 @@ class CodexJSONLInspection:
     line_count: int
     valid_json_record_count: int
     malformed_json_line_count: int
+    duplicate_json_key_line_count: int
     non_object_record_count: int
     oversized_line_count: int
     record_type_counts: tuple[tuple[str, int], ...]
@@ -97,6 +98,19 @@ class CodexJSONLInspectionError(RuntimeError):
         super().__init__(f"Codex JSONL inspection failed ({code})")
 
 
+class _DuplicateJSONKey(ValueError):
+    pass
+
+
+def _reject_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise _DuplicateJSONKey
+        result[key] = value
+    return result
+
+
 def _category(value: object, allowed: frozenset[str]) -> str:
     return value if type(value) is str and value in allowed else "other"
 
@@ -120,11 +134,13 @@ def _drain_line(stream) -> None:
             return
 
 
-def _read_json_line(raw: bytes) -> tuple[object | None, bool]:
+def _read_json_line(raw: bytes) -> tuple[object | None, bool, bool]:
     try:
-        return json.loads(raw), True
+        return json.loads(raw, object_pairs_hook=_reject_duplicate_json_keys), True, False
+    except _DuplicateJSONKey:
+        return None, False, True
     except (json.JSONDecodeError, UnicodeDecodeError, RecursionError):
-        return None, False
+        return None, False, False
 
 
 def inspect_codex_snapshot(
@@ -150,7 +166,7 @@ def inspect_codex_snapshot(
     session_id_files: dict[str, set[int]] = {}
     message_ids: dict[str, dict[str, object]] = {}
     image_hashes: dict[bytes, int] = {}
-    line_count = valid_json = malformed = non_objects = oversized = 0
+    line_count = valid_json = malformed = duplicate_json_key_lines = non_objects = oversized = 0
     session_meta_records = session_meta_ids = message_records = 0
     session_id_pairs = matching_session_id_pairs = nonmatching_session_id_pairs = 0
     files_with_multiple_session_ids = 0
@@ -182,9 +198,10 @@ def inspect_codex_snapshot(
                         if not raw.endswith(b"\n"):
                             _drain_line(stream)
                         continue
-                    record, valid = _read_json_line(raw)
+                    record, valid, duplicate_json_keys = _read_json_line(raw)
+                    duplicate_json_key_lines += int(duplicate_json_keys)
                     if not valid:
-                        malformed += 1
+                        malformed += int(not duplicate_json_keys)
                         previous_record_ordinal = None
                         continue
                     valid_json += 1
@@ -351,6 +368,7 @@ def inspect_codex_snapshot(
         line_count=line_count,
         valid_json_record_count=valid_json,
         malformed_json_line_count=malformed,
+        duplicate_json_key_line_count=duplicate_json_key_lines,
         non_object_record_count=non_objects,
         oversized_line_count=oversized,
         record_type_counts=tuple(sorted(record_types.items())),

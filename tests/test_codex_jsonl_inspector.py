@@ -197,6 +197,28 @@ def test_inspector_reports_session_id_and_ordinal_relations_as_counts(
     assert "private-model" not in repr(result)
 
 
+def test_inspector_counts_duplicate_json_key_lines_without_exposing_keys_or_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    raw = (
+        b'{"private_top_key":"one","private_top_key":"two"}\n'
+        b'{"type":"response_item","payload":{"type":"message","role":"user",'
+        b'"private_nested_key":"three","private_nested_key":"four","content":[]}}\n'
+    )
+    store, snapshot = _snapshot(tmp_path, monkeypatch, {"one.jsonl": raw})
+
+    result = inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+
+    assert result.duplicate_json_key_line_count == 2
+    assert result.valid_json_record_count == 0
+    assert result.malformed_json_line_count == 0
+    rendered = repr(result)
+    for private_value in (
+        "private_top_key", "private_nested_key", "one", "two", "three", "four",
+    ):
+        assert private_value not in rendered
+
+
 def test_inspector_rejects_conflicting_outer_and_nested_session_meta_ids(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
