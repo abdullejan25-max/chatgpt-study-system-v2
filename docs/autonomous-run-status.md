@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- 当前工程检查点：`6267bc2`（private raw ZIP ingest 的恢复实现）；随后新增 manifest 大小上限修复，合入前仍在审查。
+- 当前工程检查点：`d69cd91`（Obsidian projection writer 仓库边界与失败恢复加固）。
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有真实导出归档、真实迁移、V2 业务写入或发布。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。
@@ -23,6 +23,7 @@
 - 新增显式 `projection` capability 与只读 `projection_snapshot` MCP/Gateway 接口。History 与 Wrong Answer 分别使用独立 SQLite 高水位 token；支持来源/记录分页、每域 10,000 条与 32 MiB 上限、固定错误、逻辑 URI 校验和 provenance 分类字段白名单。普通 `read` 不显示也不能调用该工具。没有访问任何真实 History/Wrong Answer 数据库。
 - 新增 projection collector：按独立 store 水位完整读取所有来源及记录页，核对来源数、来源记录数与 domain 总数，检测重复/不前进 cursor，并且只在完整核对后返回 renderer snapshot。没有跨 store 原子性保证。
 - 合成验证：projection/collector/writer suite **36 passed, 1 skipped**；全量测试 **433 passed, 8 skipped**。端到端覆盖 Gateway collection → renderer → manifest writer，并验证读取不新增 DB audit。流水线测试发现嵌套完整 SHA 路径在 Windows 临时根下超长；现已改为单一组合身份 SHA-256 路径。
+- 整分支只读复审（`64d7849..3a9339b`）未发现 P0/P1；发现的 Obsidian writer 风险均已修复并复审：拒绝写入仓库重叠目录；更新失败时恢复旧文件与 manifest；若恢复失败保留带映射的恢复目录；manifest 列出的缺失文件也能正确回滚；备份/空目录/staging 清理失败会明确设置状态。相关 renderer/writer/collector 模块定向验证 **44 passed, 1 skipped**；没有真实 Vault 或个人投影。
 
 ## P11.3A 来源覆盖
 
@@ -41,7 +42,7 @@ History 仍未配置，当前 capability 仅为 `read`。新增的私有 raw ZIP
 
 ## P12 状态
 
-- **Step 1 — Obsidian**：纯内存 renderer、History 时间线、独立 manifest-bounded writer、opt-in per-store Gateway 枚举接口及 reconciliation collector 均已实现并通过合成测试。synthetic end-to-end **36 passed, 1 skipped**，全量回归 **433 passed, 8 skipped**。无个人 snapshot。writer 仅经 synthetic 目录验证。真实 Vault/GUI 未检查，O1–O13 和 P12 Step 1 release gate 仍未通过，详见 [Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
+- **Step 1 — Obsidian**：纯内存 renderer、History 时间线、独立 manifest-bounded writer、opt-in per-store Gateway 枚举接口及 reconciliation collector 均已实现并通过合成测试。原 synthetic end-to-end **36 passed, 1 skipped**；本次 writer 安全修复后的三个相关模块 **44 passed, 1 skipped**。先前全量回归 **433 passed, 8 skipped**，本次未重跑。无个人 snapshot。writer 仅经 synthetic 目录验证。真实 Vault/GUI 未检查，O1–O13 和 P12 Step 1 release gate 仍未通过，详见 [Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
 - **Step 2 — WorkBuddy**：官方文档确认提供本地 stdio MCP 配置；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 3 — Hermes**：官方文档确认支持本地 stdio MCP；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 4 — Cross-Agent**：被前置真实 Host gate 阻断；无跨 Host 写读、版本或投影验证。
