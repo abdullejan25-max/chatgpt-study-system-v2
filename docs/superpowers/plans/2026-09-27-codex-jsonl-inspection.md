@@ -25,6 +25,6 @@
 ### Task 3: Checkpoint and next design gate
 
 - [x] Run `git diff --check`, focused tests, and adjacent History contract tests.
-- [ ] Commit code, tests, plan, and public-safe docs.
+- [x] Commit code, tests, plan, and public-safe docs (`ad71369`).
 - [ ] Update the ignored resume checkpoint to the verified HEAD.
 - [ ] Use the evidence to design a separate lossless normalized History model; do not write V2 business data until target configuration and gates pass.
