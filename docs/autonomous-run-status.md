@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- 当前工程检查点：`a4d039d`（Codex JSONL 私有快照、复验和来源登记支持）。
+- 最近功能提交：`a4d039d`（Codex JSONL 私有快照、复验和来源登记支持）。
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有真实导出归档、真实迁移、V2 业务写入或发布。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。
@@ -24,6 +24,7 @@
 - 新增 projection collector：按独立 store 水位完整读取所有来源及记录页，核对来源数、来源记录数与 domain 总数，检测重复/不前进 cursor，并且只在完整核对后返回 renderer snapshot。没有跨 store 原子性保证。
 - 合成验证：projection/collector/writer suite **36 passed, 1 skipped**；全量测试 **433 passed, 8 skipped**。端到端覆盖 Gateway collection → renderer → manifest writer，并验证读取不新增 DB audit。流水线测试发现嵌套完整 SHA 路径在 Windows 临时根下超长；现已改为单一组合身份 SHA-256 路径。
 - 整分支只读复审（`64d7849..3a9339b`）未发现 P0/P1；发现的 Obsidian writer 风险均已修复并复审：拒绝写入仓库重叠目录；更新失败时恢复旧文件与 manifest；若恢复失败保留带映射的恢复目录；manifest 列出的缺失文件也能正确回滚；备份/空目录/staging 清理失败会明确设置状态。相关 renderer/writer/collector 模块定向验证 **44 passed, 1 skipped**；没有真实 Vault 或个人投影。
+- Codex JSONL snapshot 与 registry 定向测试 **33 passed, 4 skipped**；与 raw ZIP 和 migration manifest 回归合并运行 **62 passed, 4 skipped**。全量回归未重跑。
 
 ## P11.3A 来源覆盖
 
