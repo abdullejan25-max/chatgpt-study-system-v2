@@ -25,10 +25,11 @@
 - 合成验证：projection/collector/writer suite **36 passed, 1 skipped**；全量测试 **433 passed, 8 skipped**。端到端覆盖 Gateway collection → renderer → manifest writer，并验证读取不新增 DB audit。流水线测试发现嵌套完整 SHA 路径在 Windows 临时根下超长；现已改为单一组合身份 SHA-256 路径。
 - 整分支只读复审（`64d7849..3a9339b`）未发现 P0/P1；发现的 Obsidian writer 风险均已修复并复审：拒绝写入仓库重叠目录；更新失败时恢复旧文件与 manifest；若恢复失败保留带映射的恢复目录；manifest 列出的缺失文件也能正确回滚；备份/空目录/staging 清理失败会明确设置状态。相关 renderer/writer/collector 模块定向验证 **44 passed, 1 skipped**；没有真实 Vault 或个人投影。
 - Codex JSONL snapshot 与 registry 定向测试 **33 passed, 4 skipped**；与 raw ZIP 和 migration manifest 回归合并运行 **62 passed, 4 skipped**。全量回归未重跑。
-- 独立 Codex JSONL 结构检查器、私有 snapshot/registry 与 History 合约回归 **57 passed, 4 skipped**；没有运行全量套件。检查器兼容已观察到的外层与嵌套 session metadata ID 字段，并在两者冲突时失败关闭。基于结构观察新增 lossless History envelope 设计提案；仅为文档，不改 schema、Gateway 或业务数据。
+- 独立 Codex JSONL 结构检查器、私有 snapshot/registry 与 History 合约回归 **59 passed, 4 skipped**；没有运行全量套件。检查器兼容已观察到的外层与嵌套 session metadata ID 字段，并在两者冲突时失败关闭；新增固定字段名出现计数，不输出字段值或任意字段名。
 - 合成-only History occurrence DTO 已加入：保留 typed block 边界、open role/kind、原始时间字符串、record ordinal 与可选 source-declared ordering，敏感字段从 `repr()` 隐藏。与 inspector 和 History 合约回归 **36 passed**；DTO 未接入真实 importer、Gateway 或数据库。
 - 合成-only Codex line adapter 已加入：仅映射明确 role、ID、原始 timestamp 和 text block；图片、音频、工具/事件及未知结构通过 snapshot locator 保留。未知 conversation/order/title/model/branch 不补猜。adapter/DTO/inspector/History 定向回归 **42 passed**；没有运行个人快照或真实数据库。
 - 复核发现 source `ordinal` 与 message `phase` 尚无迁移映射；adapter 现在将其标记为原始记录引用，不推断 message order 或丢弃原值。定向回归仍为 **42 passed**。
+- 对已验证快照新增只读字段与序号统计：100 条 `session_meta` 中 `id` 与 `session_id` 字段各出现 100 次，其中 57 对相等、43 对不相等（不据此命名冲突或映射 ID）；`parent_thread_id` 出现 43 次、`forked_from_id` 18 次；27,222 条 `event_msg` 中 `thread_id` 出现 19,518 次；`response_item.author` 出现 416 次、`phase` 1,314 次。全部 60,846 条记录有 top-level `ordinal`，文件内相邻比较没有重复或回退。这些只是结构观察，不证明会话/消息顺序或关联。
 
 ## P11.3A 来源覆盖
 

@@ -10,7 +10,7 @@ The verified local snapshot contains 82 JSONL candidates. A bounded exploratory 
 
 ## Chosen approach
 
-Add an inspector that accepts only a published snapshot path and expected snapshot digest, verifies the manifest and every file before parsing, then streams JSONL records under fixed line and record-count ceilings. It reports allowlisted event/content/role categories, parseability, metadata-ID cardinalities from the observed outer `payload.id` or nested `payload.meta.id` layouts, duplicate-message-ID conflict categories, timestamp syntax coverage, and inline image data URI integrity/deduplication counts. If both metadata ID locations are present and differ, inspection fails closed. Its result contains aggregate counts only; identifiers, text, paths, image bytes, and digests never leave the function.
+Add an inspector that accepts only a published snapshot path and expected snapshot digest, verifies the manifest and every file before parsing, then streams JSONL records under fixed line and record-count ceilings. It reports allowlisted event/content/role categories, parseability, metadata-ID cardinalities from the observed outer `payload.id` or nested `payload.meta.id` layouts, duplicate-message-ID conflict categories, timestamp syntax coverage, inline image data URI integrity/deduplication counts, and field-presence totals for a fixed key allowlist at record/payload/meta/content-block scopes. If both metadata ID locations are present and differ, inspection fails closed. Its result contains aggregate counts only; identifiers, text, paths, image bytes, arbitrary field names, and digests never leave the function.
 
 The inspector is not a normalizer or importer. It does not assign canonical conversation/message counts, choose timestamps for conflicting duplicate IDs, map `developer` to another role, flatten tool events, or create Assets. Those choices require an explicit lossless History representation and remain blocked from business writes while the History target is unconfigured.
 
@@ -25,6 +25,7 @@ The inspector is not a normalizer or importer. It does not assign canonical conv
 - Reuse the snapshot store's manifest, SHA-256, private-path, and size checks before inspection.
 - Cap each JSONL record at 16 MiB and total records at 1,000,000; stop with a fixed path-free error when a bound is exceeded.
 - Cap distinct message IDs at 250,000, decoded inline image bytes at 512 MiB total, and unique image payload tracking at 100,000 images / 256 MiB. Exceeded state or image bounds fail closed instead of exhausting memory.
+- Field-presence reporting is limited to a fixed key allowlist and four fixed scopes; arbitrary field names and all field values are discarded.
 - Never return or log raw data, source identifiers, filenames, paths, content, image bytes, or digests.
 - Image data URIs are decoded only in memory for integrity and deduplication counts; no Asset registration or file extraction occurs.
 - All persisted fixtures are synthetic. Real inspection results go only to the ignored private checkpoint; public docs contain aggregate observations and uncertainty only.

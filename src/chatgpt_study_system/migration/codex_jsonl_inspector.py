@@ -36,6 +36,13 @@ _EVENT_TYPES = frozenset({"task_started", "task_complete", "user_message", "agen
 _ROLES = frozenset({"user", "assistant", "developer", "system", "tool"})
 _CONTENT_TYPES = frozenset({"input_text", "output_text", "input_image"})
 _IMAGE_MIME_TYPES = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})
+_FIELD_KEYS = frozenset({
+    "id", "session_id", "thread_id", "parent_thread_id", "forked_from_id", "ordinal",
+    "branch", "title", "author", "model", "model_provider", "timestamp", "created_at",
+    "updated_at", "content", "attachment", "attachments", "images", "local_images", "files",
+    "source_order", "conversation_order", "message_order", "role", "type", "text", "image_url",
+    "file_id", "audio_url", "meta", "git", "phase",
+})
 
 
 @dataclass(frozen=True)
@@ -48,12 +55,16 @@ class CodexJSONLInspection:
     non_object_record_count: int
     oversized_line_count: int
     record_type_counts: tuple[tuple[str, int], ...]
+    field_presence_counts: tuple[tuple[str, str, str, int], ...]
     response_type_counts: tuple[tuple[str, int], ...]
     role_counts: tuple[tuple[str, int], ...]
     content_block_counts: tuple[tuple[str, int], ...]
     session_metadata_record_count: int
     session_metadata_id_count: int
     unique_session_metadata_id_count: int
+    session_id_pair_count: int
+    session_id_pair_match_count: int
+    session_id_pair_nonmatching_count: int
     session_ids_repeated_across_files: int
     files_with_multiple_session_ids: int
     message_record_count: int
@@ -66,6 +77,9 @@ class CodexJSONLInspection:
     duplicate_groups_crossing_files: int
     parseable_message_timestamp_count: int
     utc_message_timestamp_count: int
+    parseable_record_ordinal_count: int
+    adjacent_equal_record_ordinal_count: int
+    record_ordinal_regression_count: int
     inline_image_payload_count: int
     valid_inline_image_payload_count: int
     invalid_inline_image_payload_count: int
@@ -128,6 +142,7 @@ def inspect_codex_snapshot(
         raise CodexJSONLInspectionError("snapshot_invalid") from None
 
     record_types: Counter[str] = Counter()
+    field_presence: Counter[tuple[str, str, str]] = Counter()
     response_types: Counter[str] = Counter()
     roles: Counter[str] = Counter()
     content_types: Counter[str] = Counter()
@@ -137,8 +152,10 @@ def inspect_codex_snapshot(
     image_hashes: dict[bytes, int] = {}
     line_count = valid_json = malformed = non_objects = oversized = 0
     session_meta_records = session_meta_ids = message_records = 0
+    session_id_pairs = matching_session_id_pairs = nonmatching_session_id_pairs = 0
     files_with_multiple_session_ids = 0
     parseable_timestamps = utc_timestamps = 0
+    parseable_ordinals = adjacent_equal_ordinals = ordinal_regressions = 0
     inline_images = valid_images = invalid_images = image_bytes = unique_image_bytes = 0
     file_index = -1
 
@@ -150,6 +167,7 @@ def inspect_codex_snapshot(
             relative = PurePosixPath(entry["relative_path"])
             path = Path(snapshot_path) / "files" / Path(*relative.parts)
             local_session_ids: set[str] = set()
+            previous_record_ordinal: int | None = None
             with open(_os_path(path), "rb") as stream:
                 while True:
                     raw = stream.readline(_MAX_LINE_BYTES + 1)
@@ -160,27 +178,64 @@ def inspect_codex_snapshot(
                         raise CodexJSONLInspectionError("record_limit_exceeded")
                     if len(raw) > _MAX_LINE_BYTES:
                         oversized += 1
+                        previous_record_ordinal = None
                         if not raw.endswith(b"\n"):
                             _drain_line(stream)
                         continue
                     record, valid = _read_json_line(raw)
                     if not valid:
                         malformed += 1
+                        previous_record_ordinal = None
                         continue
                     valid_json += 1
                     if not isinstance(record, dict):
                         non_objects += 1
+                        previous_record_ordinal = None
                         continue
+
+                    ordinal = record.get("ordinal")
+                    if type(ordinal) is int and ordinal >= 0:
+                        parseable_ordinals += 1
+                        if previous_record_ordinal is not None:
+                            adjacent_equal_ordinals += int(ordinal == previous_record_ordinal)
+                            ordinal_regressions += int(ordinal < previous_record_ordinal)
+                        previous_record_ordinal = ordinal
+                    else:
+                        previous_record_ordinal = None
 
                     envelope = _category(record.get("type"), _RECORD_TYPES)
                     record_types[envelope] += 1
+                    for key in record.keys() & _FIELD_KEYS:
+                        field_presence[("record", envelope, key)] += 1
                     payload = record.get("payload")
                     if not isinstance(payload, dict):
                         continue
+                    for key in payload.keys() & _FIELD_KEYS:
+                        field_presence[("payload", envelope, key)] += 1
+                    nested_meta = payload.get("meta")
+                    if isinstance(nested_meta, dict):
+                        for key in nested_meta.keys() & _FIELD_KEYS:
+                            field_presence[("payload.meta", envelope, key)] += 1
+                    nested_content = payload.get("content")
+                    if isinstance(nested_content, list):
+                        for block in nested_content:
+                            if isinstance(block, dict):
+                                for key in block.keys() & _FIELD_KEYS:
+                                    field_presence[("content_block", envelope, key)] += 1
                     if envelope == "session_meta":
                         session_meta_records += 1
-                        identifier = payload.get("id")
                         meta = payload.get("meta")
+                        session_id = payload.get("session_id")
+                        if type(session_id) is not str and isinstance(meta, dict):
+                            session_id = meta.get("session_id")
+                        identifier = payload.get("id")
+                        if type(identifier) is not str and isinstance(meta, dict):
+                            identifier = meta.get("id")
+                        if type(session_id) is str and 0 < len(session_id) <= _MAX_ID_CHARS \
+                                and type(identifier) is str and 0 < len(identifier) <= _MAX_ID_CHARS:
+                            session_id_pairs += 1
+                            matching_session_id_pairs += int(session_id == identifier)
+                            nonmatching_session_id_pairs += int(session_id != identifier)
                         nested_identifier = meta.get("id") if isinstance(meta, dict) else None
                         valid_identifier = type(identifier) is str and 0 < len(identifier) <= _MAX_ID_CHARS
                         valid_nested_identifier = (
@@ -299,12 +354,19 @@ def inspect_codex_snapshot(
         non_object_record_count=non_objects,
         oversized_line_count=oversized,
         record_type_counts=tuple(sorted(record_types.items())),
+        field_presence_counts=tuple(sorted(
+            (scope, envelope, key, count)
+            for (scope, envelope, key), count in field_presence.items()
+        )),
         response_type_counts=tuple(sorted(response_types.items())),
         role_counts=tuple(sorted(roles.items())),
         content_block_counts=tuple(sorted(content_types.items())),
         session_metadata_record_count=session_meta_records,
         session_metadata_id_count=session_meta_ids,
         unique_session_metadata_id_count=len(session_id_files),
+        session_id_pair_count=session_id_pairs,
+        session_id_pair_match_count=matching_session_id_pairs,
+        session_id_pair_nonmatching_count=nonmatching_session_id_pairs,
         session_ids_repeated_across_files=repeated_session_ids,
         files_with_multiple_session_ids=files_with_multiple_session_ids,
         message_record_count=message_records,
@@ -319,6 +381,9 @@ def inspect_codex_snapshot(
         duplicate_groups_crossing_files=sum(len(row["files"]) > 1 for row in duplicate_groups),
         parseable_message_timestamp_count=parseable_timestamps,
         utc_message_timestamp_count=utc_timestamps,
+        parseable_record_ordinal_count=parseable_ordinals,
+        adjacent_equal_record_ordinal_count=adjacent_equal_ordinals,
+        record_ordinal_regression_count=ordinal_regressions,
         inline_image_payload_count=inline_images,
         valid_inline_image_payload_count=valid_images,
         invalid_inline_image_payload_count=invalid_images,

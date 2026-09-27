@@ -133,6 +133,70 @@ def test_inspector_counts_nested_session_meta_wrapper_ids(
     assert result.unique_session_metadata_id_count == 1
 
 
+def test_inspector_returns_only_allowlisted_field_presence_counts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    records = [
+        {"type": "session_meta", "timestamp": "private timestamp", "payload": {
+            "id": "private outer id", "meta": {
+                "session_id": "private nested id", "parent_thread_id": "private parent",
+                "private_custom_key": "private nested value",
+            },
+        }},
+        {"type": "response_item", "ordinal": 9, "payload": {
+            "type": "message", "id": "private message id", "role": "user",
+            "private_custom_key": "private payload value",
+            "content": [{"type": "input_image", "image_url": "private image URL",
+                         "private_block_key": "private block value"}],
+        }},
+    ]
+    store, snapshot = _snapshot(tmp_path, monkeypatch, {
+        "one.jsonl": b"".join(_line(record) for record in records),
+    })
+
+    result = inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+    field_counts = result.field_presence_counts
+    rendered = repr(field_counts)
+
+    assert ("record", "session_meta", "timestamp", 1) in field_counts
+    assert ("payload", "session_meta", "id", 1) in field_counts
+    assert ("payload.meta", "session_meta", "session_id", 1) in field_counts
+    assert ("payload.meta", "session_meta", "parent_thread_id", 1) in field_counts
+    assert ("record", "response_item", "ordinal", 1) in field_counts
+    assert ("content_block", "response_item", "image_url", 1) in field_counts
+    for private_value in (
+        "private timestamp", "private outer id", "private nested id", "private parent",
+        "private message id", "private image URL", "private_custom_key", "private_block_key",
+    ):
+        assert private_value not in rendered
+
+
+def test_inspector_reports_session_id_and_ordinal_relations_as_counts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    records = [
+        {"type": "session_meta", "ordinal": 1, "payload": {"id": "private-one", "session_id": "private-one"}},
+        {"type": "session_meta", "ordinal": 2, "payload": {"id": "private-two", "session_id": "private-three"}},
+        {"type": "event_msg", "ordinal": 2, "payload": {"type": "task_started"}},
+        {"type": "response_item", "ordinal": 1, "payload": {"type": "reasoning"}},
+        {"type": "turn_context", "ordinal": 3, "payload": {"model": "private-model"}},
+    ]
+    store, snapshot = _snapshot(tmp_path, monkeypatch, {
+        "one.jsonl": b"".join(_line(record) for record in records),
+    })
+
+    result = inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+
+    assert result.session_id_pair_count == 2
+    assert result.session_id_pair_match_count == 1
+    assert result.session_id_pair_nonmatching_count == 1
+    assert result.parseable_record_ordinal_count == 5
+    assert result.adjacent_equal_record_ordinal_count == 1
+    assert result.record_ordinal_regression_count == 1
+    assert "private-one" not in repr(result)
+    assert "private-model" not in repr(result)
+
+
 def test_inspector_rejects_conflicting_outer_and_nested_session_meta_ids(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

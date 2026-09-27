@@ -14,6 +14,8 @@ The current upstream [`ContentItem` model](https://github.com/openai/codex/blob/
 
 An aggregate-only field-location check on the verified local snapshot found all 100 `session_meta` IDs at the outer `payload.id` location, none at `payload.meta.id`, and no records containing both locations. The inspector now recognizes either location and fails closed if both are present with different values; it does not infer any conversation relation from these IDs.
 
+An aggregate comparison found 57 equal outer `payload.id` / `payload.session_id` pairs and 43 non-matching pairs. Non-matching is not treated as a conflict and no identifier mapping is chosen. All 60,846 records have an exact non-negative top-level `ordinal`; per-file adjacent comparisons found zero equal values and zero regressions. This does not establish conversation or message-order semantics.
+
 ## Design goals
 
 - Keep original source bytes in the already verified private snapshot as the immutable evidence.
