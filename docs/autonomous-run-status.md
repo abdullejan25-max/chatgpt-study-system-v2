@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- Last safe implementation commit：`64c91c2` (`feat: collect reconciled projection snapshots`)
+- Last safe implementation commit：`4a826d6` (`fix: keep history projection paths Windows-safe`)
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有真实迁移、V2 业务写入或发布。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。
@@ -20,7 +20,7 @@
 - 官方 Google Takeout 的 Gemini Apps 导出已完成；页面显示 47.7 MB，下载截止时间为 2026-10-04 16:06。尝试下载时跳转到 Google 登录；未输入凭据或验证码，未下载本地归档。相应 registry 状态已更新为 `available`，conversation/message 数仍未知。
 - 新增显式 `projection` capability 与只读 `projection_snapshot` MCP/Gateway 接口。History 与 Wrong Answer 分别使用独立 SQLite 高水位 token；支持来源/记录分页、每域 10,000 条与 32 MiB 上限、固定错误、逻辑 URI 校验和 provenance 分类字段白名单。普通 `read` 不显示也不能调用该工具。没有访问任何真实 History/Wrong Answer 数据库。
 - 新增 projection collector：按独立 store 水位完整读取所有来源及记录页，核对来源数、来源记录数与 domain 总数，检测重复/不前进 cursor，并且只在完整核对后返回 renderer snapshot。没有跨 store 原子性保证。
-- 合成验证：focused enum/collector suite **90 passed, 1 skipped**；全量测试 **432 passed, 8 skipped**。测试涵盖读权限隔离、后续插入排除、21 条分页、数量核对、非法布尔计数、DTO 脱敏与读取不写审计记录。
+- 合成验证：projection/collector/writer suite **36 passed, 1 skipped**；全量测试 **433 passed, 8 skipped**。端到端覆盖 Gateway collection → renderer → manifest writer，并验证读取不新增 DB audit。流水线测试发现嵌套完整 SHA 路径在 Windows 临时根下超长；现已改为单一组合身份 SHA-256 路径。
 
 ## P11.3A 来源覆盖
 
@@ -37,7 +37,7 @@ History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化
 
 ## P12 状态
 
-- **Step 1 — Obsidian**：纯内存 renderer、History 时间线、独立 manifest-bounded writer、opt-in per-store Gateway 枚举接口及 reconciliation collector 均已实现并通过合成测试。collector 能构造完整合成 renderer snapshot；focused enum/collector suite **90 passed, 1 skipped**，全量回归 **432 passed, 8 skipped**。无个人 snapshot。writer 仅经 synthetic 目录验证。真实 Vault/GUI 未检查，O1–O13 和 P12 Step 1 release gate 仍未通过，详见 [Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
+- **Step 1 — Obsidian**：纯内存 renderer、History 时间线、独立 manifest-bounded writer、opt-in per-store Gateway 枚举接口及 reconciliation collector 均已实现并通过合成测试。synthetic end-to-end **36 passed, 1 skipped**，全量回归 **433 passed, 8 skipped**。无个人 snapshot。writer 仅经 synthetic 目录验证。真实 Vault/GUI 未检查，O1–O13 和 P12 Step 1 release gate 仍未通过，详见 [Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
 - **Step 2 — WorkBuddy**：官方文档确认提供本地 stdio MCP 配置；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 3 — Hermes**：官方文档确认支持本地 stdio MCP；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 4 — Cross-Agent**：被前置真实 Host gate 阻断；无跨 Host 写读、版本或投影验证。
