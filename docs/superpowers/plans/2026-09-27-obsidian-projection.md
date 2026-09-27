@@ -11,7 +11,8 @@ Build a deterministic, one-way renderer from explicitly supplied V2 Gateway read
 - The current live `health_report` reports History as `not_configured`; `list_history_sources` is unavailable in this Host.
 - `HistoryBackend` supports source listing, query-based search, and fetch by known item ID. Search is not a complete corpus enumeration API.
 - Wrong-answer Gateway reads support query-based search and bundle-by-known-source-ID. They do not enumerate all source IDs.
-- Therefore this milestone implements the pure rendering boundary only. A future complete collector requires bounded, consistent Gateway enumeration APIs and a configured History target; real file output also requires a confirmed private Vault/output root.
+- History has its own optional configured database; Wrong Answers use the Documents/Assets database. They are separate consistency domains, and current reads do not establish a shared cross-store transaction.
+- Therefore this milestone implements the pure rendering boundary only. A future complete collector requires bounded enumeration APIs with stable continuation/watermark behavior and count reconciliation per store. It must report separate store consistency points unless a coordinating mechanism is added. It also requires a configured History target; real file output requires a confirmed private Vault/output root.
 
 ## Invariants
 
