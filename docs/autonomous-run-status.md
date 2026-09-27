@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- 最近功能提交：`8644406`（Codex occurrence adapter 保留未映射字段引用；仅合成 fixture 验证）。
+- 最近功能提交：`ecbf5bd`（Codex 字段存在性、session ID 对比与 ordinal 连续性均以聚合计数呈现；不推断语义）。
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有官方导出 ZIP、规范化、真实迁移、V2 业务写入或发布；Codex 候选完成私有原始快照和 aggregate-only 结构检查，不代表 canonical 计数或迁移。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。

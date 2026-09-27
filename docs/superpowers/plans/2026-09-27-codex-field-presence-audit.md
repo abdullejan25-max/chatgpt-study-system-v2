@@ -31,7 +31,7 @@
 - [x] **Step 3: Add bounded allowlisted field counters** for record, payload, `payload.meta`, and content-block scopes.
 - [x] **Step 4: Run focused inspector/snapshot/registry/History tests and `git diff --check`.** Observed **58 passed, 4 skipped**.
 - [x] **Step 5: Inspect the verified private snapshot with the updated inspector**; output contained only fixed scope/key categories and aggregate counts.
-- [ ] **Step 6: Update public-safe status, private checkpoint, and commit the inspector/test/docs milestone.**
+- [x] **Step 6: Update public-safe status, private checkpoint, and commit the inspector/test/docs milestone.** Commit: `ecbf5bd`.
 
 ### Task 2: Compare candidate session IDs and ordinal continuity
 
@@ -40,4 +40,4 @@
 - [x] **Step 3: Add only aggregate equality/regression counters**; retain no identifier or ordinal values in the result.
 - [x] **Step 4: Run focused inspector/snapshot/registry/History tests.** Observed **59 passed, 4 skipped**.
 - [x] **Step 5: Re-run the verified snapshot and save only comparison counts privately.** Observed 57 equal ID/session_id pairs and 43 non-matching; all 60,846 records have ordinals, with zero adjacent equalities/regressions.
-- [ ] **Step 6: Update status/checkpoint and commit after `git diff --check`.**
+- [x] **Step 6: Update status/checkpoint and commit after `git diff --check`.** Commit: `ecbf5bd`.
