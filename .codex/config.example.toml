@@ -1,0 +1,22 @@
+# Codex Desktop project-scoped MCP template.
+# Run `python .codex/setup_mcp.py` to generate the ignored local config.toml.
+
+[mcp_servers.study_system]
+command = "uv"
+args = [
+    "run",
+    "--project",
+    "__PROJECT_ROOT__",
+    "python",
+    "-m",
+    "chatgpt_study_system.transports.mcp_stdio",
+    "--config",
+    "__LOCAL_CONFIG_PATH__",
+]
+cwd = "__PROJECT_ROOT__"
+env = { PYTHONPATH = "__SOURCE_ROOT__" }
+enabled = true
+required = true
+startup_timeout_sec = 30
+tool_timeout_sec = 60
+default_tools_approval_mode = "writes"

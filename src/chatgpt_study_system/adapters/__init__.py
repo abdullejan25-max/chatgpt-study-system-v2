@@ -1,0 +1,1 @@
+"""Replaceable local data adapters."""

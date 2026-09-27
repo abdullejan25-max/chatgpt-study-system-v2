@@ -1,0 +1,28 @@
+# Wrong Answer Workflow
+
+This is the single authoritative, host-neutral procedure for analyzing a wrong answer with this Gateway. It applies when a user says, for example, “分析这张错题”, “帮我看看这题” or “分析并保存这张错题”. MCP clients should use it for these requests without asking the user to name internal tools or fields.
+
+## Authority and boundaries
+
+- The user-provided JPG/PNG or original document page is the authoritative visual evidence. Inspect it directly when the host supplies image understanding. OCR or extracted text is deterministic derived data only: use it as a convenience, verify it against the visual, and report unreadable/uncertain details instead of guessing.
+- The Agent alone interprets the problem, the student's work, correctness, reference answer, and cause of error. The Gateway only retrieves, validates, stores and reports deterministic results; it does not solve or grade.
+- Search Study or documents only when a concept, method, or reference needs verification. Do not require a textbook lookup for every problem. For PDF evidence, prefer the relevant original page image over unverified extracted text.
+- Preserve the original asset separately from extracted text and Agent analysis. Do not rewrite source content as analysis.
+- Analyze-only requests end with an answer to the user and do not persist a source or analysis. Persist only on an explicit request to save (including “分析并保存”). A write denial or unavailable source does not authorize a workaround.
+
+## Procedure
+
+1. Confirm that the intended image/page is actually available to the Agent. If the host exposes only a filename or inaccessible attachment, ask the user to attach/provide it; never infer image bytes or use another file.
+2. Inspect the original visual. Transcribe the question and student answer faithfully enough to identify the problem; mark ambiguity. Solve independently, compare the student's work with the solution, and derive the error type, relevant knowledge points, reasoning, correct solution, and review advice. Keep this analysis in the conversation unless saving was requested.
+3. Retrieve evidence only as needed. Search Study for a specific concept/method when useful. Search documents for a likely reference page if available, then inspect the original PDF page image when visual verification matters. Cite only returned logical source IDs/URIs actually consulted. Do not run whole-book OCR; bounded OCR can assist only when already supported and needed.
+4. For an explicit save request, check whether this wrong-answer source is already registered (search/bundle where appropriate). If its original bytes are not registered and the host can provide the exact bytes, call `register_asset`; otherwise use the existing `asset://` or `document://` URI. Do not register reconstructed or OCR-produced bytes as the original.
+5. Call `register_wrong_answer_source` with the existing source URI, Agent-transcribed question and student answer, and a verified page number if applicable. Reuse the returned logical `source_id`; the source record is immutable.
+6. Save the Agent-authored fields through `save_wrong_answer_analysis`: `error_type`, `knowledge_points`, `reasoning`, `correct_solution`, and `review_advice`. Set `source_refs` to the actual original wrong-answer asset/document and any consulted document sources; include no invented refs. Set `study_relations` only to actual `study:` IDs returned by Study search, or an empty list. Generate an idempotency key internally. Do not request provenance timestamps, version, or identity from the user: the Gateway records time/provenance and determines the version. If known, include the Agent's own name, client name, and run/session ID in the optional `provenance` object; those values are reported identity only, not authenticated identity. Do not guess them.
+7. If the source already has analysis and a revision is explicitly requested, fetch the current bundle/version and call `update_wrong_answer_analysis` with that version as `expected_version`. This appends a new version and links its predecessor; never replace/delete prior analysis. If a concurrent update causes a conflict, fetch the bundle again and reconcile before retrying.
+8. Report the result and evidence concisely. For saved work, include the returned source ID/version and distinguish what was visually verified from OCR/text-layer or textbook evidence. Source registration and analysis saving are separate Gateway transactions; if the source registration succeeds but analysis saving fails, say exactly that the source exists without a saved analysis and do not silently claim completion. For analysis-only work, do not imply anything was saved.
+
+## Available Gateway operations
+
+Use only operations exposed by the connected MCP server and respect its capabilities. Relevant operations include `fetch_asset`, `register_asset`, `register_wrong_answer_source`, `get_wrong_answer_bundle`, `search_wrong_answers`, `save_wrong_answer_analysis`, `update_wrong_answer_analysis`, `search_study`, `search_documents`, `fetch_document_page`, and `fetch_document_page_image`; a host may instead read the corresponding asset/document resources. Tool schemas are authoritative for exact argument shapes. `study-workflow://wrong-answer` is the URI for this canonical procedure.
+
+If a required operation is absent, a capability denies a write, or the original visual cannot be obtained, stop at the safest available read/analyze stage and explain the concrete limitation. Never call a model/provider API or substitute another intelligent layer.

@@ -1,0 +1,13 @@
+# 当前状态
+
+更新时间：2026-09-27。当前工作分支仍名为 `phase-3-readonly-mcp-spike`，P10 开始时的基线 HEAD 为 `c413b437`。Phase 1–9 本地实现已完成，P10 Release Hardening 正在进行。P10 bootstrap 自动化已实现；开发 checkout 全量测试为 308 passed、5 skipped。隔离 clean release candidate 默认与开发依赖安装不含 PyMuPDF，全量测试为 307 passed、6 skipped；发行物元数据、MCP initialize 和只读 `health_report` smoke 通过。详细证据见 [P10 Release Gate](p10-release-gate.md)。
+
+真实错题与 retrieval E2E 的既有结果已同步到 [Real Wrong Answer E2E checkpoint](real-wrong-answer-e2e-checkpoint.md)；该文档同步没有重新导入真实资料。
+
+P10 自动 release gates 正在收尾：项目使用 Apache-2.0，PyMuPDF 只在非默认 `pdf-ocr` extra 中提供。旧开发历史保留本地且不会公开；公开历史使用独立新 root commit。当前仍需完成 clean release candidate 的 Codex Desktop GUI 验证后，才能进行 GitHub 创建和首次 push。
+
+阶段决策与限制记录在各 `phase-*-checkpoint.md`、[`phase-6-closeout.md`](phase-6-closeout.md)、架构文档和 ADR 中。
+
+架构不变量：外部 Agent 是唯一智能层；Gateway 只执行确定性操作。Tunnel/Responses API 不属于 Core，也不是项目完成条件。真实私人 History、错题和教材不用于自动化测试。
+
+Phase 6 的 private document store 显式配置后可接收资产/文档；PDF 文字层由 `pypdf` 确定性提取，PDF 大文件只能通过显式配置的本地相对路径 ingest root 输入。授权的 269 页教材副本已通过 disposable MCP smoke 验证 search/page/原页 PNG/provenance；原始 23.5 MB 文件测试前后 SHA-256、size、mtime 一致。fresh smoke 显式禁用 OCR，记录 40 个 `pdf_text_layer`、3 个 `pdf_ocr_unavailable`、226 个 suspicious 页；同源第二次 ingestion 复用同一 document URI 且无需再次解析。此前受控 OCR continuation 的四个 16-page batch 完整提交，停止时为 40 个 `pdf_text_layer`、72 个 `pdf_ocr_derived`、157 个 suspicious 页、118 chunks；整本 eager OCR 不再是 Phase 6 条件。`unverified` 文字层不能证明公式/变量完整，原书数学符号和视觉页面应视为权威来源；Tesseract 参数告警仍是已知限制。大 PDF asset 支持受限分块读取；完整 PDF 超过 MCP 单次 binary-resource 上限。Phase 7 错题分析与来源分离保存；Phase 8 已加入 capability split、事务审计和 Windows reparse-point 检查。2026-09-26 已新增统一 append-only `write_provenance` ledger；History 源时间与导入时间分开，Agent/client identity 是 caller-reported。旧 OCR 页文本目前仍不做历史归档；本地 capability 也不是 Agent 身份认证。详情见 [`P1-P9 System Audit`](p1-p9-system-audit.md)。ChatGPT remote MCP / Tunnel 尚未实施，也不阻塞 Phase 4–9；Phase 10 GitHub Release Hardening 已启动；P10-B bootstrap 已通过自动化测试；开发 checkout 的真实 Desktop 新会话已由项目所有者验证加载 `study_system`、`health_report` 返回 `ok: true` 且 Study 可读；History `not_configured` 是配置状态。最终 clean release candidate GUI 验证待完成。

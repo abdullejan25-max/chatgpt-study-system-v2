@@ -1,0 +1,46 @@
+# Copy to config.local.toml and edit locally. Never commit config.local.toml.
+# Use a placeholder here; do not put personal paths or data in this file.
+
+[gateway]
+version = "0.1.0"
+
+[study]
+root = "C:/PATH/TO/STUDY_ROOT"
+qmd_collection = "studyvault"
+qmd_version = "2.8.3"
+
+# Preferred real-data mode: fixed native Node + audited QMD CLI. The source
+# config/index are copied to a disposable runtime for each search.
+[study.qmd_runtime]
+node_executable = "C:/PATH/TO/node.exe"
+cli_entrypoint = "C:/PATH/TO/@tobilu/qmd/dist/cli/qmd.js"
+config = "C:/PATH/TO/qmd/index.yml"
+index = "C:/PATH/TO/qmd/index.sqlite"
+
+[history]
+backend = "not_configured"
+
+# To enable a private History store, replace the section above with:
+# [history]
+# backend = "sqlite"
+# database = "C:/PATH/TO/PRIVATE_RUNTIME/history.db"
+# The parent directory must exist. No source is discovered or imported automatically.
+
+[assets]
+backend = "not_configured"
+
+# All MCP capabilities are opt-in. The default is read-only.
+# Add "ingest" for explicit asset/document ingestion and "write" for
+# wrong-answer source and Agent-analysis persistence. "admin" grants all.
+[permissions]
+capabilities = ["read"]
+
+# To enable the private asset/document store, replace the section above with:
+# [assets]
+# backend = "sqlite"
+# root = "C:/PATH/TO/PRIVATE_RUNTIME/assets"
+# database = "C:/PATH/TO/PRIVATE_RUNTIME/documents.db"
+# Optional local-only source inbox for Gateway-registered original assets.
+# Relative paths are accepted only under this root; this does not enable arbitrary file reads.
+# ingest_root = "C:/PATH/TO/PRIVATE_RUNTIME/asset-ingest"
+# Both parent directories and the asset root must already exist. Startup does not write.
