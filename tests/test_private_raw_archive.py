@@ -105,6 +105,98 @@ def test_ingest_preserves_exact_zip_bytes_and_redacts_manifest(tmp_path: Path, m
         assert private_value.encode() not in manifest_bytes
 
 
+def test_repeat_ingest_preserves_published_archive_and_manifest(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    source_path = tmp_path / "source.zip"
+    with zipfile.ZipFile(source_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("synthetic.txt", b"synthetic payload")
+    store = PrivateRawArchiveStore(root=tmp_path / "private-store")
+
+    first = store.ingest_zip(source_path, source_system="chatgpt")
+    manifest_path = first.stored_path.with_suffix(".manifest.json")
+    archive_bytes = first.stored_path.read_bytes()
+    manifest_bytes = manifest_path.read_bytes()
+    second = store.ingest_zip(source_path, source_system="chatgpt")
+
+    assert second.duplicate is True
+    assert second.stored_path == first.stored_path
+    assert second.sha256 == first.sha256
+    assert first.stored_path.read_bytes() == archive_bytes
+    assert manifest_path.read_bytes() == manifest_bytes
+
+
+def test_retry_completes_missing_manifest_for_verified_archive(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    source_path = tmp_path / "source.zip"
+    with zipfile.ZipFile(source_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("synthetic.txt", b"synthetic payload")
+    store = PrivateRawArchiveStore(root=tmp_path / "private-store")
+    first = store.ingest_zip(source_path, source_system="gemini")
+    manifest_path = first.stored_path.with_suffix(".manifest.json")
+    archive_bytes = first.stored_path.read_bytes()
+    manifest_path.unlink()  # Simulate interruption after ZIP publication.
+
+    recovered = store.ingest_zip(source_path, source_system="gemini")
+
+    assert recovered.duplicate is True
+    assert recovered.stored_path == first.stored_path
+    assert first.stored_path.read_bytes() == archive_bytes
+    manifest = json.loads(manifest_path.read_bytes())
+    assert manifest["source_system"] == "gemini"
+    assert manifest["sha256"] == first.sha256
+    assert manifest["byte_count"] == len(archive_bytes)
+    assert manifest["member_count"] == 1
+    assert manifest["uncompressed_byte_count"] == len(b"synthetic payload")
+
+
+def test_invalid_existing_manifest_fails_closed_without_replacement(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    source_path = tmp_path / "source.zip"
+    with zipfile.ZipFile(source_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("synthetic.txt", b"synthetic payload")
+    store = PrivateRawArchiveStore(root=tmp_path / "private-store")
+    first = store.ingest_zip(source_path, source_system="chatgpt")
+    archive_bytes = first.stored_path.read_bytes()
+    manifest_path = first.stored_path.with_suffix(".manifest.json")
+    invalid_bytes = b'{"source_system":"gemini"}'
+    manifest_path.write_bytes(invalid_bytes)
+
+    with pytest.raises(RawArchiveError) as error:
+        store.ingest_zip(source_path, source_system="chatgpt")
+
+    assert error.value.code == "manifest_invalid"
+    assert manifest_path.read_bytes() == invalid_bytes
+    assert first.stored_path.read_bytes() == archive_bytes
+
+
+def test_retry_after_interrupted_manifest_publication(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    source_path = tmp_path / "source.zip"
+    with zipfile.ZipFile(source_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("synthetic.txt", b"synthetic payload")
+    source_bytes = source_path.read_bytes()
+    store = PrivateRawArchiveStore(root=tmp_path / "private-store")
+    real_write_manifest = store._write_manifest
+
+    def interrupted_publication(*args):
+        raise OSError("synthetic interruption")
+
+    monkeypatch.setattr(store, "_write_manifest", interrupted_publication)
+    with pytest.raises(RawArchiveError) as error:
+        store.ingest_zip(source_path, source_system="chatgpt")
+    assert error.value.code == "storage_unavailable"
+    target = store.root / "chatgpt" / f"{hashlib.sha256(source_bytes).hexdigest()}.zip"
+    assert target.read_bytes() == source_bytes
+    assert not target.with_suffix(".manifest.json").exists()
+
+    monkeypatch.setattr(store, "_write_manifest", real_write_manifest)
+    recovered = store.ingest_zip(source_path, source_system="chatgpt")
+    assert recovered.duplicate is True
+    assert recovered.stored_path == target
+    assert target.read_bytes() == source_bytes
+    assert json.loads(target.with_suffix(".manifest.json").read_bytes())["sha256"] == recovered.sha256
+
+
 def test_store_root_must_be_under_configured_user_state_root(tmp_path: Path, monkeypatch) -> None:
     configured_root = tmp_path / "configured-state"
     outside_root = tmp_path / "outside-state"

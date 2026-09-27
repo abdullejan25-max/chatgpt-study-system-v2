@@ -161,11 +161,24 @@ class PrivateRawArchiveStore:
                     os.link(partial, target)
                     partial.unlink()
                     partial = None
-                    self._write_manifest(destination_dir, source_system, sha256, byte_count,
-                                         member_count, uncompressed)
                     duplicate = False
                 except FileExistsError:
-                    raise RawArchiveError("storage_unavailable") from None
+                    duplicate = True
+                    try:
+                        validate_private_journal_path(target)
+                        target_info = target.stat(follow_symlinks=False)
+                        if not stat.S_ISREG(target_info.st_mode):
+                            raise RawArchiveError("integrity_mismatch")
+                        existing_bytes, existing_sha256 = _hash_file(target)
+                    except (OSError, ValueError):
+                        raise RawArchiveError("integrity_mismatch") from None
+                    if existing_bytes != byte_count or existing_sha256 != sha256:
+                        raise RawArchiveError("integrity_mismatch")
+                    existing_members, existing_uncompressed = self._verify_zip(target)
+                    if (existing_members, existing_uncompressed) != (member_count, uncompressed):
+                        raise RawArchiveError("integrity_mismatch")
+                self._complete_or_validate_manifest(destination_dir, source_system, sha256,
+                                                    byte_count, member_count, uncompressed)
                 return ArchiveIngestResult(source_system, sha256, byte_count, member_count,
                                            uncompressed, duplicate, target)
             finally:
@@ -175,6 +188,43 @@ class PrivateRawArchiveStore:
             raise
         except (OSError, ValueError):
             raise RawArchiveError("storage_unavailable") from None
+
+    def _complete_or_validate_manifest(self, directory: Path, source_system: str,
+                                       sha256: str, byte_count: int, member_count: int,
+                                       uncompressed: int) -> None:
+        target = directory / f"{sha256}.manifest.json"
+        if not target.exists():
+            try:
+                self._write_manifest(directory, source_system, sha256, byte_count,
+                                     member_count, uncompressed)
+                return
+            except FileExistsError:
+                # Another ingest may have published the manifest first.
+                pass
+        try:
+            validate_private_journal_path(target)
+            raw = target.read_bytes()
+            manifest = json.loads(raw)
+        except (OSError, ValueError, UnicodeError):
+            raise RawArchiveError("manifest_invalid") from None
+        expected = {
+            "source_system": source_system,
+            "sha256": sha256,
+            "byte_count": byte_count,
+            "member_count": member_count,
+            "uncompressed_byte_count": uncompressed,
+        }
+        if (not isinstance(manifest, dict) or set(manifest) != set(expected) | {"ingested_at"}
+                or any(type(manifest[key]) is not type(value) or manifest[key] != value
+                       for key, value in expected.items())
+                or not isinstance(manifest["ingested_at"], str)):
+            raise RawArchiveError("manifest_invalid")
+        try:
+            timestamp = datetime.fromisoformat(manifest["ingested_at"].replace("Z", "+00:00"))
+            if timestamp.utcoffset() != timezone.utc.utcoffset(None):
+                raise ValueError
+        except ValueError:
+            raise RawArchiveError("manifest_invalid") from None
 
     def _verify_zip(self, path: Path) -> tuple[int, int]:
         try:
