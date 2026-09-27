@@ -1,12 +1,12 @@
 # Phase 10 — GitHub Release Gate
 
 更新时间：2026-09-27
-状态：**PASS — GitHub 首次公开、真实 remote fresh-clone 与 Desktop Host gates 均通过。** 未创建 version tag 或 GitHub Release。
+状态：**PASS — GitHub 首次公开、真实 remote fresh-clone、Desktop Host 与 `v0.1.0` 正式发布 gates 均通过。** `v0.1.0` 指向 `64d7849`；本次文档同步不改 tag。
 
 ## Repository snapshot
 
 - 开发仓库分支：`phase-3-readonly-mcp-spike`；P10 开始时的基线 HEAD：`c413b4375de807e1ff2f39c6e3b3b1b402fd9940`。
-- 旧开发 history 保留在本地开发仓库，不做 rewrite。公开 repository 使用独立 `main`，从全新 root commit 开始；远端仅有 `main`，没有 tags 或 Releases。
+- 旧开发 history 保留在本地开发仓库，不做 rewrite。公开 repository 使用独立 `main`，从全新 root commit 开始；GitHub default branch `main` 当前与正式 `v0.1.0` tag 指向同一 commit `64d7849`。
 - 本机 `.codex/config.toml` 与根目录 `config.local.toml` 被忽略；本地 Desktop 配置没有被覆盖。P4–9 plan 已原样归档；ignored `docs/debug.log` 留在本机，不进入发布树。
 - P1–P9 与 Wrong Answer / Retrieval E2E 均保持既有验证结果；P10 未重构 Gateway 或 Wrong Answer 主链路。
 
@@ -37,7 +37,7 @@
 
 旧开发 history 的扫描曾发现历史开发提交包含机器账户安装路径；那些提交只保留在本地开发仓库，不会成为 public `main` 的祖先。发布采用单独的 release candidate Git repository，并从最终候选树创建无父提交的 root commit；不 rewrite、force-push 或上传旧 branches。
 
-公开仓库为 [`abdullejan25-max/chatgpt-study-system-v2`](https://github.com/abdullejan25-max/chatgpt-study-system-v2)，visibility 为 public，default branch 为 `main`。只显式 push 了 `main`，clone URL 为 `https://github.com/abdullejan25-max/chatgpt-study-system-v2.git`。公开 `main` root 为 `cc2ee4e9477a266a047d803822ba82de86e81024`，该提交没有 parent；旧开发 commit `c413b4375de807e1ff2f39c6e3b3b1b402fd9940` 不在 GitHub clone 的对象库中。
+公开仓库为 [`abdullejan25-max/chatgpt-study-system-v2`](https://github.com/abdullejan25-max/chatgpt-study-system-v2)，visibility 为 public，default branch 为 `main`。只显式 push 了 `main`，clone URL 为 `https://github.com/abdullejan25-max/chatgpt-study-system-v2.git`。公开 `main` root 为 `cc2ee4e9477a266a047d803822ba82de86e81024`，该提交没有 parent；旧开发 commit `c413b4375de807e1ff2f39c6e3b3b1b402fd9940` 不在 GitHub clone 的对象库中。`v0.1.0 — Initial Public Release` 已于 2026-09-27 发布，tag 与该公开 `main` 当前指向 `64d7849`。
 
 ## Security regression review
 
@@ -57,7 +57,7 @@
 - GitHub remote 的稳定 fresh clone 位于含空格和中文字符的路径。按更新后的 README 使用全新 `.venv` 和独立 uv cache，`uv lock --check`、默认 `uv sync --no-editable`、`setup_mcp.py`、`dev` extra 安装均通过；默认与 dev 环境均没有 PyMuPDF / `fitz`。`pdf-ocr` dry-run 只计划引入 PyMuPDF 1.28.2。
 - GitHub fresh clone 全量测试：**308 passed, 6 skipped**。首轮全量测试有一次 MCP stdio 进程用例超时；隔离复跑 **1 passed**，随后全量复跑通过。Windows 本地 symlink/junction 权限与 Codex Host/QMD opt-in 用例属于跳过项。
 - 使用 fresh clone 生成的 `.codex/config.toml` 及其完整命令参数启动真实 stdio MCP 子进程：initialize 成功，`health_report.ok = true`，合成 Study configured/root_exists/readable 均为 true；History `not_configured`、QMD `discoverable = false` 符合合成配置预期。`required = true` 保留，两个私有配置均被 Git 忽略。
-- GitHub 页面正常渲染 README，API 确认 public visibility、default branch `main` 且 license detection 为 Apache-2.0；远端 branches 只有 `main`，tags 与 Releases 均为 0。fresh clone 中 root 无 parent；全部公开 commits 与 reachable objects 已复扫，`git fsck` 无异常。公开 tree 为 85 个文件，没有私有配置、数据库、PDF、图片、日志或 GitHub Actions workflow。
+- GitHub 页面正常渲染 README，API 确认 public visibility、default branch `main` 且 license detection 为 Apache-2.0；远端 branches 只有 `main`，正式 tag/release 为 `v0.1.0`。fresh clone 中 root 无 parent；全部公开 commits 与 reachable objects 已复扫，`git fsck` 无异常。公开 tree 为 85 个文件，没有私有配置、数据库、PDF、图片、日志或 GitHub Actions workflow。
 - public object 扫描未发现真实 Windows 账户路径、凭证或 token；5 个测试文件只含用于路径脱敏验证的合成 Windows 用户目录样例。P4–9 plan 保存在 `docs/superpowers/plans/archived/2026-09-25-phase-4-9.md`；`docs/debug.log` 未进入 public tree。
 - 项目所有者已在最终稳定 clean release candidate 的 Codex Desktop 新对话完成 GUI 验证：`study_system` 加载，`health_report.ok = true`，Study 可读。按本轮要求未重复 Desktop GUI 验证；新 `--no-sync` 启动参数已由 GitHub fresh clone 的 MCP SDK stdio initialize + `health_report` smoke 实际执行。
 
@@ -70,7 +70,7 @@
 - [x] clean release candidate 全量测试、package metadata/build 和 MCP initialize + `health_report` smoke 通过。
 - [x] public `main` 是独立无父 root，且 public tree / objects / history 复扫通过。
 - [x] 对稳定 clean release candidate 完成 Codex Desktop 新对话验证；MCP 已加载，`health_report.ok = true`，合成 Study 可读。
-- [x] GitHub identity 确认为 `abdullejan25-max`；public repository 已创建，仅显式 push clean public `main`，没有 force、其他 refs、archive branch、tags 或 Releases。
+- [x] GitHub identity 确认为 `abdullejan25-max`；public repository 已创建，仅显式 push clean public `main`，没有 force、其他 branches 或 archive branch；`v0.1.0` 为正式 tag/Release。
 - [x] 从真实 GitHub remote fresh clone，复验安装、PyMuPDF optional boundary、setup、全量测试、MCP initialize 与 `health_report`。
 - [x] GitHub 页面识别 README 与 Apache-2.0 LICENSE；default branch、公开 root history、object privacy scan 和 clean clone 均通过。
 

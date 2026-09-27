@@ -4,7 +4,7 @@
 
 真实错题与 retrieval E2E 的既有结果已同步到 [Real Wrong Answer E2E checkpoint](real-wrong-answer-e2e-checkpoint.md)；该文档同步没有重新导入真实资料。
 
-P10 release gates 已通过：项目使用 Apache-2.0，PyMuPDF 只在非默认 `pdf-ocr` extra 中提供。旧开发历史保留在本地开发仓库；公开 `main` 从无父 root `cc2ee4e9` 开始。GitHub fresh clone 的安装、测试、setup 与 MCP smoke 通过；项目所有者已确认 clean candidate Codex Desktop GUI gate 通过。没有创建 version tag 或 GitHub Release。
+P10 release gates 已通过：项目使用 Apache-2.0，PyMuPDF 只在非默认 `pdf-ocr` extra 中提供。旧开发历史保留在本地开发仓库；公开 `main` 从无父 root `cc2ee4e9` 开始。GitHub fresh clone 的安装、测试、setup 与 MCP smoke 通过；项目所有者已确认 clean candidate Codex Desktop GUI gate 通过。GitHub 已于 2026-09-27 正式发布 `v0.1.0 — Initial Public Release`；tag 指向公开 `main` 的 `64d7849`，本次文档同步未改动该 tag。
 
 阶段决策与限制记录在各 `phase-*-checkpoint.md`、[`phase-6-closeout.md`](phase-6-closeout.md)、架构文档和 ADR 中。
 
