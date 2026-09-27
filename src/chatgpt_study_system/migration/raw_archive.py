@@ -16,6 +16,7 @@ from .manifest import validate_private_journal_path
 
 
 _DEFAULT_LIMITS = (512 * 1024 * 1024, 50_000, 2 * 1024 * 1024 * 1024, 200)
+_MAX_MANIFEST_BYTES = 4096
 
 
 @dataclass(frozen=True)
@@ -203,7 +204,14 @@ class PrivateRawArchiveStore:
                 pass
         try:
             validate_private_journal_path(target)
-            raw = target.read_bytes()
+            with target.open("rb") as manifest_file:
+                manifest_info = os.fstat(manifest_file.fileno())
+                if (not stat.S_ISREG(manifest_info.st_mode)
+                        or manifest_info.st_size > _MAX_MANIFEST_BYTES):
+                    raise RawArchiveError("manifest_invalid")
+                raw = manifest_file.read(_MAX_MANIFEST_BYTES + 1)
+            if len(raw) > _MAX_MANIFEST_BYTES:
+                raise RawArchiveError("manifest_invalid")
             manifest = json.loads(raw)
         except (OSError, ValueError, UnicodeError):
             raise RawArchiveError("manifest_invalid") from None

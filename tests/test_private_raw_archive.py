@@ -169,6 +169,34 @@ def test_invalid_existing_manifest_fails_closed_without_replacement(tmp_path: Pa
     assert first.stored_path.read_bytes() == archive_bytes
 
 
+def test_oversized_existing_manifest_fails_closed_without_unbounded_read(
+        tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    source_path = tmp_path / "source.zip"
+    with zipfile.ZipFile(source_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("synthetic.txt", b"synthetic payload")
+    store = PrivateRawArchiveStore(root=tmp_path / "private-store")
+    first = store.ingest_zip(source_path, source_system="chatgpt")
+    manifest_path = first.stored_path.with_suffix(".manifest.json")
+    oversized_manifest = b" " * 4097
+    manifest_path.write_bytes(oversized_manifest)
+    original_read_bytes = Path.read_bytes
+    read_bytes_calls = []
+
+    def tracked_read_bytes(path: Path) -> bytes:
+        read_bytes_calls.append(path)
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", tracked_read_bytes)
+
+    with pytest.raises(RawArchiveError) as error:
+        store.ingest_zip(source_path, source_system="chatgpt")
+
+    assert error.value.code == "manifest_invalid"
+    assert read_bytes_calls == []
+    assert original_read_bytes(manifest_path) == oversized_manifest
+
+
 def test_retry_after_interrupted_manifest_publication(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     source_path = tmp_path / "source.zip"

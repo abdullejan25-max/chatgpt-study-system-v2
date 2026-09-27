@@ -5,9 +5,9 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- Last safe implementation commit：`4a826d6` (`fix: keep history projection paths Windows-safe`)
+- 当前工程检查点：`6267bc2`（private raw ZIP ingest 的恢复实现）；随后新增 manifest 大小上限修复，合入前仍在审查。
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
-- P11 状态：**BLOCKED**。没有真实迁移、V2 业务写入或发布。
+- P11 状态：**BLOCKED**。没有真实导出归档、真实迁移、V2 业务写入或发布。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。
 
 ## 已完成的安全工作
@@ -37,7 +37,7 @@
 | Codex | 已发现 70 个 `.jsonl` 候选文件（不是已验证的 conversation 数）；没有读取内容，conversation/message counts 与 role、边界、身份仍未知，导入未开始。 |
 | WorkBuddy | 安装元数据报告版本 5.6.2；本地聊天存储和可访问的原始导出仍未验证。官方 [Conversation Memory 文档](https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Memory)说明记忆是从对话提取的摘要；[FAQ](https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/FQA)说诊断日志可能含对话记录。这些资料没有证明存在可用的原始聊天导出。 |
 
-History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化、跨源去重、附件处理、History 导入、read-back 和 retrieval E2E 均未完成。未知 role、author、时间、thread、message boundary、分支或附件关系保持 unknown。
+History 仍未配置，当前 capability 仅为 `read`。新增的私有 raw ZIP ingest 组件只用合成归档验证：精确保留、资源上限、重复校验和中断恢复；没有真实归档落盘。真实来源的 raw archive integrity、规范化、跨源去重、附件处理、History 导入、read-back 和 retrieval E2E 仍未完成。未知 role、author、时间、thread、message boundary、分支或附件关系保持 unknown。
 
 ## P12 状态
 
@@ -57,6 +57,7 @@ History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化
 ## 独立工程前置
 
 - **Projection snapshot consistency**：Gateway API 与 collector 已实现，并通过合成数据核对 per-source/per-domain counts。History 与 Wrong Answer 位于不同 SQLite 数据库，不能声称存在跨库原子快照；真实私有配置未启用 projection，因此个人快照与 Vault Gate 仍需等待用户配置/授权及 GUI。
+- **Private raw archive ingest**：新增仅接受 ChatGPT/Gemini ZIP 的仓库外私有存储组件；限制最大 512 MiB、50,000 entries、2 GiB 展开量和 200:1 单成员压缩比，不解压。重复 ingest 校验既有归档与 manifest；ZIP 已发布但 manifest 缺失时可在重试中恢复。合成定向测试为 **10 passed**，独立复审未发现阻断项。无真实归档、无解析、无 History 写入；P11 仍为 BLOCKED。
 
 ## 发布与隐私
 
