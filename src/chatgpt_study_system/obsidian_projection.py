@@ -142,6 +142,12 @@ def _hash_path(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def _history_item_path(item: HistoryItem) -> str:
+    """Hash all logical identity parts once to keep generated paths Windows-safe."""
+    logical_key = "\0".join((item.source_id, item.conversation_id, item.item_id))
+    return f"History/items/{_hash_path(logical_key)}.md"
+
+
 def _validate_history(
     snapshot: ProjectionSnapshot,
 ) -> tuple[dict[str, HistorySource], tuple[HistoryItem, ...], int]:
@@ -269,8 +275,7 @@ def _validate_wrong_bundle(bundle: object) -> tuple[dict, tuple[dict, ...], int]
 
 
 def _render_history_item(item: HistoryItem) -> tuple[str, str]:
-    path = (f"History/items/{_hash_path(item.source_id)}/"
-            f"{_hash_path(item.conversation_id)}/{_hash_path(item.item_id)}.md")
+    path = _history_item_path(item)
     values = {
         "type": "history_item",
         "logical_id": item.item_id,
@@ -409,7 +414,7 @@ def render_projection(snapshot: ProjectionSnapshot) -> dict[str, str]:
         group = sorted(items_by_conversation[(source_id, conversation_id)],
                        key=lambda item: (_timestamp_value(item.created_at), item.item_id))
         for item in group:
-            page = f"items/{_hash_path(item.source_id)}/{_hash_path(item.conversation_id)}/{_hash_path(item.item_id)}.md"
+            page = _history_item_path(item).removeprefix("History/")
             history_lines.append(f"- [{item.role} — {item.created_at}]({page})")
     add_file("History/index.md", "\n".join(history_lines) + "\n")
 
@@ -420,7 +425,7 @@ def render_projection(snapshot: ProjectionSnapshot) -> dict[str, str]:
         "> Equal event times are listed by logical ID; that tie-break does not establish original event order.",
     ]
     for item in sorted(history_items, key=lambda row: (_timestamp_value(row.created_at), row.item_id)):
-        page = f"items/{_hash_path(item.source_id)}/{_hash_path(item.conversation_id)}/{_hash_path(item.item_id)}.md"
+        page = _history_item_path(item).removeprefix("History/")
         timeline_lines.append(f"- [{item.role} — {item.created_at}]({page})")
     if not history_items:
         timeline_lines.append("- No History items were supplied.")

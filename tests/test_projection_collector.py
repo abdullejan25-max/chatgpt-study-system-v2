@@ -1,3 +1,5 @@
+import json
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -13,6 +15,7 @@ from chatgpt_study_system.projection_collector import (
     ProjectionCollectionError,
     collect_projection,
 )
+from chatgpt_study_system.obsidian_writer import write_projection
 
 
 def _projection_gateway(tmp_path: Path, *, source_count: int = 21,
@@ -72,6 +75,25 @@ def test_collector_pages_all_sources_reconciles_counts_and_builds_renderer_input
     assert len(result.snapshot.wrong_answer_bundles) == 21
     assert max(len(bundle["analyses"]) for bundle in result.snapshot.wrong_answer_bundles) == 21
     assert render_projection(result.snapshot)
+
+
+def test_collector_renderer_and_writer_form_synthetic_one_way_pipeline(
+        tmp_path: Path) -> None:
+    gateway = _projection_gateway(tmp_path, source_count=1, analysis_count=1)
+    with sqlite3.connect(gateway.document_store.database_path) as connection:
+        audit_before = connection.execute("SELECT COUNT(*) FROM operation_audit").fetchone()[0]
+
+    collected = collect_projection(gateway)
+    rendered = render_projection(collected.snapshot)
+    target = tmp_path / "V2Projection"
+    write_projection(rendered, target)
+
+    manifest = json.loads((target / ".projection-manifest.json").read_text(encoding="utf-8"))
+    assert manifest == {"schema_version": 1, "files": sorted(rendered)}
+    assert all((target / relative).is_file() for relative in rendered)
+    with sqlite3.connect(gateway.document_store.database_path) as connection:
+        audit_after = connection.execute("SELECT COUNT(*) FROM operation_audit").fetchone()[0]
+    assert audit_after == audit_before
 
 
 def test_collector_rejects_domain_count_mismatch_without_returning_partial_snapshot(

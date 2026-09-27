@@ -70,6 +70,7 @@
 
 - [x] Verify 21-source synthetic snapshots cross domain page boundaries and a 21-analysis source crosses the records page boundary.
 - [x] Reconcile per-source and domain totals; reject mismatched counts and nonadvancing cursors without returning a partial snapshot.
-- [x] Construct the existing pure `ProjectionSnapshot` input and render it in a synthetic end-to-end test.
+- [x] Construct the existing pure `ProjectionSnapshot`, render it, and write it into a synthetic owned `V2Projection` directory; verify the DB audit count is unchanged.
+- [x] Flatten composite History item identity into one opaque SHA-256 path segment after the end-to-end test exposed Windows path-length failure with three nested full hashes.
 
 This does not claim cross-store atomicity or a real Host/Vault gate.

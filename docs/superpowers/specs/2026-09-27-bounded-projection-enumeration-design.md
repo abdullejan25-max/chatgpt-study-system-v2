@@ -16,7 +16,7 @@ History items and Wrong Answer sources/analyses are append-only through their su
 
 ## DTO and privacy boundary
 
-The Gateway uses safe DTO handling, redacts local paths, checks logical source references, and reduces provenance to categorical fields used by the renderer. A separate collector consumes all pages and reconciles per-source and domain counts before building the existing `ProjectionSnapshot`. No absolute database path, SQL diagnostics, or private storage metadata is returned. The renderer remains a pure function over explicitly supplied DTOs, and the writer remains a separately invoked filesystem operation.
+The Gateway uses safe DTO handling, redacts local paths, checks logical source references, and reduces provenance to categorical fields used by the renderer. A separate collector consumes all pages and reconciles per-source and domain counts before building the existing `ProjectionSnapshot`. History item filenames hash the composite source/conversation/item identity into one opaque path segment to avoid Windows path-length failures from nested full-length hashes. No absolute database path, SQL diagnostics, or private storage metadata is returned. The renderer remains a pure function over explicitly supplied DTOs, and the writer remains a separately invoked filesystem operation.
 
 ## Verification
 
