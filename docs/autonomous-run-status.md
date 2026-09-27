@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- 最近功能提交：`816bc6e`（Codex adapter 对重复 JSON 键失败关闭；仅合成验证）。
+- 最近功能提交：`52984e9`（合成-only 有界 JSONL 物理 span 索引器；未连接私人 snapshot）。
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有官方导出 ZIP、规范化、真实迁移、V2 业务写入或发布；Codex 候选完成私有原始快照和 aggregate-only 结构检查，不代表 canonical 计数或迁移。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。

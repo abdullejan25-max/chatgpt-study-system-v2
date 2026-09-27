@@ -28,4 +28,4 @@
 - [x] Implement a bounded binary-stream iterator that reports exact spans and omits oversized content.
 - [x] Verify every emitted normal span round-trips to the exact original bytes; verify oversized spans preserve exact length without retaining data.
 - [x] Run focused synthetic tests and `git diff --check`. Observed **12 passed** across span and adapter tests.
-- [ ] Update status/checkpoint and commit; keep private snapshot/Gateway/business data untouched.
+- [x] Update status/checkpoint and commit; keep private snapshot/Gateway/business data untouched. Commit: `52984e9`.
