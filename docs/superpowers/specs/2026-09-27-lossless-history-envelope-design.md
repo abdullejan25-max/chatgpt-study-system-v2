@@ -8,6 +8,8 @@ Design only. This proposal does not change the Gateway, SQLite schema, MCP capab
 
 The current `HistoryImportItem` / `HistoryItem` contract stores one text string, a closed role set (`user`, `assistant`, `system`, `tool`), one timestamp, one conversation ID, and one source item ID. The verified Codex snapshot shows message-shaped records with `developer` roles and inline image blocks, repeated message IDs with differing timestamps, tool/event records outside the message shape, and multiple session metadata IDs in some files. Therefore, mapping the source into the current contract would lose source structures or make unsupported identity, timestamp, and deduplication choices.
 
+Codex rollout formats can evolve. The upstream fixture checked on 2026-09-27 constructs a `session_meta` payload from a `SessionMetaLine` wrapper containing `meta` and `git`; that current fixture is useful schema evidence, but it does not prove that the already captured local files use the same version or field layout. A future adapter must profile the verified source snapshot itself, support only explicitly verified variants, and keep all other structures opaque. [Upstream rollout fixture](https://github.com/openai/codex/blob/main/codex-rs/app-server/tests/common/rollout.rs)
+
 ## Design goals
 
 - Keep original source bytes in the already verified private snapshot as the immutable evidence.
