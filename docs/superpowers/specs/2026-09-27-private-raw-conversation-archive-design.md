@@ -28,6 +28,7 @@ The selected approach preserves the exact archive and avoids extraction.
 - It checks ZIP central-directory metadata before CRC verification: at most 50,000 members, 512 MiB compressed bytes, 2 GiB declared uncompressed bytes, and 200:1 maximum member compression ratio. It does not extract or return member names.
 - It verifies each member CRC with bounded streaming reads, then atomically promotes the staged file to `<source_system>/<sha256>.zip` and writes a sibling JSON manifest containing only source system, archive SHA-256, byte count, member count, declared uncompressed byte count, and UTC ingest time. The manifest contains no original filename, path, member names, conversation text, or account data. Source-scoped paths preserve provenance if two platforms produce identical ZIP bytes.
 - If the digest already exists, it validates the existing archive and manifest and returns an idempotent duplicate result without replacing either file. If a prior crash published the ZIP but not its manifest, a retry validates that ZIP and safely completes the missing manifest. A present but invalid manifest fails closed.
+- The ingest result exposes only source system, SHA-256, byte count, member count, declared uncompressed byte count, and duplicate status; its local stored-path field is excluded from the result representation. Public errors use fixed codes and path-free messages.
 - Any failure removes only this call's `.partial` file. Existing archive data is never deleted or overwritten.
 
 ## Error behavior

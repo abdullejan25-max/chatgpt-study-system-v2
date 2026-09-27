@@ -1,0 +1,202 @@
+"""Private, byte-preserving storage for official conversation ZIP exports."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import secrets
+import stat
+import zipfile
+
+from .manifest import validate_private_journal_path
+
+
+_DEFAULT_LIMITS = (512 * 1024 * 1024, 50_000, 2 * 1024 * 1024 * 1024, 200)
+
+
+@dataclass(frozen=True)
+class RawArchiveLimits:
+    max_archive_bytes: int = _DEFAULT_LIMITS[0]
+    max_members: int = _DEFAULT_LIMITS[1]
+    max_uncompressed_bytes: int = _DEFAULT_LIMITS[2]
+    max_member_compression_ratio: int = _DEFAULT_LIMITS[3]
+
+
+@dataclass(frozen=True)
+class ArchiveIngestResult:
+    source_system: str
+    sha256: str
+    byte_count: int
+    member_count: int
+    uncompressed_byte_count: int
+    duplicate: bool
+    stored_path: Path = field(repr=False)
+
+
+class RawArchiveError(RuntimeError):
+    """An ingest failure with a fixed, path-free public code and message."""
+
+    def __init__(self, code: str):
+        self.code = code
+        super().__init__(f"Raw archive ingest failed ({code})")
+
+
+def default_raw_archive_root() -> Path:
+    state_root = os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_STATE_HOME")
+    if not state_root or not Path(state_root).is_absolute():
+        raise RawArchiveError("storage_unavailable")
+    return Path(state_root) / "ChatGPTStudySystemV2" / "migration" / "raw-archives"
+
+
+def _validate_state_root(path: Path) -> Path:
+    try:
+        resolved = validate_private_journal_path(path)
+        if os.name == "nt":
+            configured = [Path(value).resolve(strict=False) for key in ("LOCALAPPDATA", "XDG_STATE_HOME")
+                          if (value := os.environ.get(key)) and Path(value).is_absolute()]
+            if not any(resolved.is_relative_to(root) for root in configured):
+                raise ValueError
+        else:
+            resolved.mkdir(parents=True, exist_ok=True, mode=0o700)
+            info = resolved.stat(follow_symlinks=False)
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid():
+                raise ValueError
+            resolved.chmod(0o700)
+            if resolved.stat().st_mode & 0o077:
+                raise ValueError
+        return resolved
+    except (OSError, ValueError):
+        raise RawArchiveError("unsafe_path") from None
+
+
+def _validate_source(path: Path, root: Path) -> tuple[Path, os.stat_result]:
+    try:
+        if not path.is_absolute() or path.suffix.lower() != ".zip":
+            raise ValueError
+        validate_private_journal_path(path)
+        resolved = path.resolve(strict=True)
+        if resolved.is_relative_to(root) or root.is_relative_to(resolved):
+            raise ValueError
+        info = path.stat(follow_symlinks=False)
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise ValueError
+        return resolved, info
+    except (OSError, ValueError):
+        raise RawArchiveError("unsafe_path") from None
+
+
+class PrivateRawArchiveStore:
+    def __init__(self, root: Path | None = None, limits: RawArchiveLimits | None = None):
+        self.root = _validate_state_root(Path(root) if root is not None else default_raw_archive_root())
+        self.limits = limits or RawArchiveLimits()
+
+    def ingest_zip(self, source_path: Path, *, source_system: str) -> ArchiveIngestResult:
+        if source_system not in ("chatgpt", "gemini"):
+            raise RawArchiveError("unsupported_source")
+        source_path = Path(source_path)
+        _, initial = _validate_source(source_path, self.root)
+        if initial.st_size > self.limits.max_archive_bytes:
+            raise RawArchiveError("archive_too_large")
+
+        destination_dir = self.root / source_system
+        try:
+            destination_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if os.name != "nt":
+                destination_dir.chmod(0o700)
+            validate_private_journal_path(destination_dir / "placeholder")
+            source_file = source_path.open("rb")
+            opened = os.fstat(source_file.fileno())
+            if (opened.st_dev, opened.st_ino) != (initial.st_dev, initial.st_ino):
+                raise RawArchiveError("source_changed")
+            partial = destination_dir / f".{secrets.token_hex(16)}.partial"
+            digest = hashlib.sha256()
+            byte_count = 0
+            try:
+                with source_file, partial.open("xb") as output:
+                    os.chmod(partial, 0o600) if os.name != "nt" else None
+                    while chunk := source_file.read(1024 * 1024):
+                        byte_count += len(chunk)
+                        if byte_count > self.limits.max_archive_bytes:
+                            raise RawArchiveError("archive_too_large")
+                        digest.update(chunk)
+                        output.write(chunk)
+                    output.flush()
+                    os.fsync(output.fileno())
+                    final = os.fstat(source_file.fileno())
+                if (byte_count != opened.st_size or
+                        (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns) !=
+                        (final.st_dev, final.st_ino, final.st_size, final.st_mtime_ns)):
+                    raise RawArchiveError("source_changed")
+                sha256 = digest.hexdigest()
+                member_count, uncompressed = self._verify_zip(partial)
+                target = destination_dir / f"{sha256}.zip"
+                try:
+                    os.link(partial, target)
+                    partial.unlink()
+                    partial = None
+                    self._write_manifest(destination_dir, source_system, sha256, byte_count,
+                                         member_count, uncompressed)
+                    duplicate = False
+                except FileExistsError:
+                    raise RawArchiveError("storage_unavailable") from None
+                return ArchiveIngestResult(source_system, sha256, byte_count, member_count,
+                                           uncompressed, duplicate, target)
+            finally:
+                if partial is not None:
+                    partial.unlink(missing_ok=True)
+        except RawArchiveError:
+            raise
+        except (OSError, ValueError):
+            raise RawArchiveError("storage_unavailable") from None
+
+    def _verify_zip(self, path: Path) -> tuple[int, int]:
+        try:
+            with zipfile.ZipFile(path, "r") as archive:
+                infos = archive.infolist()
+                if len(infos) > self.limits.max_members:
+                    raise RawArchiveError("too_many_members")
+                uncompressed = 0
+                for info in infos:
+                    if info.flag_bits & 0x1:
+                        raise RawArchiveError("encrypted_member")
+                    uncompressed += info.file_size
+                    if uncompressed > self.limits.max_uncompressed_bytes:
+                        raise RawArchiveError("expansion_limit")
+                    if info.file_size and (not info.compress_size or
+                                           info.file_size > info.compress_size * self.limits.max_member_compression_ratio):
+                        raise RawArchiveError("expansion_limit")
+                if archive.testzip() is not None:
+                    raise RawArchiveError("invalid_zip")
+                return len(infos), uncompressed
+        except RawArchiveError:
+            raise
+        except (OSError, zipfile.BadZipFile, RuntimeError, EOFError, NotImplementedError):
+            raise RawArchiveError("invalid_zip") from None
+
+    @staticmethod
+    def _write_manifest(directory: Path, source_system: str, sha256: str, byte_count: int,
+                        member_count: int, uncompressed: int) -> None:
+        target = directory / f"{sha256}.manifest.json"
+        payload = json.dumps({
+            "source_system": source_system,
+            "sha256": sha256,
+            "byte_count": byte_count,
+            "member_count": member_count,
+            "uncompressed_byte_count": uncompressed,
+            "ingested_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        }, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        temp = directory / f".{secrets.token_hex(16)}.manifest.partial"
+        try:
+            with temp.open("xb") as output:
+                if os.name != "nt":
+                    os.chmod(temp, 0o600)
+                output.write(payload)
+                output.flush()
+                os.fsync(output.fileno())
+            os.link(temp, target)
+        finally:
+            temp.unlink(missing_ok=True)
