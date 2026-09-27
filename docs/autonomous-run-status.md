@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- 最近功能提交：`d9df502`（有界 Codex JSONL 检查器兼容两种 metadata ID 布局，并拒绝冲突）。
+- 最近功能提交：`8442e18`（新增不接 Gateway/数据库的版本化 History occurrence DTO，合成测试通过）。
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有官方导出 ZIP、规范化、真实迁移、V2 业务写入或发布；Codex 候选完成私有原始快照和 aggregate-only 结构检查，不代表 canonical 计数或迁移。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。
@@ -26,6 +26,7 @@
 - 整分支只读复审（`64d7849..3a9339b`）未发现 P0/P1；发现的 Obsidian writer 风险均已修复并复审：拒绝写入仓库重叠目录；更新失败时恢复旧文件与 manifest；若恢复失败保留带映射的恢复目录；manifest 列出的缺失文件也能正确回滚；备份/空目录/staging 清理失败会明确设置状态。相关 renderer/writer/collector 模块定向验证 **44 passed, 1 skipped**；没有真实 Vault 或个人投影。
 - Codex JSONL snapshot 与 registry 定向测试 **33 passed, 4 skipped**；与 raw ZIP 和 migration manifest 回归合并运行 **62 passed, 4 skipped**。全量回归未重跑。
 - 独立 Codex JSONL 结构检查器、私有 snapshot/registry 与 History 合约回归 **57 passed, 4 skipped**；没有运行全量套件。检查器兼容已观察到的外层与嵌套 session metadata ID 字段，并在两者冲突时失败关闭。基于结构观察新增 lossless History envelope 设计提案；仅为文档，不改 schema、Gateway 或业务数据。
+- 合成-only History occurrence DTO 已加入：保留 typed block 边界、open role/kind、原始时间字符串、record ordinal 与可选 source-declared ordering，敏感字段从 `repr()` 隐藏。与 inspector 和 History 合约回归 **36 passed**；DTO 未接入真实 importer、Gateway 或数据库。
 
 ## P11.3A 来源覆盖
 

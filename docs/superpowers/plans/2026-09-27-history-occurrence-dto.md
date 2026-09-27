@@ -58,7 +58,9 @@ Run: `uv run --offline --extra dev pytest -q tests/test_history_occurrence.py te
 
 Expected: PASS with no Gateway/database integration.
 
-- [ ] **Step 5: Commit the synthetic-only DTO**
+Observed: **36 passed** in 5.74s.
+
+- [x] **Step 5: Commit the synthetic-only DTO**
   - State that the DTO is an in-memory proposal and is not yet accepted by the current History write contract.
   - Run `git diff --check`; stage only the named files and plan.
-  - Commit as `feat: add lossless history occurrence DTO`.
+  - Commit as `feat: add lossless history occurrence DTO` (`8442e18`).
