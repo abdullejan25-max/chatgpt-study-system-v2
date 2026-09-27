@@ -9,7 +9,55 @@ from pathlib import Path
 import pytest
 
 from chatgpt_study_system.migration import raw_archive
-from chatgpt_study_system.migration.raw_archive import PrivateRawArchiveStore, RawArchiveError
+from chatgpt_study_system.migration.raw_archive import (
+    PrivateRawArchiveStore,
+    RawArchiveError,
+    RawArchiveLimits,
+)
+
+
+def test_limits_cannot_raise_hard_resource_ceilings() -> None:
+    hard_maxima = {
+        "max_archive_bytes": 512 * 1024 * 1024,
+        "max_members": 50_000,
+        "max_uncompressed_bytes": 2 * 1024 * 1024 * 1024,
+        "max_member_compression_ratio": 200,
+    }
+    for field, maximum in hard_maxima.items():
+        with pytest.raises(ValueError, match="^Invalid raw archive limits$") as error:
+            RawArchiveLimits(**{field: maximum + 1})
+        assert str(maximum + 1) not in str(error.value)
+
+    invalid_values = (-1, True, 1.5, "10")
+    for field in hard_maxima:
+        for value in invalid_values:
+            with pytest.raises(ValueError, match="^Invalid raw archive limits$"):
+                RawArchiveLimits(**{field: value})
+
+    RawArchiveLimits(max_archive_bytes=1, max_members=1,
+                     max_uncompressed_bytes=1, max_member_compression_ratio=1)
+    RawArchiveLimits(max_members=0, max_uncompressed_bytes=0)
+
+
+def test_tightened_member_limit_leaves_no_published_or_partial_files(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    source_path = tmp_path / "source.zip"
+    with zipfile.ZipFile(source_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("synthetic.txt", b"synthetic payload")
+    store_root = tmp_path / "private-store"
+
+    with pytest.raises(RawArchiveError) as error:
+        PrivateRawArchiveStore(
+            root=store_root, limits=RawArchiveLimits(max_members=0)
+        ).ingest_zip(source_path, source_system="chatgpt")
+
+    assert error.value.code == "too_many_members"
+    destination_dir = store_root / "chatgpt"
+    assert not list(destination_dir.glob("*.zip"))
+    assert not list(destination_dir.glob("*.manifest.json"))
+    assert not list(destination_dir.glob("*.partial"))
 
 
 def test_ingest_preserves_exact_zip_bytes_and_redacts_manifest(tmp_path: Path, monkeypatch) -> None:

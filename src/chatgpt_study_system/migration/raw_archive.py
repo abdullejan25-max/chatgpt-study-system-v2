@@ -25,6 +25,17 @@ class RawArchiveLimits:
     max_uncompressed_bytes: int = _DEFAULT_LIMITS[2]
     max_member_compression_ratio: int = _DEFAULT_LIMITS[3]
 
+    def __post_init__(self) -> None:
+        limits = (
+            (self.max_archive_bytes, _DEFAULT_LIMITS[0], False),
+            (self.max_members, _DEFAULT_LIMITS[1], True),
+            (self.max_uncompressed_bytes, _DEFAULT_LIMITS[2], True),
+            (self.max_member_compression_ratio, _DEFAULT_LIMITS[3], False),
+        )
+        if any(type(value) is not int or value < (0 if zero_allowed else 1) or value > maximum
+               for value, maximum, zero_allowed in limits):
+            raise ValueError("Invalid raw archive limits")
+
 
 @dataclass(frozen=True)
 class ArchiveIngestResult:
