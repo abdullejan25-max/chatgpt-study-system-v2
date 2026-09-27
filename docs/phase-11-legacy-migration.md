@@ -46,6 +46,20 @@
 - 28 条错题笔记缺少稳定来源 ID、source ref、版本、可靠时间和 provenance。70 张图与笔记没有可证明配对关系；不猜题源、不创建 Wrong Answer。4 张图片的原始 SHA 与当前 4 个 V2 Asset blob 匹配，target stored bytes 的 SHA 校验通过；这 4 项仍保留关系 unresolved。其余 66 张没有目标 hash 命中，保持旧档案。
 - 当前 V2 已有 5 个 Wrong Answer Source 与 5 个 Analysis、4 个唯一 Asset；既有 Gateway read-back 证据有效。本次没有重复注册或改写这些记录，旧笔记没有足够 legacy identity 可与它们合并。
 
+## P11.3A — Unified AI / Agent Conversation History
+
+**状态：BLOCKED，未导入。** 本次新增的统一来源盘点是 P11 正式范围；它不改变既有 1,209 项 Legacy inventory，也不把 app 安装记录当成聊天记录。
+
+- 本地私有 conversation-source registry 已创建，当前有 6 个来源条目：ChatGPT 官方导出、Gemini 官方导出、Legacy Markdown archive，以及 Codex、WorkBuddy、Hermes 三个已发现客户端。POSIX 存储目录/数据库为 owner-only；Windows 默认落在用户状态目录。公共摘要只包含聚合数量与固定状态码，跨来源总数明确标为来源报告之和；账号、标识、私有路径和哈希留在本地。
+- Legacy Basic Memory 中既有的 55 个聊天 Markdown 仍是 archive-only：它们不能证明平台会话 ID、message role/author、event time 或原始消息边界，因此不被计作 55 个已验证 conversation，也不转成 raw History messages。
+- ChatGPT 官方导出尚未请求。Privacy Portal 在选择“下载我的数据”后要求账户登录；没有输入账号、密码、验证码或提交请求。此项为 `WAITING_FOR_USER: CHATGPT_EXPORT`。
+- Gemini 官方 Takeout 已只选择 `My Activity → Gemini Apps` 并提交一次性 ZIP 导出请求；当前仍在平台处理，尚未收到或读取 archive。未选择其它 Google 产品或活动类别。
+- Codex、WorkBuddy、Hermes 客户端已在有界主机盘点中发现，但各自的本地聊天存储位置、可访问性和导出能力尚未验证。未读取浏览器凭据、cookie、token 或系统密钥库。
+- History 后端仍为 `not_configured`，当前 capability 仅为 `read`。没有 V2 History、Assets、Documents 或 Wrong Answer 业务写入；没有 raw archive、规范化记录或 retrieval E2E。
+- 新增私有 registry 的合成测试在 Windows 为 **18 passed, 2 skipped**（两个 POSIX 权限位断言不适用）；与现有 migration journal 测试合并运行共 **37 passed, 2 skipped**。历史完整回归 **365 passed, 5 skipped** 属于先前 checkpoint，本次没有重复运行。
+
+P11.3A subgates：Conversation Source Inventory、V1 Conversation Deduplication、Local Agent History Import、Gemini Export/Import、Raw Archive Integrity、Normalization、Attachments、Cross-source Dedupe、Ordering、Retrieval E2E 与 Coverage Report 均为 **BLOCKED**；ChatGPT Export/Import 为 **WAITING_FOR_USER**。任何导出只有在官方 archive 可用并校验原始格式后才进入解析；未知时间、role、identity、分支或附件关系继续保持 unknown。
+
 ## Manifest、事务和回滚
 
 - 真实 dry-run 的安全 run token 可用于恢复，私有 journal 不含原文和本机绝对路径。当前 run 有 5 个 manifest/checkpoint batch。相同真实 run 重放两次后 JSON 摘要及 checkpoint 数完全一致；合成测试还覆盖冲突来源 ID、相同 ID 的重复分类、重复 blob、planned→committed 单行状态更新、崩溃批次和 journal 恢复。
@@ -68,6 +82,8 @@
 | Legacy Inventory | PASS | 明确根目录完整盘点，摘要不含正文或路径 |
 | Study Strategy | PASS | 同一权威根原地复用，临时 QMD 重建和检索通过 |
 | History Migration | BLOCKED | History 未配置，旧 fact annotation contract 未实现；无业务写入 |
+| Unified Conversation Source Inventory | BLOCKED | 私有登记器记录 6 个来源条目；ChatGPT 需登录，Gemini 导出仍在处理，本地 Agent history 尚未验证 |
+| Unified Conversation History | BLOCKED | 无 raw archive、规范化、跨源去重或检索证据；ChatGPT 子门槛为 WAITING_FOR_USER |
 | Assets/Documents | BLOCKED | Study PDF 可原地复用；70 张旧错题图均未能与 source 建立可信关系，4 个现有目标 hash 命中也仍属 unresolved |
 | Wrong Answers | BLOCKED | 28 条 note 与 70 张图的关系无法验证 |
 | Idempotency | PASS | manifest identity、冲突检测、重跑和 checkpoint 合成测试通过 |

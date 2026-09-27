@@ -87,6 +87,7 @@ class ConversationSourceRecord:
 - [x] Implement bounded JSON payloads in transactional SQLite persistence and private path validation using the existing migration safety helper.
 - [x] Rerun the focused file and verify reopen, replacement, unsafe-path rejection, and summary redaction.
 - [x] Enforce owner-only POSIX registry directory/database modes; confine Windows registry paths to the configured per-user state root so its ACL is inherited.
+- [x] Keep registry data in a dedicated directory; reject a pre-existing POSIX directory with broad permissions without changing its mode.
 - [x] Verify synthetic private-locator tests use host-native absolute paths and mark per-source aggregate totals as sums.
 
 ### Task 3: Record the real source inventory and P11.3A gate
@@ -97,10 +98,10 @@ class ConversationSourceRecord:
 - Create or update: `docs/autonomous-run-status.md`
 - Private only: the per-user conversation source registry
 
-- [ ] Add source records only from bounded, named app-data roots or official export evidence; do not scan broadly or read browser credentials.
-- [ ] Record ChatGPT/Gemini request state, local Agent source discovery, raw-archive status, counts when reliable, and fixed coverage gaps.
-- [ ] Update public docs with aggregate counts, status, blockers, and the next safe action; omit absolute paths, account identifiers, titles, filenames, source hashes, and chat text.
-- [ ] Run `git diff --check`, inspect the complete documentation diff, confirm the registry and raw archives are ignored, and verify no private names or absolute paths entered tracked files.
+- [x] Add source records only from bounded, named app-data roots or official export evidence; do not scan broadly or read browser credentials.
+- [x] Record ChatGPT/Gemini request state, local Agent source discovery, raw-archive status, counts when reliable, and fixed coverage gaps.
+- [x] Update public docs with aggregate counts, status, blockers, and the next safe action; omit absolute paths, account identifiers, titles, filenames, source hashes, and chat text.
+- [x] Run `git diff --check`, inspect the complete documentation diff, verify the private registry is outside the repository and no raw archive exists in Git, and confirm no private names or absolute paths entered tracked files.
 
 ## Deferred Gate Work
 
