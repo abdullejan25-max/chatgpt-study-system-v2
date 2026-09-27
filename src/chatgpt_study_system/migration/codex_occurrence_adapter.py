@@ -26,6 +26,19 @@ class CodexOccurrenceParseError(ValueError):
         super().__init__(f"Codex occurrence parse failed ({code})")
 
 
+class _DuplicateJSONKey(ValueError):
+    pass
+
+
+def _reject_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise _DuplicateJSONKey
+        result[key] = value
+    return result
+
+
 def _is_safe_string(value: object, *, maximum: int) -> bool:
     return type(value) is str and 0 < len(value) <= maximum \
         and not any(ord(character) < 32 or ord(character) == 127 for character in value)
@@ -52,7 +65,9 @@ def parse_codex_occurrence_line(
             or type(record_ordinal) is not int or record_ordinal < 0:
         raise CodexOccurrenceParseError("invalid_provenance")
     try:
-        record = json.loads(raw_line)
+        record = json.loads(raw_line, object_pairs_hook=_reject_duplicate_json_keys)
+    except _DuplicateJSONKey:
+        raise CodexOccurrenceParseError("duplicate_json_key") from None
     except (json.JSONDecodeError, UnicodeDecodeError, RecursionError):
         raise CodexOccurrenceParseError("malformed_json") from None
     if not isinstance(record, dict):

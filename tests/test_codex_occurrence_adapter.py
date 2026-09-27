@@ -84,6 +84,25 @@ def test_unhashable_unknown_content_tags_remain_opaque() -> None:
     assert occurrence.content_blocks[0].source_ref == "record:4/content:0"
 
 
+@pytest.mark.parametrize(
+    "line",
+    [
+        b'{"type":"response_item","type":"event_msg","payload":{"type":"message","role":"user","content":[]}}',
+        b'{"type":"response_item","payload":{"type":"message","role":"user","role":"assistant","content":[]}}',
+    ],
+)
+def test_parser_rejects_duplicate_json_keys_at_any_object_depth(line: bytes) -> None:
+    with pytest.raises(CodexOccurrenceParseError) as error:
+        parse_codex_occurrence_line(
+            line, snapshot_sha256=_SNAPSHOT,
+            source_member_ref="private/member.jsonl", record_ordinal=0,
+        )
+
+    assert error.value.code == "duplicate_json_key"
+    assert "response_item" not in str(error.value)
+    assert "assistant" not in str(error.value)
+
+
 def test_parser_rejects_non_object_records_and_excess_content_blocks(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -29,6 +29,7 @@
 - 合成-only History occurrence DTO 已加入：保留 typed block 边界、open role/kind、原始时间字符串、record ordinal 与可选 source-declared ordering，敏感字段从 `repr()` 隐藏。与 inspector 和 History 合约回归 **36 passed**；DTO 未接入真实 importer、Gateway 或数据库。
 - 合成-only Codex line adapter 已加入：仅映射明确 role、ID、原始 timestamp 和 text block；图片、音频、工具/事件及未知结构通过 snapshot locator 保留。未知 conversation/order/title/model/branch 不补猜。adapter/DTO/inspector/History 定向回归 **42 passed**；没有运行个人快照或真实数据库。
 - 复核发现 source `ordinal` 与 message `phase` 尚无迁移映射；adapter 现在将其标记为原始记录引用，不推断 message order 或丢弃原值。定向回归仍为 **42 passed**。
+- adapter 复核发现 JSON 标准库默认静默接受对象重复键并保留末值；现对任意嵌套层级重复键固定错误码失败关闭，不选首值或末值。仅合成回归，adapter/DTO/inspector/History 定向套件 **46 passed**；未解析个人快照、未写业务库，也未运行全量测试。
 - 对已验证快照新增只读字段与序号统计：100 条 `session_meta` 中 `id` 与 `session_id` 字段各出现 100 次，其中 57 对相等、43 对不相等（不据此命名冲突或映射 ID）；`parent_thread_id` 出现 43 次、`forked_from_id` 18 次；27,222 条 `event_msg` 中 `thread_id` 出现 19,518 次；`response_item.author` 出现 416 次、`phase` 1,314 次。全部 60,846 条记录有 top-level `ordinal`，文件内相邻比较没有重复或回退。这些只是结构观察，不证明会话/消息顺序或关联。
 
 ## P11.3A 来源覆盖

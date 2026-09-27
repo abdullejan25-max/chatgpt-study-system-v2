@@ -56,6 +56,7 @@ The shared envelope should not duplicate entire raw records into the History dat
 5. **Attachments:** inline image data remains represented by a private reference into the immutable source snapshot. Do not create an Asset or extract a file until an explicit attachment mapping and formal Asset workflow exist.
 6. **Unknown fields:** preserve them in the immutable source bytes and expose only a safe, allowlisted classification in general History search/projection. Never silently discard them during import.
 7. **Adapter boundary:** the current pure parser recognizes only a small set of explicit record/content shapes. It keeps conversation links, title, model, branch relations, and source-declared ordering unset; tests on synthetic fixtures do not establish local-source mapping correctness.
+8. **Ambiguous JSON objects:** reject any record containing duplicate object keys at any depth with a fixed, path-free error. Do not accept the JSON decoder's default last-value-wins behavior for identity, role, content, or metadata fields. The immutable raw snapshot remains the evidence for later review.
 
 ## Coverage and retrieval requirements
 
