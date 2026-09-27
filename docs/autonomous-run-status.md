@@ -1,6 +1,6 @@
 # 72-Hour Autonomous Continuation Status
 
-更新时间：2026-09-27
+更新时间：2026-09-28
 
 ## 当前状态
 
@@ -34,7 +34,7 @@
 - 新增 synthetic-only bounded JSONL span iterator，并接入内存 occurrence DTO：精确保留 LF/CRLF、物理序号及 `[start,end)` 偏移；malformed/blank 行仍占序号，oversized 行分块 drain 且不保留正文。source JSON `ordinal` 仍为 opaque。DTO/span/adapter/inspector/History suite **56 passed**；未访问私有快照，未连接 Gateway 或数据库。
 - Adapter 语义复核纠正时间字段：源 `timestamp` 只保存在 `source_timestamp_raw`，`source_created_at` 保持 unknown；可解析格式不等于事件时间证据。DTO/span/adapter/inspector/History suite 仍为 **56 passed**，全为合成/合约测试。
 - 对已验证快照新增只读字段与序号统计：100 条 `session_meta` 中 `id` 与 `session_id` 字段各出现 100 次，其中 57 对相等、43 对不相等（不据此命名冲突或映射 ID）；`parent_thread_id` 出现 43 次、`forked_from_id` 18 次；27,222 条 `event_msg` 中 `thread_id` 出现 19,518 次；`response_item.author` 出现 416 次、`phase` 1,314 次。全部 60,846 条记录有 top-level `ordinal`，文件内相邻比较没有重复或回退。这些只是结构观察，不证明会话/消息顺序或关联。
-- Aggregate-only inspector 现在对重复 JSON 对象键单独计数，并排除这些行，不再接受标准库默认的末值覆盖行为；合成回归验证嵌套和顶层重复键不会泄露键名或值。Codex inspector、snapshot、occurrence DTO/adapter/span 与 History 合约套件 **71 passed, 2 skipped**。本次未重新解析个人快照：registry 摘要在配置的私有快照根目录下未匹配到任何候选目录；因此不更新私有数据的聚合计数，也不将旧计数称为本次复验结果。恢复状态记为 `CODEX_SNAPSHOT_SELECTION_UNRESOLVED`。
+- Aggregate-only inspector 现在对重复 JSON 对象键单独计数，并排除这些行，不再接受标准库默认的末值覆盖行为；合成回归验证嵌套和顶层重复键不会泄露键名或值。Codex inspector、snapshot、occurrence DTO/adapter/span 与 History 合约套件 **71 passed, 2 skipped**。本轮恢复检查读取到两条不同用途的 Codex registry 记录；固定私有快照根目录内有一个候选目录，但其 manifest 摘要与可访问 local-history 记录不匹配，locator 指向的目录也不含 manifest。未尝试按不匹配的摘要解析快照，不更新私有聚合计数；恢复状态仍为 `CODEX_SNAPSHOT_SELECTION_UNRESOLVED`。本轮 Edge 未打开 ChatGPT/Gemini 官方导出状态页，导出状态未刷新。
 
 ## P11.3A 来源覆盖
 
@@ -82,4 +82,4 @@ History 仍未配置，当前 capability 仅为 `read`。官方 ChatGPT/Gemini Z
 - WorkBuddy 与 Hermes 的 stdio 客户端能力已按官方文档确认；本机连接、工具调用和跨 Host E2E 仍未验证，详见 [P12 Host Compatibility Checkpoint](p12-host-compatibility.md)。
 - Obsidian O1 contracts and missing facets are documented in [P12 Obsidian Reality Audit](p12-obsidian-reality-audit.md); private Vault selection and GUI remain user gates.
 - 应用内已安排本地线程每 6 小时续作一次，覆盖 72 小时；状态无变化时保持安静。
-- 下一安全步骤：只在固定私有状态根目录内调查 `CODEX_SNAPSHOT_SELECTION_UNRESOLVED`（有界检查，不递归扫描其他目录、不重扫源、不重拷贝）；无法唯一恢复时保留阻断并继续其它独立合成准备。WorkBuddy 历史入口和是否有原始导出仍需用户在桌面端核实。保持 V2 私有 History/错题读取禁用，直到受信任配置明确启用。维护 WAITING_FOR_USER 清单，不重复提交 Gemini 导出；不执行真实业务写入或发布。
+- 下一安全步骤：只在固定私有状态根目录内调查 `CODEX_SNAPSHOT_SELECTION_UNRESOLVED`；如果唯一候选无法与 registry 摘要建立一致关系，保留阻断，不按猜测解析、不递归搜索、不重扫源、不重拷贝。随后继续已有合成 P12 准备。WorkBuddy 历史入口和是否有原始导出仍需用户在桌面端核实。保持 V2 私有 History/错题读取禁用，直到受信任配置明确启用。维护 WAITING_FOR_USER 清单，不重复提交 Gemini 导出；不执行真实业务写入或发布。
