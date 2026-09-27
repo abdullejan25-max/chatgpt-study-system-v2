@@ -27,7 +27,7 @@
 
 ## P11.3A 来源覆盖
 
-私有登记器有 6 个来源条目；跨来源 conversation/message 总数仍未知（来源间可能重叠）。Hermes 当前可访问 SQLite snapshot 报告 27 sessions、5,666 message rows。
+私有登记器有 7 个来源条目（本次以只读行数核对）；跨来源 conversation/message 总数仍未知（来源间可能重叠）。Hermes 当前可访问 SQLite snapshot 报告 27 sessions、5,666 message rows。
 
 | 来源 | 当前证据与状态 |
 |---|---|
