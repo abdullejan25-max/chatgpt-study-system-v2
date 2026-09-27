@@ -10,6 +10,8 @@ The current `HistoryImportItem` / `HistoryItem` contract stores one text string,
 
 Codex rollout formats can evolve. The upstream fixture checked on 2026-09-27 constructs a `session_meta` payload from a `SessionMetaLine` wrapper containing `meta` and `git`; that current fixture is useful schema evidence, but it does not prove that the already captured local files use the same version or field layout. A future adapter must profile the verified source snapshot itself, support only explicitly verified variants, and keep all other structures opaque. [Upstream rollout fixture](https://github.com/openai/codex/blob/main/codex-rs/app-server/tests/common/rollout.rs)
 
+An aggregate-only field-location check on the verified local snapshot found all 100 `session_meta` IDs at the outer `payload.id` location, none at `payload.meta.id`, and no records containing both locations. The inspector now recognizes either location and fails closed if both are present with different values; it does not infer any conversation relation from these IDs.
+
 ## Design goals
 
 - Keep original source bytes in the already verified private snapshot as the immutable evidence.

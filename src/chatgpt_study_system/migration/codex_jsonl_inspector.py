@@ -180,6 +180,17 @@ def inspect_codex_snapshot(
                     if envelope == "session_meta":
                         session_meta_records += 1
                         identifier = payload.get("id")
+                        meta = payload.get("meta")
+                        nested_identifier = meta.get("id") if isinstance(meta, dict) else None
+                        valid_identifier = type(identifier) is str and 0 < len(identifier) <= _MAX_ID_CHARS
+                        valid_nested_identifier = (
+                            type(nested_identifier) is str
+                            and 0 < len(nested_identifier) <= _MAX_ID_CHARS
+                        )
+                        if valid_identifier and valid_nested_identifier and identifier != nested_identifier:
+                            raise CodexJSONLInspectionError("session_metadata_id_conflict")
+                        if not valid_identifier:
+                            identifier = nested_identifier
                         if type(identifier) is str and 0 < len(identifier) <= _MAX_ID_CHARS:
                             session_meta_ids += 1
                             local_session_ids.add(identifier)

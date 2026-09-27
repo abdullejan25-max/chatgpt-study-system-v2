@@ -10,7 +10,7 @@ The verified local snapshot contains 82 JSONL candidates. A bounded exploratory 
 
 ## Chosen approach
 
-Add an inspector that accepts only a published snapshot path and expected snapshot digest, verifies the manifest and every file before parsing, then streams JSONL records under fixed line and record-count ceilings. It reports allowlisted event/content/role categories, parseability, metadata-ID cardinalities, duplicate-message-ID conflict categories, timestamp syntax coverage, and inline image data URI integrity/deduplication counts. Its result contains aggregate counts only; identifiers, text, paths, image bytes, and digests never leave the function.
+Add an inspector that accepts only a published snapshot path and expected snapshot digest, verifies the manifest and every file before parsing, then streams JSONL records under fixed line and record-count ceilings. It reports allowlisted event/content/role categories, parseability, metadata-ID cardinalities from the observed outer `payload.id` or nested `payload.meta.id` layouts, duplicate-message-ID conflict categories, timestamp syntax coverage, and inline image data URI integrity/deduplication counts. If both metadata ID locations are present and differ, inspection fails closed. Its result contains aggregate counts only; identifiers, text, paths, image bytes, and digests never leave the function.
 
 The inspector is not a normalizer or importer. It does not assign canonical conversation/message counts, choose timestamps for conflicting duplicate IDs, map `developer` to another role, flatten tool events, or create Assets. Those choices require an explicit lossless History representation and remain blocked from business writes while the History target is unconfigured.
 
@@ -31,7 +31,7 @@ The inspector is not a normalizer or importer. It does not assign canonical conv
 
 ## Verification
 
-Synthetic tests cover valid/invalid JSONL, non-object records, line and total-record bounds, fixed path-free failures, category counts, repeated IDs with time/content conflicts, valid and invalid inline image data, image deduplication, and snapshot verification before reads. Tests prove the result representation contains no fixture content, ID, filename, path, or digest.
+Synthetic tests cover valid/invalid JSONL, non-object records, line and total-record bounds, fixed path-free failures, category counts, both metadata ID layouts and conflicting metadata IDs, repeated message IDs with time/content conflicts, valid and invalid inline image data, image deduplication, and snapshot verification before reads. Tests prove the result representation contains no fixture content, ID, filename, path, or digest.
 
 ## Acceptance
 

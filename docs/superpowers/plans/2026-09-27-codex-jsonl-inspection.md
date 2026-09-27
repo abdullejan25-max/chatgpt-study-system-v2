@@ -12,6 +12,7 @@
 - [x] Add tests for malformed/non-object records, line/record limits, snapshot mismatch, and redacted errors/results.
 - [x] Implement a path-free aggregate result with fixed allowlisted categories.
 - [x] Bound retained message-ID and image-deduplication state; fail closed when those bounds are exceeded.
+- [x] Inspect local session metadata ID field locations as aggregate-only counts; support the observed local and current upstream wrapper paths without choosing between conflicting IDs.
 - [x] Run focused synthetic tests and review that no values from input records escape.
 
 ### Task 2: Inspect existing private snapshot

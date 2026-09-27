@@ -25,7 +25,7 @@
 - 合成验证：projection/collector/writer suite **36 passed, 1 skipped**；全量测试 **433 passed, 8 skipped**。端到端覆盖 Gateway collection → renderer → manifest writer，并验证读取不新增 DB audit。流水线测试发现嵌套完整 SHA 路径在 Windows 临时根下超长；现已改为单一组合身份 SHA-256 路径。
 - 整分支只读复审（`64d7849..3a9339b`）未发现 P0/P1；发现的 Obsidian writer 风险均已修复并复审：拒绝写入仓库重叠目录；更新失败时恢复旧文件与 manifest；若恢复失败保留带映射的恢复目录；manifest 列出的缺失文件也能正确回滚；备份/空目录/staging 清理失败会明确设置状态。相关 renderer/writer/collector 模块定向验证 **44 passed, 1 skipped**；没有真实 Vault 或个人投影。
 - Codex JSONL snapshot 与 registry 定向测试 **33 passed, 4 skipped**；与 raw ZIP 和 migration manifest 回归合并运行 **62 passed, 4 skipped**。全量回归未重跑。
-- 独立 Codex JSONL 结构检查器、私有 snapshot/registry 与 History 合约回归 **55 passed, 4 skipped**；没有运行全量套件。基于结构观察新增 lossless History envelope 设计提案；仅为文档，不改 schema、Gateway 或业务数据。
+- 独立 Codex JSONL 结构检查器、私有 snapshot/registry 与 History 合约回归 **57 passed, 4 skipped**；没有运行全量套件。检查器兼容已观察到的外层与嵌套 session metadata ID 字段，并在两者冲突时失败关闭。基于结构观察新增 lossless History envelope 设计提案；仅为文档，不改 schema、Gateway 或业务数据。
 
 ## P11.3A 来源覆盖
 
@@ -37,7 +37,7 @@
 | Gemini | 官方导出已完成，详情页为 47.7 MB，截止 2026-10-04 16:06；下载跳转到 Google 账号验证/reCAPTCHA。没有输入凭据或解决挑战，归档未本地下载或检查。`WAITING_FOR_USER: GEMINI_EXPORT_VERIFICATION_DOWNLOAD` |
 | Legacy Markdown | 既有 55 项保持 archive-only；文件数不等于已验证的 conversation/message 数。 |
 | Hermes | 官方文档确认会话存入 `state.db`；当前配置位置的副本 integrity 为 `ok`，27 sessions、5,666 message rows。仅查 SQLite 结构、完整性与行数，没有查正文或时间。History target 未配置，仍 `BLOCKED`，全部 message rows 未导入。 |
-| Codex | 最新元数据盘点和已复验的私有字节快照包含 82 个 `.jsonl` 候选文件、322,967,757 bytes；此前记录的 70 个文件、306,937,852 bytes 差异未解释。结构统计观察到 60,846 条有效 JSON 记录、1,988 条 message-shaped records、77 个 distinct session metadata IDs、11 组时间戳冲突的重复 message ID，以及 21 个内嵌图片 data URI（14 个唯一）。这些不是 canonical conversation/message counts；正文未输出，尚未规范化或导入。 |
+| Codex | 最新元数据盘点和已复验的私有字节快照包含 82 个 `.jsonl` 候选文件、322,967,757 bytes；此前记录的 70 个文件、306,937,852 bytes 差异未解释。结构统计观察到 60,846 条有效 JSON 记录、1,988 条 message-shaped records、100 条 metadata IDs 全位于外层 `payload.id`（77 个 distinct 值）、11 组时间戳冲突的重复 message ID，以及 21 个内嵌图片 data URI（14 个唯一）。这些不是 canonical conversation/message counts；正文未输出，尚未规范化或导入。 |
 | WorkBuddy | 安装元数据报告版本 5.6.2；本地聊天存储和可访问的原始导出仍未验证。官方 [Conversation Memory 文档](https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Memory)说明记忆是从对话提取的摘要；[FAQ](https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/FQA)说诊断日志可能含对话记录；[跨设备任务文档](https://www.workbuddy.ai/document/cross-device-tasks)描述已授权连接设备可查看桌面任务对话历史。这只确认了文档所述的应用内查看路径，没有确认原始导出或本地存储格式。 |
 
 History 仍未配置，当前 capability 仅为 `read`。官方 ChatGPT/Gemini ZIP ingest 组件只用合成归档验证；没有真实官方 ZIP 导出落盘。Codex 原始 JSONL 候选已做私有字节快照，并经独立只读检查器做有界结构计数；未输出正文，也未规范化。真实会话 identity、canonical 会话/消息数、跨源去重、附件处理、History 导入、read-back 和 retrieval E2E 仍未完成。未知 role、author、时间语义、thread、message boundary、分支或附件关系保持 unknown。

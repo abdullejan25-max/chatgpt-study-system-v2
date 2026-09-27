@@ -118,6 +118,35 @@ def test_inspector_counts_conflicting_duplicate_content_and_invalid_image(
     assert result.invalid_inline_image_payload_count == 1
 
 
+def test_inspector_counts_nested_session_meta_wrapper_ids(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    wrapper = {"type": "session_meta", "payload": {
+        "meta": {"id": "nested-session-id"}, "git": {"branch": "synthetic"},
+    }}
+    store, snapshot = _snapshot(tmp_path, monkeypatch, {"one.jsonl": _line(wrapper)})
+
+    result = inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+
+    assert result.session_metadata_record_count == 1
+    assert result.session_metadata_id_count == 1
+    assert result.unique_session_metadata_id_count == 1
+
+
+def test_inspector_rejects_conflicting_outer_and_nested_session_meta_ids(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    wrapper = {"type": "session_meta", "payload": {
+        "id": "outer-session-id", "meta": {"id": "nested-session-id"},
+    }}
+    store, snapshot = _snapshot(tmp_path, monkeypatch, {"one.jsonl": _line(wrapper)})
+
+    with pytest.raises(CodexJSONLInspectionError) as error:
+        inspect_codex_snapshot(store, snapshot.stored_path, expected_digest=snapshot.snapshot_sha256)
+
+    assert error.value.code == "session_metadata_id_conflict"
+
+
 def test_inspector_rejects_snapshot_tampering_without_path_bearing_errors(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
