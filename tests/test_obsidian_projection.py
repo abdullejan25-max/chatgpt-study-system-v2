@@ -237,6 +237,22 @@ def test_history_orders_fractional_timestamps_by_instant() -> None:
     assert index.index("00:00:00.1Z") < index.index("00:00:00.11Z")
 
 
+def test_dashboard_has_cross_conversation_history_timeline() -> None:
+    files = render_projection(_snapshot())
+    timeline = files["History/timeline.md"]
+
+    assert "provided_input_only" in timeline
+    assert "does not establish original event order" in timeline
+    assert timeline.index("user — 2026-09-01T00:00:01Z") \
+        < timeline.index("tool — 2026-09-01T00:00:01Z") \
+        < timeline.index("assistant — 2026-09-01T00:00:02Z")
+    assert "[History timeline](History/timeline.md)" in files["Dashboard.md"]
+    assert all(
+        posixpath.normpath(str(PurePosixPath("History/timeline.md").parent.joinpath(target))) in files
+        for target in re.findall(r"\]\(([^)]+)\)", timeline)
+    )
+
+
 def test_input_byte_limit_applies_across_wrong_answer_bundles(monkeypatch) -> None:
     monkeypatch.setattr(projection_module, "_MAX_INPUT_BYTES", 10_000)
     first = _wrong_answer_bundle()
@@ -297,7 +313,7 @@ def test_file_count_bound_accounts_for_all_four_fixed_outputs(monkeypatch) -> No
         history_sources=snapshot.history_sources,
         history_items=(snapshot.history_items[0],),
     ))
-    assert len(files) == 8
+    assert len(files) == 9
 
 
 @pytest.mark.parametrize(

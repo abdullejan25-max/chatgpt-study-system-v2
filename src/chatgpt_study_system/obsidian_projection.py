@@ -413,6 +413,19 @@ def render_projection(snapshot: ProjectionSnapshot) -> dict[str, str]:
             history_lines.append(f"- [{item.role} — {item.created_at}]({page})")
     add_file("History/index.md", "\n".join(history_lines) + "\n")
 
+    timeline_lines = [
+        "# History timeline",
+        "",
+        "> Scope: `provided_input_only`; this timeline contains only supplied History items.",
+        "> Equal event times are listed by logical ID; that tie-break does not establish original event order.",
+    ]
+    for item in sorted(history_items, key=lambda row: (_timestamp_value(row.created_at), row.item_id)):
+        page = f"items/{_hash_path(item.source_id)}/{_hash_path(item.conversation_id)}/{_hash_path(item.item_id)}.md"
+        timeline_lines.append(f"- [{item.role} — {item.created_at}]({page})")
+    if not history_items:
+        timeline_lines.append("- No History items were supplied.")
+    add_file("History/timeline.md", "\n".join(timeline_lines) + "\n")
+
     source_lines = ["# History sources", "", "> Counts are reported by the supplied Gateway snapshot."]
     for source_id in sorted(sources):
         source = sources[source_id]
@@ -502,6 +515,7 @@ def render_projection(snapshot: ProjectionSnapshot) -> dict[str, str]:
         f"- Wrong-answer sources supplied: {len(rendered_wrong)}\n\n"
         "## Views\n\n"
         "- [History](History/index.md)\n"
+        "- [History timeline](History/timeline.md)\n"
         "- [Wrong Answers](WrongAnswers/index.md)\n"
         "- [Sources](Sources/index.md)\n\n"
         "- [Knowledge Points](KnowledgePoints/index.md)\n"
@@ -518,6 +532,6 @@ def render_projection(snapshot: ProjectionSnapshot) -> dict[str, str]:
     ))
 
     ordered_files = dict(sorted(files.items()))
-    if len(ordered_files) > _MAX_RECORDS + 6:
+    if len(ordered_files) > _MAX_RECORDS + 7:
         raise ProjectionError
     return ordered_files
