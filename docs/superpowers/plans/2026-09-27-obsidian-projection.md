@@ -35,8 +35,8 @@ Build a deterministic, one-way renderer from explicitly supplied V2 Gateway read
 ### Task 2 — Pure projection renderer
 
 - [x] Add typed snapshot/view DTOs and deterministic Markdown rendering.
-- [x] Generate dashboard, History index/conversation pages, and Wrong Answer index/source pages.
-- [x] Use JSON-compatible quoted YAML frontmatter; include `generated: true`, IDs, event/import times, type, and safe provenance summary.
+- [x] Generate dashboard with recent supplied Wrong Answers, History index/conversation pages, Wrong Answer index/source pages, and Agent-reported Knowledge Point/Error Type indexes.
+- [x] Use JSON-compatible quoted YAML frontmatter; include `generated: true`, IDs, event/import times, type, and safe provenance summary. Render subject as unavailable because the current Wrong Answer DTO has no subject field.
 - [x] Hash logical IDs for output path components and cap the complete rendered payload.
 
 ### Task 3 — P12 status and next gates

@@ -1,0 +1,25 @@
+# P12 Step 1 — Obsidian Reality Audit
+
+Checked: 2026-09-27. This audit uses repository contracts and safe host metadata; it does not open a private StudyVault, enumerate learning records, or claim a GUI pass.
+
+| O1 item | Evidence | Status |
+|---|---|---|
+| Obsidian installation | The read-only host audit recorded Obsidian 1.13.7 from installed-app metadata and executable metadata. | Installed; GUI and target Vault remain unverified. |
+| StudyVault structure and `.obsidian` | No target Vault has been confirmed for this projection task. | `WAITING_FOR_USER: OBSIDIAN_VAULT_SELECTION`; no private Vault paths or contents inspected. |
+| Study authority | Repository rules keep Study in its authoritative Markdown location; the projection does not copy or rewrite Study files. | Contract confirmed; real Vault navigation not checked. |
+| History model | `HistorySource` reports a source ID and item count. `HistoryItem` carries logical/source/conversation IDs, event time, content, and provenance. History search requires a query; item fetch requires a known ID. | Model confirmed; current `health_report` says History is `not_configured`, and `list_history_sources` returns `HISTORY_UNAVAILABLE`. |
+| Wrong Answer model | A source has a logical source ID, source URI, optional page, question/answer text, and creation time. Analyses are versioned and carry an analysis ID, source refs, Study refs, Agent provenance, and write provenance. Sources and analyses are immutable/append-only in the Gateway store. | Contract confirmed from the adapter; no private records read. |
+| Asset logical IDs | Assets use `asset://sha256/<64 lowercase hex>`; documents use `document://sha256/<64 lowercase hex>`. | Renderer preserves source references and does not copy bytes. |
+| Knowledge relations | `study_relations` are explicit `study:` references from an analysis. A knowledge-point label is a separate Agent-supplied field; it is not proof of a Study link. | Indexes show Agent-reported terms and link back to supplied Wrong Answer pages; no Study graph edges are inferred. |
+| Missing facets | The current Wrong Answer DTO has no subject field. The projection input contains no V2 runtime status or unresolved Legacy summary. | Dashboard labels these facets unavailable instead of deriving them. |
+
+## Projection scope
+
+The renderer creates a dashboard, a recent-supplied-source list, History pages, Wrong Answer pages, and Agent-reported Knowledge Point/Error Type indexes. All outputs remain `provided_input_only`; there is no full snapshot collector, real-vault writer, generated personal Markdown, or Obsidian GUI verification in this milestone.
+
+## Remaining O1 and release gates
+
+- Human confirms the private Vault and reviews the view in Obsidian.
+- A bounded, consistent Gateway snapshot API covers History and Wrong Answer sources/analyses.
+- Any eventual writer targets a confirmed private/ignored location and supports safe rebuilds.
+- Complete O1–O13 validation passes before `v0.3.0`.
