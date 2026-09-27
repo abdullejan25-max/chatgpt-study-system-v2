@@ -55,12 +55,11 @@ def default_raw_archive_root() -> Path:
 def _validate_state_root(path: Path) -> Path:
     try:
         resolved = validate_private_journal_path(path)
-        if os.name == "nt":
-            configured = [Path(value).resolve(strict=False) for key in ("LOCALAPPDATA", "XDG_STATE_HOME")
-                          if (value := os.environ.get(key)) and Path(value).is_absolute()]
-            if not any(resolved.is_relative_to(root) for root in configured):
-                raise ValueError
-        else:
+        configured = [Path(value).resolve(strict=False) for key in ("LOCALAPPDATA", "XDG_STATE_HOME")
+                      if (value := os.environ.get(key)) and Path(value).is_absolute()]
+        if not any(resolved.is_relative_to(root) for root in configured):
+            raise ValueError
+        if os.name != "nt":
             resolved.mkdir(parents=True, exist_ok=True, mode=0o700)
             info = resolved.stat(follow_symlinks=False)
             if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid():
@@ -87,6 +86,16 @@ def _validate_source(path: Path, root: Path) -> tuple[Path, os.stat_result]:
         return resolved, info
     except (OSError, ValueError):
         raise RawArchiveError("unsafe_path") from None
+
+
+def _hash_file(path: Path) -> tuple[int, str]:
+    digest = hashlib.sha256()
+    byte_count = 0
+    with path.open("rb") as source:
+        while chunk := source.read(1024 * 1024):
+            byte_count += len(chunk)
+            digest.update(chunk)
+    return byte_count, digest.hexdigest()
 
 
 class PrivateRawArchiveStore:
@@ -132,6 +141,9 @@ class PrivateRawArchiveStore:
                         (final.st_dev, final.st_ino, final.st_size, final.st_mtime_ns)):
                     raise RawArchiveError("source_changed")
                 sha256 = digest.hexdigest()
+                staged_byte_count, staged_sha256 = _hash_file(partial)
+                if staged_byte_count != byte_count or staged_sha256 != sha256:
+                    raise RawArchiveError("integrity_mismatch")
                 member_count, uncompressed = self._verify_zip(partial)
                 target = destination_dir / f"{sha256}.zip"
                 try:
