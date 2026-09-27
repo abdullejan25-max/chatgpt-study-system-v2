@@ -7,7 +7,7 @@
 - 当前分支：`phase-11-legacy-migration`
 - 最近功能提交：`a4d039d`（Codex JSONL 私有快照、复验和来源登记支持）。
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
-- P11 状态：**BLOCKED**。没有真实导出归档、真实迁移、V2 业务写入或发布。
+- P11 状态：**BLOCKED**。没有官方导出 ZIP、规范化、真实迁移、V2 业务写入或发布；Codex 候选仅完成私有原始快照。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。
 
 ## 已完成的安全工作
