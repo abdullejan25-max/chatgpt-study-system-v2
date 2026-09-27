@@ -20,7 +20,7 @@
 
 ---
 
-### Task 1: Define the archive store contract and prove exact preservation
+### Task 1: Implement a verified happy-path archive ingest
 
 **Files:**
 - Create: `tests/test_private_raw_archive.py`
@@ -43,23 +43,23 @@ Run: `uv run --offline --extra dev pytest -q tests/test_private_raw_archive.py::
 
 Expected: FAIL because `chatgpt_study_system.migration.raw_archive` does not exist.
 
-- [ ] **Step 3: Add the data types and configured default root**
+- [ ] **Step 3: Implement the minimal safe store and happy path**
 
-Define immutable `RawArchiveLimits`, `ArchiveIngestResult`, and `RawArchiveError`. Add `default_raw_archive_root()` under the existing `LOCALAPPDATA`/`XDG_STATE_HOME` application tree; reject missing or non-absolute configured roots. Make the stored path `repr=False`.
+Define immutable `RawArchiveLimits`, `ArchiveIngestResult`, and `RawArchiveError`. Add `default_raw_archive_root()` under the existing `LOCALAPPDATA`/`XDG_STATE_HOME` application tree; reject missing or non-absolute configured roots. Implement private staging, streaming SHA-256, ZIP CRC verification, redacted manifest creation, and atomic publication. Make the stored path `repr=False`.
 
-- [ ] **Step 4: Run the focused test and verify the contract failure moves forward**
+- [ ] **Step 4: Run the focused test and verify the happy path passes**
 
 Run: `uv run --offline --extra dev pytest -q tests/test_private_raw_archive.py::test_ingest_preserves_exact_zip_bytes_and_redacts_manifest -p no:cacheprovider`
 
-Expected: the import succeeds and the test now fails because `ingest_zip` is not implemented.
+Expected: PASS with byte-for-byte archive equality, matching SHA-256, and a manifest that excludes source paths, file/member names, and synthetic content.
 
-- [ ] **Step 5: Commit the contract skeleton and red test**
+- [ ] **Step 5: Commit the green happy-path implementation**
 
 Run:
 
 ```powershell
 git add tests/test_private_raw_archive.py src/chatgpt_study_system/migration/raw_archive.py docs/superpowers/specs/2026-09-27-private-raw-conversation-archive-design.md
-git commit -m "test: specify private raw archive contract"
+git commit -m "feat: add private raw archive ingest"
 ```
 
 ### Task 2: Stream and verify a new private raw ZIP
