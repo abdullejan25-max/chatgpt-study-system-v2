@@ -27,6 +27,7 @@ def _occurrence(**overrides: object) -> ImportedHistoryOccurrence:
         "conversation_title": "private title sentinel",
         "author": "private author sentinel",
         "model_name": "private model sentinel",
+        "source_timestamp_raw": "private unclassified timestamp",
         "source_created_at": "raw-time-spelling",
         "source_updated_at": "raw-updated-time",
         "imported_at": "imported-time-observation",
@@ -57,6 +58,7 @@ def test_occurrence_preserves_open_values_boundaries_and_distinct_order() -> Non
     assert occurrence.message_order == 8
     assert occurrence.source_created_at == "raw-time-spelling"
     assert occurrence.source_updated_at == "raw-updated-time"
+    assert occurrence.source_timestamp_raw == "private unclassified timestamp"
     assert occurrence.imported_at == "imported-time-observation"
     assert occurrence.conflict_codes == ("timestamp_conflict",)
 
@@ -75,7 +77,8 @@ def test_occurrence_repr_hides_private_values_and_content() -> None:
     sentinels = (
         "private/member.jsonl", "private body sentinel", "private/image-ref",
         "private-message-id", "private-conversation-id", "private title sentinel",
-        "private author sentinel", "private model sentinel", "private-branch-ref",
+        "private author sentinel", "private model sentinel", "private unclassified timestamp",
+        "private-branch-ref",
         "private-extension/path", "125", "190",
     )
 

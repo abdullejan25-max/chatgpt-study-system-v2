@@ -32,6 +32,7 @@
 - adapter 复核发现 JSON 标准库默认静默接受对象重复键并保留末值；现对任意嵌套层级重复键固定错误码失败关闭，不选首值或末值。仅合成回归，adapter/DTO/inspector/History 定向套件 **46 passed**；未解析个人快照、未写业务库，也未运行全量测试。
 - 已明确 `record_ordinal` 是 member 内从 0 开始的物理 JSONL 行索引，不是源 JSON 的 `ordinal`，也不是 conversation/message 语义顺序；设计规定 byte span 用 `[start, end)`、保留 LF/CRLF，并计入 malformed/oversized 行。adapter 合成套件 **8 passed**；精确 byte-span iterator 仍待合成实现。
 - 新增 synthetic-only bounded JSONL span iterator，并接入内存 occurrence DTO：精确保留 LF/CRLF、物理序号及 `[start,end)` 偏移；malformed/blank 行仍占序号，oversized 行分块 drain 且不保留正文。source JSON `ordinal` 仍为 opaque。DTO/span/adapter/inspector/History suite **56 passed**；未访问私有快照，未连接 Gateway 或数据库。
+- Adapter 语义复核纠正时间字段：源 `timestamp` 只保存在 `source_timestamp_raw`，`source_created_at` 保持 unknown；可解析格式不等于事件时间证据。DTO/span/adapter/inspector/History suite 仍为 **56 passed**，全为合成/合约测试。
 - 对已验证快照新增只读字段与序号统计：100 条 `session_meta` 中 `id` 与 `session_id` 字段各出现 100 次，其中 57 对相等、43 对不相等（不据此命名冲突或映射 ID）；`parent_thread_id` 出现 43 次、`forked_from_id` 18 次；27,222 条 `event_msg` 中 `thread_id` 出现 19,518 次；`response_item.author` 出现 416 次、`phase` 1,314 次。全部 60,846 条记录有 top-level `ordinal`，文件内相邻比较没有重复或回退。这些只是结构观察，不证明会话/消息顺序或关联。
 
 ## P11.3A 来源覆盖

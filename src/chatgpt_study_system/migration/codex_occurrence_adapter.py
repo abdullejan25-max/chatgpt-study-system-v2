@@ -154,8 +154,10 @@ def parse_codex_occurrence_line(
         content_blocks.append(_opaque_record_ref(record_ordinal))
 
     source_timestamp = record.get("timestamp")
-    timestamp = source_timestamp if _is_safe_string(source_timestamp, maximum=_MAX_TIMESTAMP_CHARS) else None
-    if source_timestamp is not None and timestamp is None:
+    raw_timestamp = source_timestamp if _is_safe_string(
+        source_timestamp, maximum=_MAX_TIMESTAMP_CHARS,
+    ) else None
+    if source_timestamp is not None and raw_timestamp is None:
         has_opaque_values = True
     try:
         return ImportedHistoryOccurrence(
@@ -170,7 +172,7 @@ def parse_codex_occurrence_line(
             role=role,
             content_blocks=tuple(content_blocks),
             source_item_id=source_item_id,
-            source_created_at=timestamp,
+            source_timestamp_raw=raw_timestamp,
             unknown_field_refs=(f"record:{record_ordinal}",) if has_opaque_values else (),
         )
     except ValueError:

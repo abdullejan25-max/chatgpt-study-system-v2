@@ -69,6 +69,7 @@ class ImportedHistoryOccurrence:
     conversation_title: str | None = field(default=None, repr=False)
     author: str | None = field(default=None, repr=False)
     model_name: str | None = field(default=None, repr=False)
+    source_timestamp_raw: str | None = field(default=None, repr=False)
     source_created_at: str | None = field(default=None, repr=False)
     source_updated_at: str | None = field(default=None, repr=False)
     imported_at: str | None = field(default=None, repr=False)
@@ -84,7 +85,10 @@ class ImportedHistoryOccurrence:
             self.source_item_id, self.conversation_ref, self.conversation_title,
             self.author, self.model_name, self.import_batch_id,
         )
-        timestamps = (self.source_created_at, self.source_updated_at, self.imported_at)
+        timestamps = (
+            self.source_timestamp_raw, self.source_created_at,
+            self.source_updated_at, self.imported_at,
+        )
         orders = (self.record_ordinal, self.conversation_order, self.message_order)
         byte_range = (self.source_byte_start, self.source_byte_end)
         if type(self.schema_version) is not int or self.schema_version != 1 \
