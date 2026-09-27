@@ -40,10 +40,10 @@ Agent
 
 ```powershell
 Copy-Item config.example.toml config.local.toml
-uv sync --project .
+uv sync --project . --no-editable
 ```
 
-`uv sync --project .` 安装核心默认依赖，不安装 PyMuPDF；核心测试使用 `--extra dev`。只有主动启用 PDF/OCR 时才加 `--extra pdf-ocr`，其中的 PyMuPDF 继续受其独立许可证约束。
+该命令安装核心默认依赖，不安装 PyMuPDF。`--no-editable` 让 uv 安装项目 wheel，避免 Windows Python 3.11 在含中文路径的 editable `.pth` 文件上遇到系统代码页解码错误。Codex MCP 使用 `uv run --no-sync` 启动已安装环境；首次设置和依赖更新后都先完成 `uv sync`。核心测试另加 `--extra dev`；只有主动启用 PDF/OCR 时才加 `--extra pdf-ocr`，其中的 PyMuPDF 继续受其独立许可证约束。
 
 macOS/Linux 可把第一条命令替换为 `cp config.example.toml config.local.toml`。编辑被 Git 忽略的 `config.local.toml`，填入自己本机的 Study/QMD 路径；只有确实要启用相应能力时，再配置 History、Asset store 和权限。默认配置示例仅启用 `read`，不会迁移现有数据，也不会选择个人数据目录。确认本机配置符合预期后，再运行：
 
@@ -60,8 +60,8 @@ python .codex/setup_mcp.py
 ## 测试
 
 ```powershell
-uv sync --project . --extra dev
-uv run --project . --extra dev pytest -q
+uv sync --project . --extra dev --no-editable
+uv run --no-sync --project . --extra dev pytest -q
 ```
 
 测试使用人工编写的合成数据。Codex Host smoke、真实 QMD smoke 和受 Windows 文件系统权限限制的测试是 opt-in 或可能跳过；synthetic 测试不等于真实 Codex Desktop 新会话验证。

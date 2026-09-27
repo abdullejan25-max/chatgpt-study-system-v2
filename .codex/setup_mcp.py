@@ -67,21 +67,35 @@ def _has_explicit_checkout_paths(server: dict[str, object], root: Path) -> bool:
 
     expected_absolute_args = [
         "run",
+        "--no-sync",
         "--project",
         root.as_posix(),
         *MODULE_ARGS[:-1],
         (root / "config.local.toml").as_posix(),
     ]
+    legacy_absolute_args = [
+        "run",
+        "--project",
+        root.as_posix(),
+        *MODULE_ARGS[:-1],
+        (root / "config.local.toml").as_posix(),
+    ]
+    current_relative_args = ["run", "--no-sync", "--project", ".", *MODULE_ARGS]
     expected_relative_args = LEGACY_RELATIVE_ARGS
     return (
         server.get("command") == "uv"
-        and server.get("args") in (expected_absolute_args, expected_relative_args)
+        and server.get("args") in (
+            expected_absolute_args,
+            legacy_absolute_args,
+            current_relative_args,
+            expected_relative_args,
+        )
         and server.get("enabled") is True
         and server.get("required") is True
     )
 
 
-def _is_generated_for_another_checkout(contents: str, template_root: Path) -> bool:
+def _is_owned_generated_config(contents: str, template_root: Path) -> bool:
     if not contents.startswith(f"{GENERATED_MARKER}\n"):
         return False
     server = _parse_server(contents)
@@ -92,7 +106,9 @@ def _is_generated_for_another_checkout(contents: str, template_root: Path) -> bo
     if not old_root.is_absolute():
         return False
     try:
-        return contents == _render_config(old_root.resolve(), template_root=template_root)
+        generated = _render_config(old_root.resolve(), template_root=template_root)
+        previous_generated = generated.replace('    "--no-sync",\n', "", 1)
+        return contents in (generated, previous_generated)
     except (OSError, ValueError):
         return False
 
@@ -164,18 +180,18 @@ def main() -> int:
             print("Codex MCP is already configured for this checkout; existing file left unchanged.")
             return 0
 
-        server = _parse_server(existing)
-        if server and _has_explicit_checkout_paths(server, root):
-            print("Existing Codex MCP config is compatible with this checkout; file left unchanged.")
-            return 0
-
-        if _is_generated_for_another_checkout(existing, root):
+        if _is_owned_generated_config(existing, root):
             try:
                 _replace_owned_config(config_path, existing, generated)
             except (OSError, RuntimeError) as exc:
                 print(f"Could not safely refresh the generated Codex config: {exc}", file=sys.stderr)
                 return 1
             print("Updated the generated Codex MCP config for this checkout.")
+            return 0
+
+        server = _parse_server(existing)
+        if server and _has_explicit_checkout_paths(server, root):
+            print("Existing Codex MCP config is compatible with this checkout; file left unchanged.")
             return 0
 
         print(

@@ -50,6 +50,7 @@ def test_setup_generates_explicit_paths_for_a_clone_opened_from_another_director
     assert server["cwd"] == repository.resolve().as_posix()
     assert server["args"] == [
         "run",
+        "--no-sync",
         "--project",
         repository.resolve().as_posix(),
         "python",
@@ -64,6 +65,28 @@ def test_setup_generates_explicit_paths_for_a_clone_opened_from_another_director
     assert server["startup_timeout_sec"] == 30
     assert server["tool_timeout_sec"] == 60
     assert server["default_tools_approval_mode"] == "writes"
+
+
+def test_setup_refreshes_its_previous_generated_config_for_the_new_launcher_contract(
+    tmp_path: Path,
+) -> None:
+    repository = _clone_bootstrap_files(tmp_path / "existing checkout")
+    (repository / "config.local.toml").write_text(
+        '[gateway]\nversion = "0.1.0"\n', encoding="utf-8"
+    )
+    config_path = repository / ".codex" / "config.toml"
+
+    first = _run_setup(repository, tmp_path)
+    assert first.returncode == 0, first.stderr
+    generated = config_path.read_text(encoding="utf-8")
+    previous = generated.replace('    "--no-sync",\n', "", 1)
+    assert previous != generated
+    config_path.write_text(previous, encoding="utf-8")
+
+    result = _run_setup(repository, tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert config_path.read_text(encoding="utf-8") == generated
 
 
 def test_setup_preserves_a_working_machine_local_desktop_configuration(
@@ -114,7 +137,7 @@ def test_setup_refreshes_its_own_config_after_the_checkout_is_moved(tmp_path: Pa
     )
     server = config["mcp_servers"]["study_system"]
     assert server["cwd"] == moved_repository.resolve().as_posix()
-    assert server["args"][2] == moved_repository.resolve().as_posix()
+    assert server["args"][3] == moved_repository.resolve().as_posix()
     assert server["args"][-1] == (moved_repository.resolve() / "config.local.toml").as_posix()
     assert server["env"]["PYTHONPATH"] == (moved_repository / "src").resolve().as_posix()
 
