@@ -45,8 +45,11 @@ History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化
 2. **History 目标**：在受信任的本机私有配置中配置 History store，并启用所需写能力。当前工作不会修改私有配置。
 3. **Obsidian GUI**：打开目标 Vault，确认可用于只读人类视图；工具当前未完成真实 GUI 检查。
 4. **WorkBuddy / Hermes**：按各 Host 的正式设置启用 MCP/Gateway 连接，并提供相应本机授权；未用临时配置或伪造 host PASS。
-5. **Obsidian 全量投影前置条件**：需要一致且有界的 History/错题 Gateway 枚举、配置 History、确认私有 Vault 输出位置并完成人工 GUI 检查；当前实现只接受显式 DTO 输入，不尝试收集。
-6. **Gemini 导出下载**：官方归档已完成，但下载页要求 Google 登录。请在官方 Takeout 页面完成账户登录/验证后再下载；当前没有本地 raw archive，下载截止时间页面显示为 2026-10-04 16:06。
+5. **Gemini 导出下载**：官方归档已完成，但下载页要求 Google 登录。请在官方 Takeout 页面完成账户登录/验证后再下载；当前没有本地 raw archive，下载截止时间页面显示为 2026-10-04 16:06。
+
+## 独立工程前置
+
+- **Gateway 全量枚举**：目前 History 只有 source listing、query search 和 known-ID fetch；Wrong Answer 只有 query search 和 known-source bundle。为完成 P12 快照，需要实现每个存储各自有界、可续读、可核对总数的只读枚举，并明确各自的一致性水位。History 与 Wrong Answer 位于不同 SQLite 数据库，不能声称存在跨库原子快照。此项是继续推进的工程工作，不是 `WAITING_FOR_USER`。
 
 ## 发布与隐私
 
@@ -55,4 +58,4 @@ History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化
 - WorkBuddy 与 Hermes 的 stdio 客户端能力已按官方文档确认；本机连接、工具调用和跨 Host E2E 仍未验证，详见 [P12 Host Compatibility Checkpoint](p12-host-compatibility.md)。
 - Obsidian O1 contracts and missing facets are documented in [P12 Obsidian Reality Audit](p12-obsidian-reality-audit.md); private Vault selection and GUI remain user gates.
 - 应用内已安排本地线程每 6 小时续作一次，覆盖 72 小时；状态无变化时保持安静。
-- 下一安全步骤：Gemini archive 已就绪，等待人工登录后再取回并校验原始文件；不重复提交导出。继续独立的 P11/P12 compatibility prep；Obsidian renderer 保持纯函数边界，不执行真实 History 写入或发布。
+- 下一安全步骤：继续实现并合成验证 Gateway 的 per-store bounded enumeration 与 count reconciliation；Gemini archive 下载仍等待人工登录，不重复提交导出。Obsidian renderer/writer 保持一向投影边界，不执行真实 History 写入或发布。
