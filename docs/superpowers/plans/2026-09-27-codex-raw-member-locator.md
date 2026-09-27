@@ -23,9 +23,9 @@
 
 ### Task 2: Add synthetic stream span index
 
-- [ ] Write synthetic tests for LF, CRLF, final unterminated lines, blank/malformed records, trailing LF, and oversized-line draining with exact start/end offsets.
-- [ ] Run the tests and confirm the span-index API is missing.
-- [ ] Implement a bounded binary-stream iterator that reports exact spans and omits oversized content.
-- [ ] Verify every emitted normal span round-trips to the exact original bytes; verify oversized spans preserve exact length without retaining data.
-- [ ] Run focused synthetic tests and `git diff --check`.
+- [x] Write synthetic tests for LF, CRLF, final unterminated lines, blank/malformed records, trailing LF, and oversized-line draining with exact start/end offsets.
+- [x] Run the tests and confirm the span-index API is missing.
+- [x] Implement a bounded binary-stream iterator that reports exact spans and omits oversized content.
+- [x] Verify every emitted normal span round-trips to the exact original bytes; verify oversized spans preserve exact length without retaining data.
+- [x] Run focused synthetic tests and `git diff --check`. Observed **12 passed** across span and adapter tests.
 - [ ] Update status/checkpoint and commit; keep private snapshot/Gateway/business data untouched.

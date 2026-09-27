@@ -53,7 +53,7 @@ For JSONL, `record_ordinal` means the zero-based physical line index within one 
 
 A durable raw locator should bind the verified snapshot identity and private manifest member reference to `record_ordinal`, zero-based `byte_start`, and exclusive `byte_end`. The byte span includes any LF/CRLF terminator. A resolver must verify snapshot and member integrity before reading, require the requested span to align with a complete physical line, and fail with a fixed error if bytes or manifest identity differ. Malformed and over-limit spans remain addressable evidence but are not passed to the occurrence adapter. Conversation order and message order remain separate optional source-declared relations; neither physical line position nor the source `ordinal` property is promoted to either semantic order without evidence.
 
-The current in-memory DTO prototype carries member reference and physical `record_ordinal`, while its compact block references use that ordinal only. It does not yet implement byte-span locators or raw-byte resolution and must not be described as independently lossless without the verified immutable snapshot.
+The current in-memory DTO prototype carries member reference and physical `record_ordinal`, while its compact block references use that ordinal only. A synthetic-only bounded span iterator now computes exact physical line byte spans; it does not access the private snapshot, verify a manifest, or resolve locators against stored members. The DTO still lacks durable byte-span fields and raw-byte resolution, and must not be described as independently lossless without the verified immutable snapshot.
 
 ## Mapping rules for current evidence
 
