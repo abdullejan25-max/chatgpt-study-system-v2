@@ -2,13 +2,15 @@
 
 ## Status
 
-Design plus an in-memory DTO prototype in `migration/history_occurrence.py`. It does not change the Gateway, SQLite schema, MCP capabilities, or any private/business store. History remains unconfigured and P11 remains blocked.
+Design plus in-memory DTO and pure single-line adapter prototypes in `migration/history_occurrence.py` and `migration/codex_occurrence_adapter.py`. The adapter is verified only with synthetic fixtures and is not connected to snapshot traversal. Nothing changes the Gateway, SQLite schema, MCP capabilities, or private/business stores. History remains unconfigured and P11 remains blocked.
 
 ## Problem
 
 The current `HistoryImportItem` / `HistoryItem` contract stores one text string, a closed role set (`user`, `assistant`, `system`, `tool`), one timestamp, one conversation ID, and one source item ID. The verified Codex snapshot shows message-shaped records with `developer` roles and inline image blocks, repeated message IDs with differing timestamps, tool/event records outside the message shape, and multiple session metadata IDs in some files. Therefore, mapping the source into the current contract would lose source structures or make unsupported identity, timestamp, and deduplication choices.
 
 Codex rollout formats can evolve. The upstream fixture checked on 2026-09-27 constructs a `session_meta` payload from a `SessionMetaLine` wrapper containing `meta` and `git`; that current fixture is useful schema evidence, but it does not prove that the already captured local files use the same version or field layout. A future adapter must profile the verified source snapshot itself, support only explicitly verified variants, and keep all other structures opaque. [Upstream rollout fixture](https://github.com/openai/codex/blob/main/codex-rs/app-server/tests/common/rollout.rs)
+
+The current upstream [`ContentItem` model](https://github.com/openai/codex/blob/main/codex-rs/protocol/src/models.rs) includes text, image, and audio variants. The synthetic parser maps only explicit input/output text blocks; image, audio, event/tool, and unknown content remain references into the raw member. This is current upstream evidence, not a claim that every local rollout uses these variants.
 
 An aggregate-only field-location check on the verified local snapshot found all 100 `session_meta` IDs at the outer `payload.id` location, none at `payload.meta.id`, and no records containing both locations. The inspector now recognizes either location and fails closed if both are present with different values; it does not infer any conversation relation from these IDs.
 
@@ -51,6 +53,7 @@ The shared envelope should not duplicate entire raw records into the History dat
 4. **Ordering and time:** line ordinal preserves order within a member. Cross-member or conversation order remains unknown unless the source gives an explicit sequence/relation. A parseable UTC timestamp is stored as a parsed observation alongside its raw value; it does not replace source order or prove event-time meaning.
 5. **Attachments:** inline image data remains represented by a private reference into the immutable source snapshot. Do not create an Asset or extract a file until an explicit attachment mapping and formal Asset workflow exist.
 6. **Unknown fields:** preserve them in the immutable source bytes and expose only a safe, allowlisted classification in general History search/projection. Never silently discard them during import.
+7. **Adapter boundary:** the current pure parser recognizes only a small set of explicit record/content shapes. It keeps conversation links, title, model, branch relations, and source-declared ordering unset; tests on synthetic fixtures do not establish local-source mapping correctness.
 
 ## Coverage and retrieval requirements
 
@@ -75,4 +78,4 @@ For every source, the migration report distinguishes discovered, accessible, exp
 
 - This design does not establish canonical conversation/message counts for Codex or any other source.
 - It does not solve cross-source deduplication, source export acquisition, authentication, branch semantics, image Asset relations, or WorkBuddy/Hermes host authorization.
-- It does not authorize parsing beyond the bounded aggregate inspector, real normalization, History writes, source deletion, publishing, or release.
+- It authorizes only the synthetic pure-line parser prototype. It does not authorize running that parser on real private records, real normalization, History writes, source deletion, publishing, or release.
