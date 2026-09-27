@@ -2,7 +2,7 @@
 
 ## Status
 
-Design only. This proposal does not change the Gateway, SQLite schema, MCP capabilities, or any private/business store. History remains unconfigured and P11 remains blocked.
+Design plus an in-memory DTO prototype in `migration/history_occurrence.py`. It does not change the Gateway, SQLite schema, MCP capabilities, or any private/business store. History remains unconfigured and P11 remains blocked.
 
 ## Problem
 
