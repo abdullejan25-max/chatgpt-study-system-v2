@@ -27,14 +27,17 @@ Use a versioned `ImportedHistoryOccurrence` envelope with these conceptual parts
 
 | Part | Meaning |
 |---|---|
+| `source_system` | Validated source namespace, such as Codex, ChatGPT, Gemini, Hermes, or WorkBuddy. |
 | `source_ref` | Private immutable snapshot identity plus private member reference and line/record ordinal. It is an evidence locator, not a user-facing filename. |
 | `occurrence_id` | Deterministic identity for one source occurrence, derived from the source namespace and stable locator. It does not imply message identity. |
-| `source_item_id` | Original source identifier when present, kept in the source namespace and treated as a possibly duplicated hint. |
-| `conversation_ref` | Optional unresolved source grouping reference. It remains absent until a documented source-to-conversation mapping is proven. |
-| `order` | Source member ordinal and record ordinal, retained independently of timestamp. |
-| `timestamp` | Raw source value, optional parsed UTC value, and a parse/status field. Parsing does not establish timestamp semantics. |
-| `kind` / `role` | Open strings for source record kind and role. Known values are classified for search/display, but unknown values remain intact. |
-| `content_blocks` | Ordered typed blocks. Text, inline image references, tool/event payload references, and unknown blocks retain boundaries and opaque source references. |
+| `source_item_id` | Original source message/event identifier when present, kept in the source namespace and treated as a possibly duplicated hint. |
+| `conversation_ref` / title | Optional source conversation ID and title, populated only when the export reliably provides the value and its relationship. Otherwise remain unknown. |
+| `order` | Preserve member and record ordinals as locators. Store source-declared conversation/message sequence separately when present. A sorted filename or timestamp is never promoted to semantic conversation order. |
+| `timestamps` | Raw source created/updated values, optional parsed UTC observations, and parse/status fields. Parsing does not establish event-time semantics. `imported_at` is assigned by the importer at actual import time. |
+| `kind` / `role` / author / model | Open source values. Record role, author, and model only when explicitly present; do not infer one from another. Unknown values remain intact. |
+| `content_blocks` / attachment refs | Ordered typed blocks. Text, inline image refs, tool/event payload refs, and unknown blocks retain boundaries and opaque source refs. Retrieved attachment bytes require the formal Assets/Documents content-addressing, deduplication, and provenance path; a URL or expired reference is not archived bytes. |
+| `provenance` / source relation | Snapshot hash, source system, importer/batch identity, and explicit legacy/source relation. Preserve source hash and provenance without copying private paths into public output. |
+| `branches` | Source-provided branch, edit, or regeneration references when reliably available; otherwise unknown. Never flatten alternatives into a single linear transcript. |
 | `extensions` | Versioned source-specific fields not yet promoted to shared semantics; unknown keys are preserved in the raw snapshot and may be indexed only through a bounded, private opaque representation. |
 | `conflicts` | Explicit references to duplicate-ID groups and per-field conflict classifications; no automatic merge or winner selection. |
 
@@ -45,9 +48,13 @@ The shared envelope should not duplicate entire raw records into the History dat
 1. **Conversation identity:** JSONL member count and distinct `session_meta` ID count are observations, not canonical conversation counts. No conversation reference is assigned until record-to-session linkage is evidenced.
 2. **Message identity:** a repeated source message ID creates an occurrence group. The observed timestamp conflicts mean that ID alone cannot be the unique item key. Keep each occurrence and report content/role/timestamp conflict flags.
 3. **Roles and event kinds:** keep the original role/kind as open values. Do not map `developer` to `system`, flatten tool calls into text, or discard non-message event records.
-4. **Ordering and time:** source ordinal is authoritative for replaying source order. A parseable UTC timestamp is stored as a parsed observation alongside its raw value; it does not replace source order or prove event-time meaning.
+4. **Ordering and time:** line ordinal preserves order within a member. Cross-member or conversation order remains unknown unless the source gives an explicit sequence/relation. A parseable UTC timestamp is stored as a parsed observation alongside its raw value; it does not replace source order or prove event-time meaning.
 5. **Attachments:** inline image data remains represented by a private reference into the immutable source snapshot. Do not create an Asset or extract a file until an explicit attachment mapping and formal Asset workflow exist.
 6. **Unknown fields:** preserve them in the immutable source bytes and expose only a safe, allowlisted classification in general History search/projection. Never silently discard them during import.
+
+## Coverage and retrieval requirements
+
+For every source, the migration report distinguishes discovered, accessible, exported, raw archived, normalized, imported, deduplicated, unresolved, and waiting-for-user counts plus known coverage gaps. Counts must state whether they are source-reported, observed occurrences, or canonical normalized items. Before a release gate can pass, synthetic and eligible real read-back tests must cover source filtering, keyword and exact-phrase search, multiple items in one conversation, source-time filtering when known, cross-source retrieval, no-result behavior, and duplicate conflict correctness. Real chat text must not enter tracked logs or docs.
 
 ## Compatibility path
 
