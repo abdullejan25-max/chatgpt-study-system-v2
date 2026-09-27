@@ -15,7 +15,9 @@ Checked: 2026-09-27. This audit uses repository contracts and safe host metadata
 
 ## Projection scope
 
-The renderer creates a dashboard, a recent-supplied-source list, History pages, Wrong Answer pages, and Agent-reported Knowledge Point/Error Type indexes. All outputs remain `provided_input_only`; there is no full snapshot collector, real-vault writer, generated personal Markdown, or Obsidian GUI verification in this milestone.
+The renderer creates a dashboard, a recent-supplied-source list, History pages, Wrong Answer pages, and Agent-reported Knowledge Point/Error Type indexes. All outputs remain `provided_input_only`; there is no full snapshot collector or Obsidian GUI verification in this milestone. A separate writer can write an explicit synthetic projection into a caller-selected dedicated `V2Projection` directory, uses an ownership manifest for repeatable rebuilds, and refuses unsafe or unowned targets. It has only been exercised against synthetic temporary directories; no real Vault has been selected or written, and no generated personal Markdown exists in the repository.
+
+The writer's focused tests report 11 passed and 1 skipped on this Windows host because symlink creation is unavailable; a synthetic reparse-point test also passes. The combined projection/writer test run reports 30 passed and 1 skipped; the full suite reports 413 passed and 8 skipped. The implementation boundaries and recovery behavior are recorded in the [writer design](superpowers/specs/2026-09-27-obsidian-generated-writer-design.md).
 
 ## Remaining O1 and release gates
 

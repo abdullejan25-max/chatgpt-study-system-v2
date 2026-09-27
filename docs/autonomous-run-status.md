@@ -5,7 +5,7 @@
 ## 当前状态
 
 - 当前分支：`phase-11-legacy-migration`
-- Last safe implementation commit：`90bc0b08b29d6bc33c56a865add0e24b95324332` (`feat: add bounded in-memory Obsidian projection`)
+- Last safe implementation commit：`b737cf96d312cf3b257af64d63982bd90c7878a4` (`feat: add safe Obsidian projection writer`)
 - 当前阶段：P11，步骤 P11.3A Unified AI / Agent Conversation History
 - P11 状态：**BLOCKED**。没有真实迁移、V2 业务写入或发布。
 - P12：仅做安全准备；没有真实 Obsidian、WorkBuddy、Hermes 或 Cross-Agent Gate PASS。
@@ -34,7 +34,7 @@ History 仍未配置，当前 capability 仅为 `read`。Raw archive、规范化
 
 ## P12 状态
 
-- **Step 1 — Obsidian**：已实现纯内存 renderer，包含最近输入错题、History、Agent 报告的 Knowledge Point/Error Type 索引；subject、V2 状态与 unresolved Legacy facets 未提供时明确标 unavailable。聚焦测试 **19 passed**；全量回归 **402 passed, 7 skipped**。它不连接 Gateway、不读取数据库、不写文件。真实 Vault/GUI 未检查；History 与错题全量枚举接口尚不存在，因此不能生成完整快照或宣称覆盖完整。O1–O13 和 P12 Step 1 release gate 仍未通过，详见 [Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
+- **Step 1 — Obsidian**：纯内存 renderer 与独立 manifest-bounded writer 均有合成测试。writer 定向测试 **11 passed, 1 skipped**（Windows symlink 创建不可用；reparse-point 检查另有合成覆盖）；renderer/writer 合并测试 **30 passed, 1 skipped**；全量回归 **413 passed, 8 skipped**。writer 只接受显式专用 `V2Projection` 目录，不接入 Gateway、数据库或真实 Vault。真实 Vault/GUI 未检查；History 与错题全量枚举接口尚不存在，因此不能生成完整快照或宣称覆盖完整。O1–O13 和 P12 Step 1 release gate 仍未通过，详见 [Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
 - **Step 2 — WorkBuddy**：官方文档确认提供本地 stdio MCP 配置；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 3 — Hermes**：官方文档确认支持本地 stdio MCP；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 4 — Cross-Agent**：被前置真实 Host gate 阻断；无跨 Host 写读、版本或投影验证。

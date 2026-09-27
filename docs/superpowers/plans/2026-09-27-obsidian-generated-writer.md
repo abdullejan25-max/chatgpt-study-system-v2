@@ -45,4 +45,4 @@
 - [x] Document that a synthetic writer exists but no real Vault write or GUI review occurred.
 - [x] Record focused and full test results only after observing them.
 - [x] Confirm no private paths, generated personal Markdown, or real source data entered Git.
-- [ ] Run `git diff --check` and commit the status update.
+- [x] Run `git diff --check` and commit the status update.
