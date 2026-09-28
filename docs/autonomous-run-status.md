@@ -1,6 +1,6 @@
 # 72-Hour Autonomous Continuation Status
 
-更新时间：2026-09-28
+更新时间：2026-09-29
 
 ## 当前状态
 
@@ -34,7 +34,7 @@
 - 新增 synthetic-only bounded JSONL span iterator，并接入内存 occurrence DTO：精确保留 LF/CRLF、物理序号及 `[start,end)` 偏移；malformed/blank 行仍占序号，oversized 行分块 drain 且不保留正文。source JSON `ordinal` 仍为 opaque。DTO/span/adapter/inspector/History suite **56 passed**；未访问私有快照，未连接 Gateway 或数据库。
 - Adapter 语义复核纠正时间字段：源 `timestamp` 只保存在 `source_timestamp_raw`，`source_created_at` 保持 unknown；可解析格式不等于事件时间证据。DTO/span/adapter/inspector/History suite 仍为 **56 passed**，全为合成/合约测试。
 - 对已验证快照新增只读字段与序号统计：100 条 `session_meta` 中 `id` 与 `session_id` 字段各出现 100 次，其中 57 对相等、43 对不相等（不据此命名冲突或映射 ID）；`parent_thread_id` 出现 43 次、`forked_from_id` 18 次；27,222 条 `event_msg` 中 `thread_id` 出现 19,518 次；`response_item.author` 出现 416 次、`phase` 1,314 次。全部 60,846 条记录有 top-level `ordinal`，文件内相邻比较没有重复或回退。这些只是结构观察，不证明会话/消息顺序或关联。
-- Aggregate-only inspector 现在对重复 JSON 对象键单独计数，并排除这些行，不再接受标准库默认的末值覆盖行为；合成回归验证嵌套和顶层重复键不会泄露键名或值。Codex inspector、snapshot、occurrence DTO/adapter/span 与 History 合约套件 **71 passed, 2 skipped**。本轮恢复检查读取到两条不同用途的 Codex registry 记录；固定私有快照根目录内有一个候选目录，但其 manifest 摘要与可访问 local-history 记录不匹配，locator 指向的目录也不含 manifest。未尝试按不匹配的摘要解析快照，不更新私有聚合计数；恢复状态仍为 `CODEX_SNAPSHOT_SELECTION_UNRESOLVED`。本轮 Edge 未打开 ChatGPT/Gemini 官方导出状态页，导出状态未刷新。
+- Aggregate-only inspector 现在对重复 JSON 对象键单独计数，并排除这些行，不再接受标准库默认的末值覆盖行为；合成回归验证嵌套和顶层重复键不会泄露键名或值。Codex inspector、snapshot、occurrence DTO/adapter/span 与 History 合约套件 **71 passed, 2 skipped**。本轮固定私有快照根目录内唯一候选的 manifest 元数据摘要与自身 canonical metadata digest 一致，文件数/总字节数也与历史 inventory 一致，但它仍与可访问 local-history registry 摘要不匹配；候选文件内容未重读，不能确认字节完整性或快照身份。locator 指向的目录不含 manifest。未按不匹配摘要解析数据，不更新个人聚合计数；`CODEX_SNAPSHOT_SELECTION_UNRESOLVED` 保持。Edge 未打开 ChatGPT/Gemini 官方导出状态页，导出状态未刷新。
 
 ## P11.3A 来源覆盖
 
@@ -53,7 +53,7 @@ History 仍未配置，当前 capability 仅为 `read`。官方 ChatGPT/Gemini Z
 
 ## P12 状态
 
-- **Step 1 — Obsidian**：纯内存 renderer、History 时间线、独立 manifest-bounded writer、opt-in per-store Gateway 枚举接口及 reconciliation collector 均已实现并通过合成测试。原 synthetic end-to-end **36 passed, 1 skipped**；本次 writer 安全修复后的三个相关模块 **44 passed, 1 skipped**。先前全量回归 **433 passed, 8 skipped**，本次未重跑。无个人 snapshot。writer 仅经 synthetic 目录验证。真实 Vault/GUI 未检查，O1–O13 和 P12 Step 1 release gate 仍未通过，详见 [Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
+- **Step 1 — Obsidian**：纯内存 renderer、History 时间线、独立 manifest-bounded writer、opt-in per-store Gateway 枚举接口及 reconciliation collector 均已实现并通过合成测试。原 synthetic end-to-end **36 passed, 1 skipped**；writer/collector/renderer 相关模块 **44 passed, 1 skipped**（本轮复跑）。先前全量回归 **433 passed, 8 skipped**，本次未重跑。无个人 snapshot。writer 仅经 synthetic 目录验证。真实 Vault/GUI 未检查，O1–O13 和 P12 Step 1 release gate 仍未通过，详见 [Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
 - 新增的 Host-neutral process smoke 通过独立 MCP SDK 验证真实 stdio 子进程在仅有 `read` 时隐藏 `projection_snapshot`，在显式 `projection` 时展示只读工具并分页读取合成 History projection；与 History/Wrong Answer MCP capability 测试合计 **24 passed**。本轮重跑 MCP stdio resources、History MCP 和 Wrong Answer MCP suite：**26 passed**。这些均为 host-neutral/synthetic 协议证据，不是 WorkBuddy/Hermes Host E2E。
 - **Step 2 — WorkBuddy**：官方文档确认提供本地 stdio MCP 配置；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
 - **Step 3 — Hermes**：官方文档确认支持本地 stdio MCP；本机 Gateway 配置和真实 E2E 未验证，仍需用户启用/配置。
