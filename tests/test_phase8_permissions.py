@@ -49,7 +49,8 @@ def test_mcp_discovery_exposes_only_enabled_write_tools(tmp_path: Path) -> None:
                      "fetch_history_item", "search_documents",
                      "fetch_document", "fetch_document_page", "list_document_ocr_candidates",
                      "fetch_asset", "get_wrong_answer_bundle",
-                     "search_wrong_answers"}
+                     "search_wrong_answers", "list_legacy_sources", "search_legacy_sources",
+                     "fetch_legacy_source"}
 
     async def check() -> None:
         async with create_connected_server_and_client_session(create_mcp_server(gateway)) as client:

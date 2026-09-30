@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import stat
 import unicodedata
 from threading import RLock
 from dataclasses import dataclass
@@ -883,6 +884,19 @@ class SQLiteDocumentStore:
                 or _path_has_reparse_point(self.database_path.parent) \
                 or _path_has_reparse_point(self.database_path):
             raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable")
+        try:
+            for suffix in ("", "-wal", "-shm", "-journal"):
+                path = Path(str(self.database_path) + suffix)
+                if _path_has_reparse_point(path):
+                    raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable")
+                try:
+                    info = path.stat(follow_symlinks=False)
+                except FileNotFoundError:
+                    continue
+                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                    raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable")
+        except OSError:
+            raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable") from None
 
     def _connect(self, *, write: bool = False) -> sqlite3.Connection:
         self._ready()
@@ -893,6 +907,11 @@ class SQLiteDocumentStore:
                 con = sqlite3.connect(self.database_path)
             else:
                 con = sqlite3.connect(self.database_path.as_uri() + "?mode=ro", uri=True)
+            try:
+                self._ready()
+            except Exception:
+                con.close()
+                raise
             con.row_factory = sqlite3.Row
             return con
         except sqlite3.Error:
@@ -931,9 +950,20 @@ class SQLiteDocumentStore:
             raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable")
         target = directory / digest
         if target.exists():
-            if _path_has_reparse_point(target) or target.stat().st_size != len(data) \
-                    or hashlib.sha256(target.read_bytes()).hexdigest() != digest:
+            if _path_has_reparse_point(target) or target.stat().st_nlink != 1 \
+                    or not stat.S_ISREG(target.stat(follow_symlinks=False).st_mode) \
+                    or target.stat().st_size != len(data):
                 raise GatewayError("CONFLICT", "Asset conflicts with existing data")
+            with target.open("rb") as stream:
+                before = _stream_signature(stream)
+                if os.fstat(stream.fileno()).st_nlink != 1:
+                    raise GatewayError("CONFLICT", "Asset conflicts with existing data")
+                snapshot = stream.read(len(data) + 1)
+                if snapshot != data or hashlib.sha256(snapshot).hexdigest() != digest \
+                        or _stream_signature(stream) != before \
+                        or os.fstat(stream.fileno()).st_nlink != 1 or target.stat().st_nlink != 1 \
+                        or _path_has_reparse_point(target):
+                    raise GatewayError("CONFLICT", "Asset conflicts with existing data")
             return
         temporary = directory / (digest + "." + uuid4().hex + ".tmp")
         try:
@@ -957,6 +987,29 @@ class SQLiteDocumentStore:
 
     def register_asset(self, data: bytes, media_type: str,
                        identity: ReportedIdentity | None = None) -> AssetRecord:
+        return self._register_asset(data, media_type, identity=identity)
+
+    def register_legacy_asset(self, data: bytes, media_type: str, *,
+                              import_batch_id: str, source_ref: str,
+                              identity: ReportedIdentity | None = None) -> AssetRecord:
+        """Restricted internal image migration; never exposed as an MCP tool.
+
+        A content match retains its original metadata and provenance. The
+        reference records a source identity, without asserting an evidence role.
+        """
+        if type(media_type) is not str or media_type not in {"image/png", "image/jpeg"} \
+                or type(import_batch_id) is not str \
+                or re.fullmatch(r"migration-[0-9a-f]{32}", import_batch_id) is None \
+                or type(source_ref) is not str \
+                or re.fullmatch(r"migration-source://[A-Za-z0-9][A-Za-z0-9_-]{0,255}/"
+                                r"[A-Za-z0-9][A-Za-z0-9_-]{0,255}", source_ref) is None:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid legacy image import")
+        return self._register_asset(data, media_type, identity=identity,
+                                    legacy_import=(import_batch_id, source_ref))
+
+    def _register_asset(self, data: bytes, media_type: str, *,
+                        identity: ReportedIdentity | None,
+                        legacy_import: tuple[str, str] | None = None) -> AssetRecord:
         _validate_asset(data, media_type)
         identity = identity or ReportedIdentity()
         created: list[Path] = []
@@ -968,8 +1021,15 @@ class SQLiteDocumentStore:
                                         ("asset://sha256/" + hashlib.sha256(data).hexdigest(),)).fetchone()
                 result = self._insert_asset(con, data, media_type, created)
                 if existing is None:
+                    metadata = ({"source_refs": [legacy_import[1]],
+                                 "imported_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                                 "source_system": legacy_import[1].split("/")[2],
+                                 "import_batch_id": legacy_import[0], "legacy_status": "imported"}
+                                if legacy_import else {})
                     insert_provenance(con, record_type="asset", record_id=result.uri, version=1,
-                                      data_origin="source", actor_type="external_client", identity=identity)
+                                      data_origin="legacy_import" if legacy_import else "source",
+                                      actor_type="importer" if legacy_import else "external_client",
+                                      identity=identity, **metadata)
                 _audit(con, "register_asset", "asset", result.uri)
             return result
         except (sqlite3.Error, OSError) as error:
@@ -1104,6 +1164,12 @@ class SQLiteDocumentStore:
         return snapshot[offset:offset + length]
 
     def _verified_asset_snapshot(self, record: AssetRecord) -> bytes:
+        if type(record) is not AssetRecord or type(record.sha256) is not str \
+                or re.fullmatch(r"[0-9a-f]{64}", record.sha256) is None \
+                or record.uri != "asset://sha256/" + record.sha256 \
+                or type(record.media_type) is not str or record.media_type not in _MEDIA \
+                or type(record.size) is not int:
+            raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable")
         size_limit = (MAX_PDF_BYTES if record.media_type == "application/pdf" else
                       MAX_IMAGE_BYTES if record.media_type in {"image/png", "image/jpeg", "image/webp"} else
                       MAX_ASSET_BYTES)
@@ -1113,13 +1179,18 @@ class SQLiteDocumentStore:
         if _path_has_reparse_point(path):
             raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable")
         try:
+            info = path.stat(follow_symlinks=False)
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable")
             with path.open("rb") as stream:
                 before = _stream_signature(stream)
-                if before[2] != record.size or _file_signature(path.stat())[:4] != before[:4]:
+                if os.fstat(stream.fileno()).st_nlink != 1 or before[2] != record.size \
+                        or _file_signature(path.stat())[:4] != before[:4]:
                     raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable")
                 snapshot = stream.read(record.size + 1)
                 if len(snapshot) != record.size or hashlib.sha256(snapshot).hexdigest() != record.sha256 \
                         or _stream_signature(stream) != before \
+                        or os.fstat(stream.fileno()).st_nlink != 1 or path.stat().st_nlink != 1 \
                         or _path_has_reparse_point(path):
                     raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable")
                 return snapshot

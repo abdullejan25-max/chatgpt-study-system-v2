@@ -159,6 +159,17 @@ class SQLiteHistoryBackend:
         finally:
             connection.close()
 
+    def initialize(self) -> None:
+        """Explicit local setup of an empty store, without inventing a source."""
+        connection = self._connect(create=True)
+        try:
+            self._create_schema(connection)
+            connection.commit()
+        except sqlite3.Error:
+            raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable") from None
+        finally:
+            connection.close()
+
     def import_items(self, source_id: str, items: list[HistoryImportItem], *,
                      source_system: str | None = None,
                      import_batch_id: str | None = None) -> tuple[str, ...]:

@@ -611,6 +611,34 @@ class Gateway:
             raise GatewayError("HISTORY_UNAVAILABLE", "History is unavailable")
         return self.history_backend
 
+    def _legacy_source_store(self):
+        from .adapters.history import SQLiteHistoryBackend
+        from .adapters.legacy_sources import SQLiteLegacySourceStore
+        self._require_capability("read")
+        if not isinstance(self._history_backend(), SQLiteHistoryBackend):
+            raise GatewayError("HISTORY_UNAVAILABLE", "History is unavailable")
+        return SQLiteLegacySourceStore(self.history_backend.database_path)
+
+    def list_legacy_sources(self) -> dict:
+        return {"sources": list(self._legacy_source_store().list_sources())}
+
+    @staticmethod
+    def _public_legacy_source(record: dict) -> dict:
+        result = dict(record)
+        result["source_item_id"] = _redact_local_paths(result["source_item_id"])
+        if "snippet" in result:
+            result["snippet"] = _redact_local_paths(result["snippet"])
+        return result
+
+    def search_legacy_sources(self, query: str, *, source_id: str | None = None,
+                              limit: int = 5, offset: int = 0) -> dict:
+        result = self._legacy_source_store().search(query, source_id, limit, offset)
+        return {**result, "results": [self._public_legacy_source(row) for row in result["results"]]}
+
+    def fetch_legacy_source(self, source_record_id: str, offset: int = 0, length: int = 16384) -> dict:
+        return {"source": self._public_legacy_source(
+            self._legacy_source_store().fetch(source_record_id, offset, length))}
+
     @staticmethod
     def _history_text(value: str, max_length: int) -> str:
         if type(value) is not str:

@@ -10,7 +10,7 @@ from uuid import uuid4
 from .contracts import GatewayError
 
 
-_ORIGINS = {"source", "deterministic_derived", "agent_generated", "imported", "system_generated"}
+_ORIGINS = {"source", "deterministic_derived", "agent_generated", "imported", "legacy_import", "system_generated"}
 _ACTORS = {"external_client", "importer", "system", "unknown"}
 _LEGACY = {"native", "imported", "pre_provenance"}
 _IDENTITY_FIELDS = {"reported_agent", "reported_client", "run_id"}
@@ -84,7 +84,8 @@ def _legacy_insert(connection: sqlite3.Connection, record_type: str, record_id: 
     return provenance_id
 
 
-def ensure_provenance_schema(connection: sqlite3.Connection, scope: str = "generic") -> None:
+def ensure_provenance_schema(connection: sqlite3.Connection, scope: str = "generic", *,
+                             backfill: bool = True) -> None:
     connection.executescript("""
         CREATE TABLE IF NOT EXISTS schema_migrations(
             scope TEXT NOT NULL, version INTEGER NOT NULL, applied_at TEXT NOT NULL,
@@ -106,6 +107,11 @@ def ensure_provenance_schema(connection: sqlite3.Connection, scope: str = "gener
     """)
     applied = connection.execute("SELECT 1 FROM schema_migrations WHERE scope=? AND version=1", (scope,)).fetchone()
     if applied:
+        return
+
+    if not backfill:
+        connection.execute("INSERT OR IGNORE INTO schema_migrations(scope, version, applied_at) VALUES (?, 1, ?)",
+                           (scope, utc_now()))
         return
 
     if _has_table(connection, "assets"):
