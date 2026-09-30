@@ -38,6 +38,18 @@ def _gateway(tmp_path: Path):
     return gateway, backend
 
 
+def test_protocol_reports_installed_package_version(tmp_path: Path) -> None:
+    gateway, _ = _gateway(tmp_path)
+
+    async def check():
+        with patch("chatgpt_study_system.transports.mcp_stdio.distribution_version", return_value="9.8.7"):
+            async with create_connected_server_and_client_session(create_mcp_server(gateway)) as client:
+                initialized = await client.initialize()
+                assert initialized.serverInfo.version == "9.8.7"
+
+    anyio.run(check)
+
+
 def test_protocol_lists_tools_with_narrow_inputs_and_correct_write_hints(tmp_path: Path) -> None:
     gateway, _ = _gateway(tmp_path)
 

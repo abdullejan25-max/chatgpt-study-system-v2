@@ -39,4 +39,6 @@ Codex local stdio MCP is the current host integration. A remote transport or Sec
 - Study Knowledge Base is the StudyVault source accessed through `StudyBackend`.
 - Archive is original evidence and is not automatically treated as durable memory.
 
+P11 adds immutable legacy source documents alongside raw History messages. `legacy_markdown`, `legacy_wrong_answer_document`, `legacy_derived_fact` and `codex_jsonl` retain exact UTF-8 bytes, measured hashes, deterministic source ordering, known source time and runtime import provenance. They do not invent message roles, authors, threads or event boundaries. Three read-only Gateway/MCP operations list, search and fetch bounded original source ranges; canonical message tools remain separate. Internal local migration services validate explicit source sets, prove target snapshot/restore, call domain transactions and reconcile durable checkpoints through deterministic retry. Image atomic units are single validated Assets. They are not Agent-facing write tools or arbitrary SQL importers.
+
 See the accepted [ADRs](adr/) for decision context and consequences.

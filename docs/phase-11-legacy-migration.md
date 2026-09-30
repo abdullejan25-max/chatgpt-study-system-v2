@@ -1,5 +1,7 @@
 # Phase 11 — Legacy Migration
 
+> **2026-09-30 更新：P11 真实来源迁移与 V2 cutover Gate 已 PASS。** 当前结果以 [Real Migration Completion](p11-real-migration-completion.md) 为准。下文保留此前 dry-run/preparation 的历史证据；其中 History 未配置、零业务提交、错题没有明确图片引用及 all-platform scope 的旧结论已被现场验证取代。当前版本范围是 V1→V2 来源迁移与切换；完整 canonical conversation normalization 和外部平台扩展仍未完成。
+
 **状态：BLOCKED。** 已完成 Legacy Reality Audit、只读 dry-run 工具、私有 manifest 和 Study 检索验证；没有向 V2 History、Assets、Documents 或 Wrong Answer 业务存储写入旧数据。当前 Gate 被未配置的 History 后端和无法验证的旧错题来源关系阻断。
 
 ## Git 与发布基线

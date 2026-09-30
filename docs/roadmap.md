@@ -2,44 +2,18 @@
 
 ```text
 Phase 1：V1 审计 ✅
-↓
 Phase 2：ChatGPT-first V2 架构 ✅
-↓
 Phase 3：只读 MCP Spike ✅
-↓
 Phase 4–9：Local Study Infrastructure ✅
-  ├─ Architecture / Single-Brain ✅
-  ├─ StudyVault / QMD read path ✅
-  ├─ Personal History read path ✅
-  ├─ Documents / Assets / PDF extraction ✅
-  ├─ Wrong Answer pipeline ✅
-  ├─ Safe write policy / audit ✅
-  └─ Codex + independent MCP client ✅
-↓
-Phase 10：GitHub Release Hardening ✅ (`v0.1.0` published)
-↓
-Phase 11：Legacy Migration ⏸ BLOCKED（只读 audit/dry-run 完成；History 与错题关系 gate 未通过）
-↓
-Phase 12：Agent Projection & Interoperability ⏸ PREPARATION（Obsidian 纯内存 renderer 已实现；全量枚举、Vault GUI 与多 Host Gate 未通过）
+Phase 10：GitHub Release Hardening ✅（v0.1.0）
+Phase 11：V1 来源迁移与 V2 cutover ✅ PASS（v0.2.0）
+Phase 12：Agent Projection & Interoperability ⏸ PREPARATION
 ```
 
-Phase 1–9 已完成本地实现与回归验证。Secure MCP Tunnel / ChatGPT remote MCP 是未来可选 transport，不属于项目本地完成条件。
+P11 的版本范围是 V1→V2 来源迁移与 V2 cutover；全平台 canonical conversation/message History 统一属于后续扩展。该范围明确区分 V1 已有数据与尚未进入 V1 的外部平台数据，不能用未取得的 ChatGPT/Gemini 导出来声称 V1 数据已迁移，也不能让它们阻断独立完成的 V1 无损来源迁移。
 
-P10 围绕 portable bootstrap、隐私边界、Apache-2.0 许可、PyMuPDF optional 隔离、clean checkout、文档和公开发布准备。旧开发历史保留在本地；公开历史从独立新 root commit 开始。真实 GitHub fresh clone 与 clean release candidate 的 Desktop Host 验证均通过，`v0.1.0 — Initial Public Release` 已发布。详情见 [P10 Release Gate](p10-release-gate.md)。
+P11 已执行真实领域写入、DB/WAL/blob snapshot、隔离 restore、hash/read-back、同源重跑、MCP retrieval E2E 和 restart persistence。Study 原地复用；旧聊天和错题保留为 typed source documents，Atomic Fact 保留为 derived fact，Codex 82 个来源文件保留为 source-only JSONL。完整错题语义及 canonical conversation normalization 的已知限制保持明确。逐项验收见 [P11 completion](p11-real-migration-completion.md)，V1 保留分类见 [Deletion candidates](v1-deletion-candidates.md)。
 
-Phase 11 已完成旧数据盘点、StudyVault 原地复用验证及本机只读 dry-run；没有向 V2 业务库写入。History 后端未配置，旧错题图文关系无法验证，因此真实迁移与 v0.2.0 release preparation 均未通过 Gate。详细分类、计数和技术条件见 [Phase 11 Legacy Migration](phase-11-legacy-migration.md)。
+P12 保留现有 Obsidian renderer/writer/collector、投影能力、WorkBuddy/Hermes preparation 和跨客户端合成 harness；本任务未增加 P12 产品功能，也未声称其 Gate PASS。下一独立任务是在明确私有投影目标后完成真实 Obsidian GUI 与 WorkBuddy/Hermes 客户端 E2E。外部官方导出、canonical source normalization 和更高效 source index 分别以真实状态推进。
 
-```text
-Phase 4：Architecture Rebaseline ✅
-Phase 5：Personal History Read Layer ✅
-Phase 6：Document & Asset Pipeline ✅ (PDF extraction implemented; native OCR has an external Tesseract gate)
-Phase 7：Wrong Answer Pipeline ✅
-Phase 8：Safe Write Layer ✅
-Phase 9：Agent Interoperability ✅
-Phase 10：GitHub Release Hardening ✅ (`v0.1.0` published)
-Phase 11：Legacy Migration ⏸ BLOCKED
-```
-
-Each phase is gated by synthetic tests and a coherent local commit. Phase 9 verified an independent stdio MCP client against the same server/Core used by Codex. ChatGPT remote MCP remains deferred as an external capability and is not an exit gate.
-
-Phase 12 preparation includes a deterministic in-memory Obsidian renderer and a synthetic cross-client stdio parity test that exercises shared Gateway versioned writes/read-back across process restarts. The renderer does not query a complete corpus or write a Vault; the parity test does not configure WorkBuddy/Hermes. Full History and wrong-answer enumeration, a confirmed private Vault target, GUI review, and real Host checks remain prerequisites; no Phase 12 gate or release is claimed PASS.
+P1–P10 的历史验收见各阶段 checkpoint 与 [P10 Release Gate](p10-release-gate.md)。Secure MCP Tunnel / ChatGPT remote MCP 仍是非 Core 的可选 transport，不属于本地 P11 迁移条件。旧 tag、公开历史和 V1 原件均保持。

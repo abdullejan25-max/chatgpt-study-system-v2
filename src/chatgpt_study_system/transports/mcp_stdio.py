@@ -1,6 +1,7 @@
 """MCP tools over a transport-neutral Gateway."""
 
 import argparse
+from importlib.metadata import version as distribution_version
 import base64
 from importlib.resources import files
 import json
@@ -105,7 +106,7 @@ def _validated_history_search_arguments(arguments: dict) -> dict:
 
 def create_mcp_server(gateway: Gateway) -> Server:
     """Expose the local Gateway operations over the official MCP SDK."""
-    server = Server("chatgpt-study-system-v2", version="0.1.0")
+    server = Server("chatgpt-study-system-v2", version=distribution_version("chatgpt-study-system-v2"))
     read_only = types.ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
     write_only = types.ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
     reported_provenance = {"type": "object", "properties": {

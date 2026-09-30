@@ -20,10 +20,13 @@ Agent
 
 - **Study**：通过显式配置的 QMD collection 搜索学习资料。搜索使用隔离的临时副本；原始索引保持为用户管理的数据源。
 - **Personal History**：读取显式登记的本地 History store；系统不会扫描聊天记录或自动导入历史。
+- **Legacy Sources**：读取经过显式迁移的旧来源文档，保留原始字节、类型与 provenance；聊天档案、旧错题笔记、派生事实和 Codex JSONL 与原始消息模型分开。`list_legacy_sources`、`search_legacy_sources`、`fetch_legacy_source` 提供只读检索和有界原文读取。
 - **Wrong Answers**：原始图片或文档作为证据，Agent 提供分析，Gateway 按权限保存来源和带版本的分析，并记录 provenance。不同 MCP Agent 使用同一套 `study-workflow://wrong-answer` 工作流。
 - **Assets & Documents**：Gateway 对明确提交的来源做边界检查、哈希与登记；原始证据和派生文字保持可区分。
 
 更完整的组件职责和安全约束见 [架构说明](docs/architecture.md)、[隐私边界](docs/privacy-boundary.md) 和 [ADR](docs/adr/)；已验证的错题链路证据见 [Real Wrong Answer E2E checkpoint](docs/real-wrong-answer-e2e-checkpoint.md)。
+
+`v0.2.0 — Legacy Migration` 的范围是 V1 来源迁移与 V2 cutover。真实迁移、恢复、幂等重跑及 MCP 检索证据见 [P11 completion](docs/p11-real-migration-completion.md)。旧错题的完整业务语义和 Codex canonical conversation normalization 仍有明确限制；ChatGPT/Gemini/Hermes/WorkBuddy 统一 History 扩展未被报告为已完成。既有 MCP 客户端更新后需重连以加载私有配置和新增只读工具。
 
 ## 安装
 
@@ -83,4 +86,4 @@ uv run --no-sync --project . --extra dev pytest -q
 
 ## 状态
 
-P1–P9 的本地功能已完成；P10 Release Hardening 的验收状态和当前测试基线见 [当前状态](docs/current-state.md) 与 [P10 Release Gate](docs/p10-release-gate.md)。项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
+P1–P10 已完成；P11 真实来源迁移与 V2 cutover Gate 已 PASS，版本为 `v0.2.0`。当前证据与限制见 [当前状态](docs/current-state.md) 和 [P11 completion](docs/p11-real-migration-completion.md)。P12 保留准备成果，尚未通过产品 Gate。项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
