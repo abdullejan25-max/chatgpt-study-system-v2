@@ -92,7 +92,14 @@ def _open_verified_source(path: Path, source_root: Path) -> Iterator[BinaryIO]:
     if not path.is_absolute() or _path_has_reparse_point(path):
         raise InventoryError("Unsafe migration source")
     try:
-        stream = path.open("rb")
+        # Win32 may require an extended path for preserved snapshot members.
+        # Keep logical paths unchanged for the handle-resolved containment check.
+        physical_path = path
+        if os.name == "nt" and not str(path).startswith("\\\\?\\"):
+            value = str(path.absolute())
+            physical_path = Path("\\\\?\\UNC\\" + value[2:] if value.startswith("\\\\")
+                                 else "\\\\?\\" + value)
+        stream = physical_path.open("rb")
         try:
             opened_path = _opened_file_path(stream)
             if opened_path is None:

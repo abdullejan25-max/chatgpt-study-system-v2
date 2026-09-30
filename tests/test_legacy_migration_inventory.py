@@ -2,6 +2,7 @@
 
 import hashlib
 import io
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -10,6 +11,20 @@ import pytest
 
 import chatgpt_study_system.migration.inventory as inventory
 from chatgpt_study_system.migration.planner import plan_records
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Win32 extended path handling")
+def test_verified_source_opens_long_windows_path_without_changing_logical_root(tmp_path):
+    root = tmp_path / "source"
+    root.mkdir()
+    source = root / ("synthetic-" * 14) / ("member-" * 14) / "source.jsonl"
+    extended = Path("\\\\?\\" + str(source))
+    extended.parent.mkdir(parents=True)
+    raw = b'{"type":"synthetic","payload":"original bytes"}\r\n'
+    extended.write_bytes(raw)
+    assert len(str(source)) > 260
+    with inventory._open_verified_source(source, root) as stream:
+        assert stream.read() == raw
 
 
 def test_study_root_reuses_authority_and_archives_unpaired_wrong_answer_files(tmp_path: Path) -> None:
