@@ -15,7 +15,7 @@
 - 保留既有 P11 dry-run/journal 与 1,209 项 inventory；没有重扫约 42.75 GB 的旧来源。
 - 新增私有 conversation-source registry，校验固定状态词、计数、UTC 时间、哈希和覆盖说明；POSIX 存储目录/数据库为 owner-only，Windows 默认落在用户状态目录；公共摘要仅输出汇总计数与固定状态码，跨来源总数明确标为来源报告之和。
 - 根据只读代码审查修复目录权限问题：默认数据库改放专用目录；若 POSIX 上该目录已存在但权限对 group/other 开放，则初始化失败且不改原权限。6 条旧 registry 记录已复制并逐条回读验证，摘要一致；旧 registry 哈希未变，作为恢复副本保留。复审未发现新问题。
-- 运行新增 registry 与现有 migration journal 的定向测试：历史结果 **37 passed, 2 skipped**（两个 POSIX 权限位断言不适用于 Windows）；本轮重跑 `test_conversation_source_registry.py` 与 `test_legacy_migration_manifest.py`：**38 passed, 2 skipped**。先前完整回归记录为 **365 passed, 5 skipped**；本次未重跑。
+- 运行新增 registry 与现有 migration journal 的定向测试：历史结果 **37 passed, 2 skipped**（两个 POSIX 权限位断言不适用于 Windows）；本轮重跑 `test_conversation_source_registry.py` 与 `test_legacy_migration_manifest.py`：**38 passed, 2 skipped**，并重跑 migration inventory/planner suite：**30 passed**，均为合成或临时测试目录。先前完整回归记录为 **365 passed, 5 skipped**；本次未重跑。
 - 用只读主机盘点发现 Obsidian、WorkBuddy、Hermes 已安装；安装事实不代表聊天数据可访问或 MCP 集成通过。
 - 官方 Google Takeout 的 Gemini Apps 导出已完成；详情页显示 47.7 MB，下载截止时间为 2026-10-04 16:06。下载跳转到 Google 账号验证/reCAPTCHA；没有尝试求解或输入凭据，归档未落盘。私有 registry 状态为 `WAITING_FOR_USER`，conversation/message 数仍未知。
 - 根据 Hermes 官方 Sessions 文档定位 `HERMES_HOME/state.db`；仅对 DB+WAL 私有临时快照做 SQLite schema / `quick_check` 与表行数查询，确认 **27 sessions、5,666 message rows**，未查询会话/消息文本、title、用户 ID 或时间。私有 registry 保存 snapshot manifest hash 与 locator；临时副本已清理，V2 没有写入。
