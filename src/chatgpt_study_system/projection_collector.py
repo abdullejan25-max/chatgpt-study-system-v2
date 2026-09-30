@@ -35,6 +35,7 @@ class ProjectionCollection:
     history_item_count: int
     wrong_answer_source_count: int
     wrong_answer_analysis_count: int
+    legacy_snapshot_token: str = ""
 
 
 def _count(value: object, maximum: int = _MAX_RECORDS) -> bool:
@@ -180,8 +181,21 @@ def collect_projection(gateway: ProjectionGateway) -> ProjectionCollection:
     wrong_bundles = _wrong_answers(
         gateway, wrong_token, wrong_sources_count, wrong_records_count,
     )
-    snapshot = ProjectionSnapshot(history_sources, history_items, wrong_bundles)
+    legacy_token, legacy_count, legacy_records = _begin(gateway, "legacy_sources")
+    legacy = []
+    seen = set()
+    for page in _pages(gateway, "legacy_sources", "records", legacy_token, "records",
+                       expected_count=legacy_records):
+        for record in page:
+            if type(record) is not dict or type(record.get("source_record_id")) is not str \
+                    or record["source_record_id"] in seen:
+                raise ProjectionCollectionError
+            seen.add(record["source_record_id"])
+            legacy.append(record)
+    if len(legacy) != legacy_count or legacy_count != legacy_records:
+        raise ProjectionCollectionError
+    snapshot = ProjectionSnapshot(history_sources, history_items, wrong_bundles, tuple(legacy))
     return ProjectionCollection(
         snapshot, history_token, wrong_token, history_sources_count,
-        history_records_count, wrong_sources_count, wrong_records_count,
+        history_records_count, wrong_sources_count, wrong_records_count, legacy_token,
     )

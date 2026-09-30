@@ -128,7 +128,7 @@ def test_render_is_deterministic_and_does_not_write_files(tmp_path, monkeypatch)
     assert list(tmp_path.iterdir()) == []
     assert list(first) == sorted(first)
     assert all(path.startswith(("Dashboard.md", "History/", "Sources/", "WrongAnswers/",
-                               "KnowledgePoints/", "ErrorTypes/"))
+                               "KnowledgePoints/", "ErrorTypes/", "Study/", "References/"))
                for path in first)
 
 
@@ -313,7 +313,18 @@ def test_file_count_bound_accounts_for_all_four_fixed_outputs(monkeypatch) -> No
         history_sources=snapshot.history_sources,
         history_items=(snapshot.history_items[0],),
     ))
-    assert len(files) == 9
+    assert len(files) == 15
+
+
+def test_writer_accepts_renderer_file_count_limit():
+    import json
+    from chatgpt_study_system import obsidian_writer
+    names = [f'items/{number:05d}.md' for number in range(projection_module._MAX_RECORDS + 13)]
+    manifest = json.dumps({'schema_version': 1, 'files': names}).encode()
+    assert obsidian_writer._manifest_files(manifest) == tuple(names)
+    names.append('items/99999.md')
+    with pytest.raises(obsidian_writer.ProjectionWriteError):
+        obsidian_writer._manifest_files(json.dumps({'schema_version': 1, 'files': names}).encode())
 
 
 @pytest.mark.parametrize(

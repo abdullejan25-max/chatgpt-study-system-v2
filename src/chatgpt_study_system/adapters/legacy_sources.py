@@ -276,6 +276,40 @@ class SQLiteLegacySourceStore:
                "source_hash, byte_count, source_order, source_created_at, imported_at, import_batch_id, source_refs "
                "FROM legacy_source_records")
 
+    def projection_snapshot(self, operation: str, *, snapshot_token: str | None = None,
+                            cursor: int = 0, limit: int = 20) -> dict:
+        """Bounded metadata-only enumeration at an append-only source watermark."""
+        if operation not in {"begin", "records"} or type(cursor) is not int or cursor < 0 \
+                or type(limit) is not int or not 1 <= limit <= 20:
+            raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        try:
+            with closing(self._connect()) as connection:
+                connection.execute("BEGIN")
+                exists = self._exists(connection)
+                maximum = connection.execute("SELECT COALESCE(MAX(rowid),0) FROM legacy_source_records").fetchone()[0] if exists else 0
+                if operation == "begin":
+                    if snapshot_token is not None or cursor:
+                        raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+                    count = connection.execute("SELECT COUNT(*) FROM legacy_source_records").fetchone()[0] if exists else 0
+                    if count > 10000:
+                        raise GatewayError("PAYLOAD_TOO_LARGE", "Source projection exceeds limits")
+                    return {"snapshot_token": f"legacy-v1:{maximum}:0", "total_sources": count,
+                            "total_records": count, "stored_payload_bytes": 0}
+                if type(snapshot_token) is not str or not re.fullmatch(r"legacy-v1:(?:0|[1-9][0-9]{0,18}):0", snapshot_token):
+                    raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+                watermark = int(snapshot_token.split(':')[1])
+                if watermark > maximum or cursor > watermark:
+                    raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot cursor")
+                rows = connection.execute(self._SELECT + " WHERE rowid>? AND rowid<=? ORDER BY rowid LIMIT ?",
+                                          (cursor, watermark, limit + 1)).fetchall() if exists else []
+                page = rows[:limit]
+                total = connection.execute("SELECT COUNT(*) FROM legacy_source_records WHERE rowid<=?", (watermark,)).fetchone()[0] if exists else 0
+                return {"snapshot_token": snapshot_token, "records": [self._metadata(connection, row) for row in page],
+                        "total_records": total, "has_more": len(rows) > limit,
+                        "next_cursor": page[-1]["blob_rowid"] if len(rows) > limit else None}
+        except sqlite3.Error:
+            raise GatewayError("STORAGE_UNAVAILABLE", "Local storage is unavailable") from None
+
     def fetch(self, source_record_id: str, offset: int = 0, length: int = MAX_FETCH_BYTES) -> dict:
         if type(source_record_id) is not str or _RECORD_ID.fullmatch(source_record_id) is None \
                 or type(offset) is not int or not 0 <= offset <= MAX_SOURCE_BYTES \

@@ -14,7 +14,7 @@ import tempfile
 
 _MANIFEST = ".projection-manifest.json"
 _SCHEMA_VERSION = 1
-_MAX_FILES = 10_006
+_MAX_FILES = 10_013
 _MAX_BYTES = 64 * 1024 * 1024
 _WINDOWS_RESERVED = re.compile(r"(?i)(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?\Z")
 

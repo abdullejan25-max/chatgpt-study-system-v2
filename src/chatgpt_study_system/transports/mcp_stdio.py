@@ -148,10 +148,10 @@ def create_mcp_server(gateway: Gateway) -> Server:
                 description=("Opt-in bounded bulk read for Obsidian projection. Requires the separate local "
                              "projection capability; History and Wrong Answer watermarks are independent."),
                 inputSchema={"type": "object", "properties": {
-                    "domain": {"type": "string", "enum": ["history", "wrong_answers"]},
+                    "domain": {"type": "string", "enum": ["history", "wrong_answers", "legacy_sources"]},
                     "operation": {"type": "string", "enum": ["begin", "sources", "records"]},
                     "snapshot_token": {"type": "string", "maxLength": 64,
-                                       "pattern": r"^(?:history|wrong)-v1:(?:0|[1-9][0-9]{0,18}):(?:0|[1-9][0-9]{0,18})$"},
+                                       "pattern": r"^(?:history|wrong|legacy)-v1:(?:0|[1-9][0-9]{0,18}):(?:0|[1-9][0-9]{0,18})$"},
                     "cursor": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
                     "source_id": {"type": "string", "maxLength": 128},
                     "limit": {"type": "integer", "minimum": 1, "maximum": 20, "default": 20},

@@ -54,6 +54,7 @@ class ProjectionSnapshot:
     history_sources: tuple[HistorySource, ...] = ()
     history_items: tuple[HistoryItem, ...] = ()
     wrong_answer_bundles: tuple[dict, ...] = ()
+    legacy_sources: tuple[dict, ...] = ()
 
 
 def _timestamp_value(value: object) -> datetime | None:
@@ -368,9 +369,10 @@ def render_projection(snapshot: ProjectionSnapshot) -> dict[str, str]:
             or type(snapshot.history_sources) is not tuple \
             or type(snapshot.history_items) is not tuple \
             or type(snapshot.wrong_answer_bundles) is not tuple \
+            or type(snapshot.legacy_sources) is not tuple \
             or len(snapshot.wrong_answer_bundles) > _MAX_RECORDS \
             or (len(snapshot.history_sources) + len(snapshot.history_items) +
-                len(snapshot.wrong_answer_bundles) > _MAX_RECORDS):
+                len(snapshot.wrong_answer_bundles) + len(snapshot.legacy_sources) > _MAX_RECORDS):
         raise ProjectionError
     sources, history_items, input_bytes = _validate_history(snapshot)
     wrong_bundles = []
@@ -390,9 +392,10 @@ def render_projection(snapshot: ProjectionSnapshot) -> dict[str, str]:
         nonlocal rendered_size
         if size is None:
             size = len(content.encode("utf-8"))
-        if rendered_size + size > _MAX_RENDERED_BYTES:
+        previous_size = len(files[path].encode("utf-8")) if path in files else 0
+        if rendered_size - previous_size + size > _MAX_RENDERED_BYTES:
             raise ProjectionError
-        rendered_size += size
+        rendered_size += size - previous_size
         files[path] = content
 
     items_by_conversation: defaultdict[tuple[str, str], list[HistoryItem]] = defaultdict(list)
@@ -536,7 +539,27 @@ def render_projection(snapshot: ProjectionSnapshot) -> dict[str, str]:
         "Study remains in its authoritative Markdown location and is not copied by this renderer.\n"
     ))
 
+    from .source_projection import render_sources
+    for path, content in render_sources(snapshot.legacy_sources).items():
+        if path == "Sources/index.md":
+            content += "\n## Canonical History sources\n\n" + "\n".join(source_lines[3:]) + "\n"
+        add_file(path, content)
+    add_file("Dashboard.md", files["Dashboard.md"] + (f"\n## Source documents\n\n- Imported source documents: {len(snapshot.legacy_sources)}\n"
+                              "- Source documents are not normalized conversations or messages.\n"
+                              "- [Study references](Study/index.md)\n- [Logical references](References/index.md)\n"))
+    add_file("Study/index.md", "# Study references\n\nStudy remains authoritative in its existing location.\n"
+             "Projection does not copy or rewrite Study content.\n")
+    refs = set()
+    for record in snapshot.legacy_sources:
+        refs.update(record["source_refs"])
+    for source, analyses in wrong_bundles:
+        refs.add(source["source_uri"])
+        for analysis in analyses:
+            refs.update(analysis["source_refs"])
+    add_file("References/index.md", "# Assets / Documents logical references\n\n"
+             "Original bytes remain in the Gateway. These logical URIs are not filesystem paths.\n\n"
+             + "\n".join(f"- `{ref}`" for ref in sorted(refs)) + "\n")
     ordered_files = dict(sorted(files.items()))
-    if len(ordered_files) > _MAX_RECORDS + 7:
+    if len(ordered_files) > _MAX_RECORDS + 13:
         raise ProjectionError
     return ordered_files

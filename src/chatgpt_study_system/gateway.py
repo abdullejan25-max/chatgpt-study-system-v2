@@ -498,8 +498,26 @@ class Gateway:
                             source_id: str | None = None, limit: int = 20) -> dict:
         """Read a bounded per-store projection page under its opt-in capability."""
         self._require_capability("projection")
-        if type(domain) is not str or domain not in {"history", "wrong_answers"}:
+        if type(domain) is not str or domain not in {"history", "wrong_answers", "legacy_sources"}:
             raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+        if domain == "legacy_sources":
+            from .adapters.history import SQLiteHistoryBackend
+            from .adapters.legacy_sources import SQLiteLegacySourceStore
+            backend = self._history_backend()
+            if not isinstance(backend, SQLiteHistoryBackend) or source_id is not None:
+                raise GatewayError("INVALID_ARGUMENT", "Invalid projection snapshot request")
+            page = SQLiteLegacySourceStore(backend.database_path).projection_snapshot(
+                operation, snapshot_token=snapshot_token, cursor=cursor, limit=limit)
+            if "records" in page:
+                safe_records = []
+                for record in page["records"]:
+                    safe = {key: record[key] for key in ("source_record_id", "source_id", "source_type",
+                            "source_order", "source_created_at", "imported_at", "source_refs", "byte_count")}
+                    safe["write_provenance"] = {key: record["write_provenance"][key] for key in
+                                                ("data_origin", "actor_type", "identity_trust", "legacy_status")}
+                    safe_records.append(safe)
+                page["records"] = safe_records
+            return page
         if domain == "history":
             backend = self._history_backend()
             reader = getattr(backend, "projection_snapshot", None)
