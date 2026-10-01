@@ -11,8 +11,9 @@ Codex 新 CLI 自然语言 no-result 真实调用成功；Hermes 首轮 Asset-on
 该会话自行用 direct stdio 脚本写入 v2，并将记录摘要存入本地 Memory；该轮 FAIL，
 不计真实 Host PASS。用户现已完成 GUI 信任，批准记录已核实。
 失败夹具和日志保留 Git 外；三 Host 共享配置切到新的隔离目标，已重新创建
-新 marker 的 v1 已通过原始字节与 DTO 回读验证；当前等待 WorkBuddy 新任务 GUI
-发送。未修改批准记录或覆盖旧 production server。
+新 marker 的 v1 已通过原始字节与 DTO 回读验证；新 WorkBuddy native MCP 已完成发现、v2、exact replay 与回读，历史 source/v1
+不变。最终 scoped Projection 两次字节一致；当前因结束 Host 进程被 Windows 拒绝
+访问，等待 owner 完全退出 WorkBuddy 后运行 Codex Stage C 与持久性验证。未修改批准记录或覆盖旧 production server。
 尚未完成 A → B → C，当前版本保持 0.5.0，未发布 v0.6.0。
 targeted 32 passed，full 622 passed / 12 skipped；证据层级、失败记录及续接任务
 见 [Step 4 checkpoint](p12-step4-cross-agent-checkpoint.md)。不重复已 PASS 的单 Host Gate。

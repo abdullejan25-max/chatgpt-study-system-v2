@@ -23,14 +23,14 @@ prompts contain no inherited DTOs. Raw receipts remain outside Git.
   to one isolated Gateway config. Preserve production and disabled memory.
 - [x] Run Hermes Stage A with natural-language synthetic save request; export
   only that official Host session and retain formal DTO baseline privately.
-- [ ] Run fresh WorkBuddy Stage B with marker-only discovery/revision request;
+- [x] Run fresh WorkBuddy Stage B with marker-only discovery/revision request;
   verify Gateway v2, exact request replay and preserved v1 provenance.
 - [ ] Run fresh Codex Stage C with marker-only discovery; verify trace, complete
   graph, exact DTO persistence, nonexistent query and Gateway stale conflict.
 - [x] Extend `tests/test_cross_agent_stdio_parity.py` only where meaningful
   cross-client document/provenance/schema/persistence coverage is missing;
   run focused tests and require an observed failure before behavior changes.
-- [ ] Run scoped Projection twice on the shared isolated target; compare
+- [x] Run scoped Projection twice on the shared isolated target; compare
   Markdown and manifest bytes through the existing writer and Gateway DTOs.
 - [ ] Record 25 Gate outcomes in `docs/p12-step4-cross-agent-checkpoint.md`,
   update current state/architecture/compatibility and redact all public evidence.
@@ -53,5 +53,13 @@ Require native MCP tools and actual trace proof; do not use SDK as Host PASS.
 Fresh shared target Stage A is now REAL VALIDATED. Hermes corrected an initial
 Base64 encoding mistake after Gateway readback; the final source references
 the correct Document/Asset, with exactly v1. Intermediate Document is retained.
-Official WorkBuddy task deeplink prefilled a fresh marker-only task; GUI send
-is pending because window capture is unavailable.
+Official WorkBuddy task deeplink requested a fresh marker-only task. Receipt
+logs do not confirm input prefill; the owner reports an empty input. Retried
+without changing cwd; GUI input/send remains pending because capture fails.
+
+Fresh WorkBuddy Stage B native MCP is REAL VALIDATED: initial bundle exact,
+v2 append, exact replay, preserved source/v1, no-result and no v3. Only post-task
+engineering status was logged; no canonical content/IDs copy or memory reads.
+Scoped Projection rebuilt twice with 14 Markdown and byte-identical manifest.
+Windows denied stopping the finished Host process; owner application exit is
+pending before the prepared fresh Codex persistence/conflict session starts.

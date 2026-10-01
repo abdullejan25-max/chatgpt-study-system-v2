@@ -1,8 +1,8 @@
 # P12 Step 4 — Cross-Agent Integration checkpoint
 
 日期：2026-10-01。目标：v0.6.0。当前版本：**0.5.0**。
-状态：**WORKBUDDY ATTEMPT FAIL / OWNER TRUST CONFIRMED / FRESH STAGE A REAL VALIDATED / WAITING_FOR_WORKBUDDY_SEND**。
-最终 Gate：**6 PASS / 5 PARTIAL / 13 WAITING / 1 FAIL**。尚未完成 A → B → C，不得发布。
+状态：**WORKBUDDY ATTEMPT FAIL / OWNER TRUST CONFIRMED / STAGE A/B REAL VALIDATED / WAITING_FOR_WORKBUDDY_EXIT**。
+最终 Gate：**15 PASS / 6 PARTIAL / 4 WAITING / 0 FAIL**。尚未完成 A → B → C，不得发布。
 
 ## Reality delta audit
 
@@ -104,15 +104,57 @@ V2 内容/IDs/provenance 的本地 Memory 副本；工具不可用必须停止�
 WorkBuddy 5.7.3 当前窗口 accessibility 只有窗口节点，截图仍报
 `FrameArrived timed out`。未猜坐标或使用自制 UI 自动化。安装产品的正式
 `workbuddy://task?action=start` 入口可预填新任务及自然语言请求；发送仍需要 GUI。
-已通过正式 task deeplink 预填全新任务，renderer 日志确认 coordinator 已接收，
-从已完成旧会话导航至新任务；当前等待 GUI 发送。新任务只提供新 marker /
+已通过正式 task deeplink 请求预填全新任务，renderer 日志仅确认 coordinator
+已接收并从已完成旧会话导航至新任务。用户反馈输入框仍为空；接收日志不证明
+预填成功。已使用不切换 cwd 的正式链接重试一次；仍需 GUI 确认输入和发送。
+新任务只提供新 marker /
 自然语言任务，不传 IDs、前轮 DTO 或回答。Hermes 创建进程已正常退出。
+
+
+### Fresh Stage B：native MCP 验收通过
+
+新的 WorkBuddy 5.7.3 session 使用独立工作区和单一自然语言 user turn；初始上下文
+没有对象 IDs、旧 marker、Stage A 回答或 DTO。实际 trace 证明它自主选择 shared
+alias 的正式 Host ToolSearch/DeferExecuteTool，search → bundle → canonical workflow
+→ expected_version=1 update → exact request/key replay → bundle，另查不存在 marker
+得到 total=0/results=[]。没有 direct client/DB/filesystem 数据读取或 Memory/session 补数。
+
+首读 bundle 与 Hermes Stage A baseline exact-equal；末读 source 与 v1 全字段
+不变，v2 supersedes v1，write_provenance 为 WorkBuddy caller-reported/unverified。
+两次 update 的完整参数字典、idempotency key 和完整 DTO 回执 exact-equal。
+末读 total=2/has_more=false/两唯一 versions 1/2，没有 v3。
+
+任务完成后 Host 仅写工程测试状态摘要，没有错题正文、object URI/ID、分析字段
+或 canonical record 副本。该 status log 不作为数据来源；不能将其描述成权威 Memory。
+原失败会话的违规 Memory 副本仍只在拒绝 fixture 所属工作区，不被新 session 读取。
+
+Hermes 已退出；新 WorkBuddy session 已完成，但 Windows 对结束其 Host process
+返回“拒绝访问”。需要 owner 完全退出 WorkBuddy，然后运行已准备的全新 Codex
+Stage C：自行搜索/文档和页面/完整 bundle/实际 stale write/CONFLICT/末读。
+没有通过系统权限绕过终止应用；尚不称 Cross-Agent persistence PASS。
+
+最终 Wrong Answer scoped Projection 已通过正式 MCP 快照与既有 collector、renderer、
+manifest writer 两次独立进程构建：1 Source/2 Analysis、14 Markdown、Markdown 与
+manifest byte-identical、空 Study relations、稳定 document ref/no v3/no duplicates，
+无 raw Asset bytes 或 private absolute paths。投影按既有契约只暴露 categorical
+provenance 字段，逐版本与实际写入 DTO 对应；不声称 UI 显示完整 Agent 自报名称。
+完整 Hermes/WorkBuddy identity 在私有 Host DTO baseline 中比较，未改 Projection。
 
 ## Gateway/SDK corroboration
 
-共享配置、能力和 workflow 已经 Gateway stdio 验证。后续必须通过 Gateway
-建立正式 baseline、验证 historical provenance、v2/idempotency/conflict/no-v3、
-exact restart comparison 和 final scoped Projection。不能用 SDK 补称真实 Host 行为。
+共享配置、能力和 workflow 已经 Gateway stdio 验证。真实 Host 已建立 A/B baseline，
+验证 historical provenance、v2/exact idempotency/no-v3；最终 scoped Projection
+也已完成。仍需真实 Stage C exact restart comparison、stale CONFLICT 和末读 no-v3。
+不能用 SDK 补称真实 Host 行为。
+
+native trace 中 WorkBuddy 展示的 5 个 Gateway tool schemas 与正式 MCP 业务语义相等：
+4 个 literal-equal，health 的 required=[] 与正式 schema 未声明 required 等价。
+Hermes 实际使用的已描述工具 schema 业务语义一致，但 nullable 类型采用 Host
+`nullable` 表达；resource/list/read 是 Host bridge，不冒充 Gateway 业务 tools。
+未使用的 register_asset 描述省略 oneOf，文字仍明确两模式互斥，Gateway 实现继续
+强制校验；记录为非阻塞的 Host schema 展示限制，不声称三 UI schema 字面完全一致。
+正式全工具 schema / workflow 三独立 stdio 进程 exact parity 由自动回归验证；
+实际 business flow 来自 Host trace，两层证据不混称。
 
 ## Automated regression
 
@@ -136,25 +178,25 @@ skip 保持现有 optional Host/QMD/PyMuPDF 与 Windows 平台限制，不冒称
 | 1 | Baseline / Reality Delta Audit | PASS | live refs、clean baseline、Host version/config delta |
 | 2 | Shared Isolated Gateway Target | PASS | 三 persistent aliases 指向同一 canonical config/store |
 | 3 | Codex Real Host Connection | PARTIAL | 新 CLI workflow/search 成功，final target Stage C 待验 |
-| 4 | WorkBuddy Real Host Connection | WAITING | owner trust 已确认；fresh native session/call 待验 |
+| 4 | WorkBuddy Real Host Connection | PASS | 5.7.3 fresh native shared MCP dispatch + actual DTO |
 | 5 | Hermes Real Host Connection | PASS | 新目标全新 Hermes CLI + 官方 export；仅 configured Gateway tools |
-| 6 | Natural-Language Auto Routing | PARTIAL | 两 Host 已观察；WorkBuddy 待验 |
+| 6 | Natural-Language Auto Routing | PARTIAL | Hermes/WorkBuddy marker-only 已验证；final Codex 待验 |
 | 7 | Agent A Create | PASS | 新 marker Document/source/v1 全回读；编码中间错误回读后自纠正，未新增分析 |
-| 8 | Agent B Cross-Agent Discovery | WAITING | fresh WorkBuddy marker-only prompt |
-| 9 | Agent B Update | WAITING | append v2、readback |
+| 8 | Agent B Cross-Agent Discovery | PASS | 新会话 search/bundle；首读 exact Stage A baseline |
+| 9 | Agent B Update | PASS | expected=1 append v2 / native readback |
 | 10 | Agent C Cross-Agent Discovery | WAITING | fresh Codex latest=v2 |
-| 11 | Version Graph | WAITING | real cross-Host [1,2] / supersession |
-| 12 | Cross-Agent Provenance | WAITING | Hermes v1 / WorkBuddy v2；历史字段不变 |
-| 13 | Idempotency | WAITING | exact real Host request/key replay |
+| 11 | Version Graph | PASS | native bundle [1,2] / v2 supersedes v1 |
+| 12 | Cross-Agent Provenance | PASS | source/v1 字段与 provenance exact preserved；v2 WorkBuddy reported |
+| 13 | Idempotency | PASS | native 两次完整 request/key/DTO exact replay |
 | 14 | Stale Conflict | WAITING | Gateway CONFLICT with new key/stale version |
-| 15 | No v3 | WAITING | final total=2 / unique versions and IDs |
-| 16 | Cross-Agent No-result | PARTIAL | Codex real no-result；其他覆盖待验 |
-| 17 | Gateway-only Boundary | PARTIAL | 原 WorkBuddy direct stdio 仍经过 Gateway，但不能替代 native MCP；新会话待验 |
+| 15 | No v3 | PARTIAL | Stage B total=2/unique versions；final stale conflict 后待确认 |
+| 16 | Cross-Agent No-result | PASS | fresh WorkBuddy Gateway total=0/results=[]；Codex final coverage待验 |
+| 17 | Gateway-only Boundary | PARTIAL | 当前 A/B only configured MCP；C 待验，旧失败保留 |
 | 18 | No Human Data Relay | PARTIAL | 已执行步骤无 DTO 中继；final chain 待验 |
-| 19 | No Session/Memory Shortcut | WAITING | 原 WorkBuddy 会话写 Memory 副本；新会话需 trace 排除 shortcut |
+| 19 | No Session/Memory Shortcut | PARTIAL | 当前 A/B fresh traces 无 inherited IDs/Memory/session 数据来源；C待验 |
 | 20 | Cross-Agent Persistence | WAITING | A/B 退出后 C exact comparison |
-| 21 | Projection Final E2E | WAITING | 最终 shared target 两次正式 build |
-| 22 | Memory Authority Boundary | FAIL | Basic Memory disabled 未阻止 native Memory 实际写入；新会话重新验收 |
+| 21 | Projection Final E2E | PASS | 现有 scoped pipeline 两次14 Markdown/manifest byte-identical |
+| 22 | Memory Authority Boundary | PASS | 当前 fresh A/B 无 canonical Memory副本；仅工程状态摘要，旧FAIL保留 |
 | 23 | Privacy | WAITING | 原始 configs/traces/stores/Vault 均 Git 外；final audit 待验 |
 | 24 | Regression | PASS | targeted 32；full 622/12；review focused 1 |
 | 25 | Documentation | PASS | spec/plan/checkpoint、证据层级及等待状态明确 |
