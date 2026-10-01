@@ -1,7 +1,7 @@
 # P12 Step 1 real projection checkpoint
 
-Checked: 2026-09-30. Target release: `v0.3.0 — Obsidian Visualization`.
-Step 1 Gate: **BLOCKED** pending human GUI validation. Package and Gateway versions remain `0.2.0`; no release/tag/push is authorized by this checkpoint. P11 remains PASS.
+Checked: 2026-10-01. Target release: `v0.3.0 — Obsidian Visualization`.
+Step 1 Gate: **PASS**. The owner completed human GUI validation on 2026-10-01 and explicitly authorized version updates, full verification, privacy/package audits and release. Package and Gateway target version is `0.3.0`. P11 remains PASS.
 
 ## Recovered baseline and implementation
 
@@ -59,13 +59,17 @@ One fresh official MCP SDK stdio client successfully performed initialize, resou
 | Windows/Unicode | PASS | Real Windows filesystem, Chinese titles, encoded links, bounded paths |
 | Asset/Document References | PASS | Logical refs retained; original bytes not copied |
 | Real Vault | PASS | Existing registered Vault, 184 generated files read back |
-| GUI Validation | BLOCKED | Human visual and link-navigation checks remain required |
+| GUI Validation | PASS | Owner confirmation on 2026-10-01: navigation, graph, Unicode, boundaries and original Study all normal |
 | MCP Compatibility | PASS | Fresh official client passes; Host resources/list deferred under rule A |
 
-## Human GUI checklist and release hold
+## Human GUI acceptance and release authorization
 
 In the existing StudyVault, open `V2Projection/Dashboard.md` in reading mode. Follow Sources → Legacy Chat Sources and a source page; also inspect Codex Sources (82), Legacy Wrong Answer Sources (28), and Derived Facts (1). Confirm known metadata/provenance and unknown author/role rather than fictitious messages. Return to Dashboard and follow Wrong Answers into one page, then Knowledge Points and Error Types and their backlinks. Follow Study references into an original Chinese-title Study note. Check generated boundaries, readable Unicode, no broken paths, duplicate pages or exposed absolute paths. Source and Asset/Document logical URIs are identifiers, not promised native Obsidian hyperlinks.
 
-Only after GUI Validation PASS may Step 1 pass and version/README/current-state/architecture/release notes, broader verification, package/privacy audits, release commit/push, annotated tag and GitHub Release proceed. No `v0.3.0` tag or Release exists as a result of this checkpoint.
+The owner confirmed Dashboard, Sources, Wrong Answers, Knowledge Points, Error Types, Study links and the relationship graph. V1/V2 views coexist in the existing Vault with clear source/generated boundaries; no garbled text, obvious broken links, duplicates, private absolute paths or Study anomalies were observed. This human acceptance closes the GUI gate despite the earlier automation screenshot timeouts. Release verification is recorded in [v0.3.0 release notes](releases/v0.3.0.md).
 
 Remaining limitations: Host resources/list compatibility; no crash-atomic writer guarantee; metadata-only source views; independent store consistency points. Deferred scope remains source/message normalization, external agents/imports, V1 deletion and incremental projection redesign.
+
+## Final release verification (2026-10-01)
+
+The default/dev full suite passed **614 tests, 12 skipped**. Skips cover existing platform/symlink, opt-in Host/QMD and optional PDF/OCR conditions; actual fresh official MCP and real-Vault checks were run separately. Wheel and source distribution build passed. Package audits confirm version `0.3.0`, Apache-2.0 license metadata/LICENSE, canonical workflow data and optional-only PyMuPDF; no private config, Vault, images, databases or raw exports are included. The public tree and new Git objects are audited before push. Real 0.3.0 Gateway health and stable 166-source/184-file projection were revalidated after installation.

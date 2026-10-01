@@ -1,6 +1,6 @@
 # 当前状态
 
-更新时间：2026-09-30。P1–P10 已完成；**P11 V1 来源迁移与 V2 cutover Gate：PASS**。版本为 `0.2.0`；[正式 tag/Release](https://github.com/abdullejan25-max/chatgpt-study-system-v2/releases/tag/v0.2.0) 对应本次迁移范围。最终默认/dev 环境测试为 605 passed、12 skipped；完整验收见 [P11 Real Migration Completion](p11-real-migration-completion.md)。
+更新时间：2026-10-01。P1–P10 已完成；**P11 V1 来源迁移与 V2 cutover Gate：PASS**。P11 发布版本为 `0.2.0`；[正式 tag/Release](https://github.com/abdullejan25-max/chatgpt-study-system-v2/releases/tag/v0.2.0) 对应本次迁移范围。最终默认/dev 环境测试为 605 passed、12 skipped；完整验收见 [P11 Real Migration Completion](p11-real-migration-completion.md)。
 
 V1 既有 1,209 项对账：150 项新增、1,052 项复用、7 项 skip、0 error。537 个 Study Markdown 与 511 个 Documents 原地复用。55 篇聊天档案、28 篇错题档案、1 条派生事实以明确类型保留原始字节；70 张图片中新增 66 个 Asset、复用 4 个内容重复。另有 82 个已验证 Codex JSONL 来源文件迁入，独立于 V1 对账。来源文档总数为 166，不能当作会话或消息数量。
 
@@ -10,6 +10,18 @@ V1 既有 1,209 项对账：150 项新增、1,052 项复用、7 项 skip、0 err
 
 私有配置选择 V2 为本项目权威运行系统。V1 未删除；[Deletion Candidate Report](v1-deletion-candidates.md) 将 Study 保留为权威来源，将原件和备份保留为档案。当前 Codex 对话已运行的 MCP 连接仍缓存旧 not_configured 配置与旧工具列表，需要重连；新进程验证不代表该旧连接已重载。
 
-ChatGPT/Gemini 的私有 registry 保留 WAITING_FOR_USER；Hermes/WorkBuddy 后续来源规范化和客户端验证 deferred，不冒充迁移完成，也不作为本次 V1 迁移 blocker。P12 现有 Obsidian、WorkBuddy、Hermes 与合成跨客户端准备成果保留，未扩展新产品功能；见 [P12 Host Compatibility](p12-host-compatibility.md) 与 [P12 Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
+ChatGPT/Gemini 的私有 registry 保留 WAITING_FOR_USER；Hermes/WorkBuddy 后续来源规范化和客户端验证 deferred，不冒充迁移完成，也不作为本次 V1 迁移 blocker。P11 完成时，P12 Obsidian、WorkBuddy、Hermes 与合成跨客户端成果仅为准备状态；见 [P12 Host Compatibility](p12-host-compatibility.md) 与 [P12 Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
 
 架构保持 Agent thinks; Gateway executes。新增 migration 是本机内部、受领域校验的确定性写路径；新增 MCP API 只有来源读取，未开放 arbitrary SQL 或通用 Agent import。真实配置、数据、journal、源 hash 和恢复材料均留在 Git 外。v0.1.0 与旧发布历史未修改。
+
+## P12 Step 1 — Obsidian Visualization
+
+**Gate：PASS；目标发布版本 `0.3.0`。** 复用既有 collector、renderer 和 manifest-owned writer，新增 opt-in `legacy_sources` metadata 分页与现有 Vault 构建入口。166 个来源按 82 / 55 / 28 / 1 分类；canonical messages 保持 0；5 个 Wrong Answer Source 与 5 个 Analysis 未改变。
+
+真实私有 Vault 生成 184 个 Markdown 文件及 manifest；逐文件 UTF-8 回读、相对链接和第二次独立构建字节一致。当前 Study root 为 1,146 files / 564 Markdown，索引引用原文件，大小/mtime 前后不变，不复制 Study。2026-10-01 用户人工确认 Dashboard、Sources、Wrong Answers、Knowledge Points、Error Types、Study 和关系图谱正常，V1/V2 共存边界清楚，无明显乱码、断链、重复页、私人路径泄露或原文异常。
+
+Fresh official MCP stdio 正常；Codex Host resources/list 的兼容问题独立 deferred，不阻塞投影。旧 P12 preparation 文档是历史快照；本次 Step 1 证据以 [真实投影检查点](p12-step1-real-projection-checkpoint.md) 与 [v0.3.0 notes](releases/v0.3.0.md) 为准。WorkBuddy/Hermes/Cross-Agent、消息规范化、V1 删除及增量重设计均未纳入本次范围。
+
+## Final release verification (2026-10-01)
+
+The default/dev full suite passed **614 tests, 12 skipped**. Skips cover existing platform/symlink, opt-in Host/QMD and optional PDF/OCR conditions; actual fresh official MCP and real-Vault checks were run separately. Wheel and source distribution build passed. Package audits confirm version `0.3.0`, Apache-2.0 license metadata/LICENSE, canonical workflow data and optional-only PyMuPDF; no private config, Vault, images, databases or raw exports are included. The public tree and new Git objects are audited before push. Real 0.3.0 Gateway health and stable 166-source/184-file projection were revalidated after installation.

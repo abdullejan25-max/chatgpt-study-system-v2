@@ -1,5 +1,7 @@
 # P12 Step 1 — Obsidian Reality Audit
 
+> Historical preparation snapshot (2026-09-27). Superseded for real integration and GUI/release status by [P12 Step 1 PASS](p12-step1-real-projection-checkpoint.md) and [v0.3.0](releases/v0.3.0.md).
+
 Checked: 2026-09-27. This audit uses repository contracts and safe host metadata; it does not open a private StudyVault, enumerate learning records, or claim a GUI pass.
 
 | O1 item | Evidence | Status |

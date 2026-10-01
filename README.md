@@ -86,4 +86,17 @@ uv run --no-sync --project . --extra dev pytest -q
 
 ## 状态
 
-P1–P10 已完成；P11 真实来源迁移与 V2 cutover Gate 已 PASS，版本为 `v0.2.0`。当前证据与限制见 [当前状态](docs/current-state.md) 和 [P11 completion](docs/p11-real-migration-completion.md)。P12 保留准备成果，尚未通过产品 Gate。项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
+P1–P10 已完成；P11 真实来源迁移与 V2 cutover Gate 已 PASS，P11 发布版本为 `v0.2.0`。当前证据与限制见 [当前状态](docs/current-state.md) 和 [P11 completion](docs/p11-real-migration-completion.md)。P12 Step 1 Obsidian Visualization Gate 已 PASS，版本为 `v0.3.0`；真实 Vault、回读、稳定重建与人工 GUI 证据见 [P12 Step 1](docs/p12-step1-real-projection-checkpoint.md)。项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
+
+## Obsidian Visualization（v0.3.0）
+
+既有 Gateway → collector → renderer → writer 将真实数据投影到私有 Vault 的 `V2Projection`，通过 manifest 管理所有权与安全重建。Dashboard 提供四类 Sources、Wrong Answers、Knowledge Points、Error Types、Study 相对引用以及 Asset/Document logical refs。来源页面是元数据视图，不复制聊天正文、不推断消息角色或会话边界；当前 canonical messages 为 0。Study 保持单一权威来源，不复制或重写原文件。
+
+批量读取需在忽略的私有配置中显式启用 `projection`。在仓库根目录执行：
+
+```powershell
+$env:PYTHONPATH = Join-Path (Get-Location) "src"
+uv run --no-sync python -m chatgpt_study_system.obsidian_build --config config.local.toml --vault <existing-private-vault>
+```
+
+构建命令要求现有 Vault 包含配置的 Study root，且 Study 与 `V2Projection` 互不重叠。它验证文件回读、相对链接、第二次独立构建与 manifest 稳定性；未登记为 generated 的用户笔记不属于删除范围。普通写入失败可回滚，突然断电或进程终止不保证整个目录原子替换。发布范围与限制见 [v0.3.0 release notes](docs/releases/v0.3.0.md)。
