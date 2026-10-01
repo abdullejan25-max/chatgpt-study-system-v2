@@ -72,6 +72,19 @@ __pycache__/
 .venv/
 
 # Personal conversations, archives, and local backups
+*.jsonl
+*.zip
+*.tgz
+*.tar
+*.tar.gz
+*.7z
+*.receipt.json
+private-migration/
+migration-receipts/
+migration-ledger/
+exports/
+gemini-export/
+gemini-exports/
 transcript/
 transcripts/
 **/transcript/
