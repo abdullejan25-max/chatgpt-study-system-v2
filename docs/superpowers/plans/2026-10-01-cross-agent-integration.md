@@ -1,0 +1,45 @@
+# Cross-Agent Integration Implementation Plan
+
+**Goal:** Prove real Hermes → WorkBuddy → Codex discovery and versioned handoff
+on one isolated Gateway, then release v0.6.0 after every Gate passes.
+
+**Architecture:** Reuse the formal Gateway and existing Projection pipeline.
+Separate persistent Host aliases point to one synthetic store; fresh session
+prompts contain no inherited DTOs. Raw receipts remain outside Git.
+
+**Tech stack:** Python, MCP stdio, real local Hosts, pytest, existing Projection.
+
+## Constraints
+
+- Gateway-only reads/writes; no private store inspection.
+- No production writes; reported/unverified identity; no human data relay.
+- No re-audit of accepted P11/Step 1/2/3 without regression evidence.
+- Keep version 0.5.0 until all final Gates pass.
+
+## Tasks
+
+- [x] Verify clean worktree, remote main/tag baseline and unchanged Host versions.
+- [x] Back up configs outside Git and add distinct persistent aliases pointing
+  to one isolated Gateway config. Preserve production and disabled memory.
+- [x] Run Hermes Stage A with natural-language synthetic save request; export
+  only that official Host session and retain formal DTO baseline privately.
+- [ ] Run fresh WorkBuddy Stage B with marker-only discovery/revision request;
+  verify Gateway v2, exact request replay and preserved v1 provenance.
+- [ ] Run fresh Codex Stage C with marker-only discovery; verify trace, complete
+  graph, exact DTO persistence, nonexistent query and Gateway stale conflict.
+- [x] Extend `tests/test_cross_agent_stdio_parity.py` only where meaningful
+  cross-client document/provenance/schema/persistence coverage is missing;
+  run focused tests and require an observed failure before behavior changes.
+- [ ] Run scoped Projection twice on the shared isolated target; compare
+  Markdown and manifest bytes through the existing writer and Gateway DTOs.
+- [ ] Record 25 Gate outcomes in `docs/p12-step4-cross-agent-checkpoint.md`,
+  update current state/architecture/compatibility and redact all public evidence.
+- [ ] After every real Gate passes, set version/config example/lock to 0.6.0,
+  write release notes, run targeted/full tests and `git diff --check`.
+- [ ] Build wheel/sdist, inspect actual contents and public candidate tree,
+  inspect reachable objects since v0.5.0 including new annotated tag.
+- [ ] Commit, fast-forward main, normal push, create GitHub Release; verify
+  remote refs and fresh public clone frozen install/version/stdio/privacy.
+
+If a real Host GUI/trust blocker occurs, finish independent preparation and
+record a resumable WAITING checkpoint; do not substitute SDK evidence or release.

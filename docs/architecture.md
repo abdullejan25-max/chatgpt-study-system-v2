@@ -11,6 +11,16 @@ Developer → Codex → stdio MCP adapter → same Local Gateway
 
 ## Boundaries
 
+P12 Step 4 acceptance uses independent Hermes, WorkBuddy and Codex sessions
+against one shared isolated Gateway/store. Cross-Agent shared data does not
+mean shared conversation context: later Hosts discover records from a marker
+through Gateway search, without inherited object IDs or prior Agent responses.
+No second business layer or Host-owned canonical memory is introduced.
+Document/source and each analysis preserve Gateway-recorded timestamps and
+provenance; Host identity remains caller-reported / unverified. The final
+cross-Host acceptance status is tracked in the Step 4 checkpoint, separately
+from earlier single-Host acceptance and synthetic SDK regression.
+
 - **Transport** validates and maps protocol requests to gateway operations. The current adapter is stdio MCP; it contains no Study or History business logic.
 - **Gateway** validates typed inputs, applies permissions and path allowlists, invokes services, standardizes results, and maps errors.
 - **Study adapter** implements a replaceable `StudyBackend`. The initial candidate is QMD search against the fixed `studyvault` collection and an explicitly configured Study root.

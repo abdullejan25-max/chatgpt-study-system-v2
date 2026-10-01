@@ -1,5 +1,16 @@
 # 当前状态
 
+## P12 Step 4 — Cross-Agent Integration（目标 v0.6.0，进行中）
+
+从 live v0.5.0 main/tag 继续，三 persistent Host aliases 指向单一 synthetic
+shared isolated Gateway。原 production/已验收配置保留，Memory disabled。
+Codex 新 CLI 自然语言 no-result 真实调用成功；Hermes 首轮 Asset-only 不计 PASS，
+canonical target 重跑 Document/source/v1/readback 已真实验证通过。
+WorkBuddy 窗口捕获/点击存在真实 GUI automation blocker。
+尚未完成 A → B → C，当前版本保持 0.5.0，未发布 v0.6.0。
+targeted 32 passed，full 622 passed / 12 skipped；证据层级、失败记录及续接任务
+见 [Step 4 checkpoint](p12-step4-cross-agent-checkpoint.md)。不重复已 PASS 的单 Host Gate。
+
 ## P12 Step 3 — Hermes Integration（v0.5.0，22/22 Gate PASS）
 
 从 v0.4.0/b75c62d checkpoint 继续，不重复已有 8 项 PASS。真实 Hermes Agent
