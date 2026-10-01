@@ -15,3 +15,12 @@ Checked: 2026-09-27. This checkpoint combines official product documentation wit
 - Existing repository support remains Codex Desktop and a stdio MCP client. No product-specific adapter is required by the documented protocol, but each host still needs an explicit configuration and a real tool invocation to pass its local gate.
 - Do not copy configuration or credentials from another host, create an ad hoc override, or claim a Host PASS from documentation alone.
 - Next real-host gate: with the owner present, add the Gateway through each product's supported settings, confirm the actual server status, invoke `health_report`, and perform the approved read-only E2E. Keep write tools disabled until separately authorized and reviewed.
+
+## WorkBuddy Step 2 superseding checkpoint (2026-10-01)
+
+The WorkBuddy preparation-only row above is historical. Real WorkBuddy 5.6.2
+read-only/write/restart acceptance is now owner-verified, with Gateway and
+isolated Projection corroboration. Gate PASS, included in v0.4.0. No Hermes
+acceptance is implied. See [Step 2](p12-step2-workbuddy-checkpoint.md) for
+Gateway-only rule correction, same-name Host resolution limits, distinct
+isolated server, evidence levels and final package/privacy audits.

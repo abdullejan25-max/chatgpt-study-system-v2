@@ -171,6 +171,20 @@ def _wrong_answers(gateway: ProjectionGateway, token: str, source_count: int,
     return tuple(bundles)
 
 
+def collect_wrong_answer_projection(gateway: ProjectionGateway) -> ProjectionCollection:
+    """Explicit Wrong Answer scope; omitted domains are not asserted empty.
+
+    Uses the same permission-controlled snapshot and completeness validation as
+    the full collector. Does not catch unavailable-backend errors or access stores.
+    """
+    token, source_count, record_count = _begin(gateway, "wrong_answers")
+    bundles = _wrong_answers(gateway, token, source_count, record_count)
+    return ProjectionCollection(
+        ProjectionSnapshot(wrong_answer_bundles=bundles),
+        "", token, 0, 0, source_count, record_count,
+    )
+
+
 def collect_projection(gateway: ProjectionGateway) -> ProjectionCollection:
     """Collect both independent store watermarks and reconcile all advertised counts."""
     history_token, history_sources_count, history_records_count = _begin(gateway, "history")

@@ -1,5 +1,23 @@
 # 当前状态
 
+## P12 Step 2 — WorkBuddy Integration（v0.4.0，21/21 Gate PASS）
+
+真实 WorkBuddy 5.6.2 只读、隔离 controlled-write 及重启持久性由用户验收；
+Gateway 补充回读确认同一测试 Source 和 versions 1/2，未创建 v3。
+独立临时 MCP 名称避免托管 production 入口的同名解析问题，Basic Memory disabled。
+所有读/计数/存在性/写入均要求 Gateway-only；最初 direct SQLite 验收作废。
+
+隔离 Projection 经 Gateway → collector → renderer → writer 生成 14 个 Markdown，
+latest v2、supersession、document refs、空 Study relations 和 provenance 正确；
+两次 Markdown/manifest 字节稳定，未访问 production 或真实 StudyVault。
+发布回归 targeted 65 passed / 1 skipped，full 617 passed / 12 skipped；
+package、Gateway 配置与 MCP metadata 同步到 0.4.0，独立 installed-package stdio smoke 通过。
+公开候选树 159 files、wheel 42 files、sdist 169 files 的隐私/metadata 审计通过；
+实际新增 Git objects 在 commit 后、push 前按 v0.3.0..HEAD 审计。
+完整证据以 [Step 2 checkpoint](p12-step2-workbuddy-checkpoint.md) 与
+[v0.4.0 release notes](releases/v0.4.0.md) 为准。
+下文 P11 / Step 1 版本与验证数字是历史基线，不代表当前 package 版本。
+
 更新时间：2026-10-01。P1–P10 已完成；**P11 V1 来源迁移与 V2 cutover Gate：PASS**。P11 发布版本为 `0.2.0`；[正式 tag/Release](https://github.com/abdullejan25-max/chatgpt-study-system-v2/releases/tag/v0.2.0) 对应本次迁移范围。最终默认/dev 环境测试为 605 passed、12 skipped；完整验收见 [P11 Real Migration Completion](p11-real-migration-completion.md)。
 
 V1 既有 1,209 项对账：150 项新增、1,052 项复用、7 项 skip、0 error。537 个 Study Markdown 与 511 个 Documents 原地复用。55 篇聊天档案、28 篇错题档案、1 条派生事实以明确类型保留原始字节；70 张图片中新增 66 个 Asset、复用 4 个内容重复。另有 82 个已验证 Codex JSONL 来源文件迁入，独立于 V1 对账。来源文档总数为 166，不能当作会话或消息数量。

@@ -88,7 +88,16 @@ uv run --no-sync --project . --extra dev pytest -q
 
 P1–P10 已完成；P11 真实来源迁移与 V2 cutover Gate 已 PASS，P11 发布版本为 `v0.2.0`。当前证据与限制见 [当前状态](docs/current-state.md) 和 [P11 completion](docs/p11-real-migration-completion.md)。P12 Step 1 Obsidian Visualization Gate 已 PASS，版本为 `v0.3.0`；真实 Vault、回读、稳定重建与人工 GUI 证据见 [P12 Step 1](docs/p12-step1-real-projection-checkpoint.md)。项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
 
-## Obsidian Visualization（v0.3.0）
+## WorkBuddy Integration（v0.4.0）
+
+P12 Step 2 的真实 WorkBuddy 验收与隔离 Projection 证据见
+[WorkBuddy Integration checkpoint](docs/p12-step2-workbuddy-checkpoint.md)。
+WorkBuddy 5.6.2 经正式 MCP 使用同一 Gateway；读、计数、存在性判断与写入均经过 Gateway。
+隔离 controlled-write、版本/幂等/冲突、reported/unverified provenance、真实重启和隔离 Projection Gate 全部 PASS。
+Basic Memory disabled；production 入口与隔离测试入口分开，未开展 WorkBuddy 聊天历史迁移。
+发布范围、验证与限制见 [v0.4.0 release notes](docs/releases/v0.4.0.md)。
+
+## Obsidian Visualization（v0.3.0 起）
 
 既有 Gateway → collector → renderer → writer 将真实数据投影到私有 Vault 的 `V2Projection`，通过 manifest 管理所有权与安全重建。Dashboard 提供四类 Sources、Wrong Answers、Knowledge Points、Error Types、Study 相对引用以及 Asset/Document logical refs。来源页面是元数据视图，不复制聊天正文、不推断消息角色或会话边界；当前 canonical messages 为 0。Study 保持单一权威来源，不复制或重写原文件。
 

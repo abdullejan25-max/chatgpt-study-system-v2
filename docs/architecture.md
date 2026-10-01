@@ -2,7 +2,7 @@
 
 ## Product and development roles
 
-In the finished product, ChatGPT is the primary user host and the only system that interprets requests, teaches, plans, and decides which tool to call. During development, Codex is the developer agent and MCP integration test host. This distinction does not change the host-neutral application contracts.
+The calling Agent host interprets requests, teaches, plans, and decides which tool to call. ChatGPT remains the intended primary product host; Codex is the developer and integration test host, and P12 Step 2 validates WorkBuddy as another local MCP Host. All use the same host-neutral application contracts.
 
 ```text
 User → Agent host → transport adapter → Local Gateway → Services/Adapters → Local data
@@ -30,7 +30,7 @@ Public `GatewayError` codes are fixed vocabulary, not backend exception text. Th
 
 The cross-agent Wrong Answer procedure has exactly one canonical body at `src/chatgpt_study_system/workflows/wrong_answer.md`, shipped as package data and exposed through MCP as `study-workflow://wrong-answer`. Relevant tool descriptions point agents to that resource; a standard user-invoked MCP Prompt exposes the same text for clients that offer prompt menus. Prompt/resource presentation is host-controlled, so the model-controlled tool descriptions also identify workflow applicability. No host-specific Skill is required for correctness, and host-specific adapters must remain pointers rather than copies.
 
-Codex local stdio MCP is the current host integration. A remote transport or Secure MCP Tunnel is future non-Core work, subject to a separate capability and deployment decision. Neither is a prerequisite for developing or testing Core, and neither is implemented in this phase. No public endpoint or inbound port is part of the current runtime. ChatGPT account capabilities must be verified separately before they become a dependency.
+Codex and WorkBuddy local stdio MCP are the verified host integrations. A remote transport or Secure MCP Tunnel is future non-Core work, subject to a separate capability and deployment decision. Neither is a prerequisite for developing or testing Core, and neither is implemented in this phase. No public endpoint or inbound port is part of the current runtime. ChatGPT account capabilities must be verified separately before they become a dependency.
 
 ## Memory boundaries
 
@@ -49,4 +49,23 @@ The existing collector consumes bounded `projection_snapshot` pages from configu
 
 The pure renderer produces deterministic Markdown maps. The writer restricts output to a dedicated manifest-owned `V2Projection`, validates Windows-safe paths, rejects repository overlap and unowned collisions, preserves user notes and rolls back handled failures through hard-link backups. It does not guarantee crash-atomic directory replacement. The explicit build entrypoint loads the official private config, requires an existing Vault containing the authoritative Study root, refuses Study/output overlap and reparse points, indexes original Study through relative links, and verifies read-back plus a second fresh collection/rebuild. Private output and raw assets/documents never enter Git or release packages.
 
-Real integration, Windows/Unicode and owner GUI acceptance are recorded in [P12 Step 1](p12-step1-real-projection-checkpoint.md). Metadata-only source views and independent store consistency points are deliberate limitations. External-agent integration, canonical normalization, deletion and incremental projection remain deferred.
+Real integration, Windows/Unicode and owner GUI acceptance are recorded in [P12 Step 1](p12-step1-real-projection-checkpoint.md). Metadata-only source views and independent store consistency points are deliberate limitations. WorkBuddy integration is recorded below; Hermes, the final Cross-Agent stage, canonical normalization, deletion and incremental projection remain deferred.
+
+## WorkBuddy integration (P12 Step 2, v0.4.0)
+
+WorkBuddy performs V2 reads, counts, existence checks and writes through the
+same Gateway. The project rule points to canonical tools/workflow; it contains
+no domain implementation. Caller identity remains reported/unverified.
+Basic Memory is disabled without deletion or history migration. An independent
+temporary `study_system_p12_isolated` entry avoids relying on unresolved
+Desktop 5.6.2 same-name configuration precedence; the managed production
+entry is preserved. Real Host evidence and its limits are recorded in the
+[Step 2 checkpoint](p12-step2-workbuddy-checkpoint.md).
+
+An explicit `collect_wrong_answer_projection` entry reuses permission-controlled
+Gateway snapshot paging and completeness checks for isolated targets without
+History. Omitted domains are outside the supplied input scope, not asserted
+empty. The default three-domain collector remains unchanged and still reports
+unavailable backends. Rendering and writing use the existing deterministic,
+manifest-owned pipeline; output stays outside the repository, with logical
+references only and no invented Study links or original Asset bytes.

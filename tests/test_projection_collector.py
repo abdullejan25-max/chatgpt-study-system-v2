@@ -14,8 +14,52 @@ from chatgpt_study_system.obsidian_projection import render_projection
 from chatgpt_study_system.projection_collector import (
     ProjectionCollectionError,
     collect_projection,
+    collect_wrong_answer_projection,
 )
 from chatgpt_study_system.obsidian_writer import write_projection
+
+
+def test_wrong_answer_only_collection_excludes_unconfigured_history(tmp_path):
+    from chatgpt_study_system.adapters.history import NotConfiguredHistoryBackend
+    from chatgpt_study_system.contracts import GatewayError
+
+    gateway = _projection_gateway(tmp_path, source_count=1, analysis_count=2)
+    gateway.history_backend = NotConfiguredHistoryBackend()
+    collected = collect_wrong_answer_projection(gateway)
+    assert collected.wrong_answer_source_count == 1
+    assert collected.wrong_answer_analysis_count == 2
+    assert collected.snapshot.history_sources == ()
+    assert collected.snapshot.history_items == ()
+    assert collected.snapshot.legacy_sources == ()
+    rendered = render_projection(collected.snapshot)
+    page = next(text for path, text in rendered.items() if path.startswith('WrongAnswers/items/'))
+    assert 'version: 2\n' in page and '## Version 3' not in page
+    with pytest.raises(GatewayError, match='HISTORY_UNAVAILABLE'):
+        collect_projection(gateway)
+
+
+def test_wrong_answer_only_collection_enforces_projection_permission(tmp_path):
+    from chatgpt_study_system.contracts import GatewayError
+
+    gateway = _projection_gateway(tmp_path, source_count=1, analysis_count=1)
+    gateway.capabilities = frozenset({'read'})
+    with pytest.raises(GatewayError, match='PERMISSION_DENIED'):
+        collect_wrong_answer_projection(gateway)
+
+
+def test_wrong_answer_only_collection_rejects_incomplete_snapshot(tmp_path, monkeypatch):
+    gateway = _projection_gateway(tmp_path, source_count=1, analysis_count=1)
+    original = gateway.projection_snapshot
+
+    def missing_analysis(domain, operation, **kwargs):
+        page = original(domain, operation, **kwargs)
+        if operation == 'records':
+            page['analyses'] = []
+        return page
+
+    monkeypatch.setattr(gateway, 'projection_snapshot', missing_analysis)
+    with pytest.raises(ProjectionCollectionError):
+        collect_wrong_answer_projection(gateway)
 
 
 def _projection_gateway(tmp_path: Path, *, source_count: int = 21,
