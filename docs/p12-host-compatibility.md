@@ -9,6 +9,11 @@ Checked: 2026-09-27. This checkpoint combines official product documentation wit
 
 ## Interpretation
 
+2026-10-01 Hermes Step 3 已开始：v0.20.0 (2026.8.3) native stdio discovery/health
+可用，生产只读 config 已持久保存；模型服务 TLS/403 故障阻塞真实 Agent E2E。
+下列早期调查表是历史快照，当前证据见 [Hermes checkpoint](p12-step3-hermes-checkpoint.md)
+与 [Host setup](hermes-host-setup.md)。尚无 Hermes v0.5.0 release。
+
 - Documentation establishes that both products describe a local stdio MCP client path. It does not establish compatibility with this repository's Gateway build, its Windows process launch, or private local settings.
 - A synthetic repository test now starts the Gateway as a separate stdio subprocess and uses an independent MCP SDK client to verify that `projection_snapshot` is hidden with only `read`, then visible with the explicit `projection` capability and marked read-only while serving `begin` → `sources` → `records`; the focused process/History/Wrong Answer MCP set reports **24 passed**. This validates the host-neutral process boundary only, not either installed product's configuration, UI, or real-host E2E.
 - A second synthetic test now runs three independent MCP client sessions against separate Gateway subprocess lifetimes sharing one temporary SQLite store: client A writes version 1, client B reads/searches and appends version 2 with `expected_version`, an identical idempotency replay returns version 2, and a new stale-version write conflicts; client A reconnects and reads exactly versions 1 and 2. Both clients discover the same canonical workflow and tool set; caller identities remain explicitly reported/unverified. The parity test plus existing Wrong Answer MCP and stdio process suites report **5 passed**. This is cross-client protocol preparation, not a WorkBuddy/Hermes host pass.

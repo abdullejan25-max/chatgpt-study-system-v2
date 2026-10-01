@@ -1,5 +1,16 @@
 # 当前状态
 
+## P12 Step 3 — Hermes Integration（进行中，尚未发布）
+
+2026-10-01 从 v0.4.0 开始，真实 Hermes Agent v0.20.0 (2026.8.3)
+原生 stdio 连接生产 read-only Gateway，发现 15 个 read tools。
+native handler health 为 ok=true / gateway_version=0.4.0 / History sqlite；
+三类 no-result 经 native client 返回空结果。这些不是模型侧 Agent E2E。
+默认模型连接 TLS 失败，现有备用模型服务 HTTP 403 账号分组无权限；需要用户恢复
+Hermes 模型服务后继续真实 Agent Gate。Memory/profile 已关闭并保存私有配置备份。
+未执行隔离写入、restart baseline、Hermes Projection 或 v0.5.0 发布。
+回归为 622 passed / 12 skipped；完整证据见 [Hermes checkpoint](p12-step3-hermes-checkpoint.md)。
+
 ## P12 Step 2 — WorkBuddy Integration（v0.4.0，21/21 Gate PASS）
 
 真实 WorkBuddy 5.6.2 只读、隔离 controlled-write 及重启持久性由用户验收；

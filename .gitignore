@@ -5,6 +5,7 @@
 config.local.toml
 .codex/config.toml
 .workbuddy/
+.hermes/
 *.secret
 *.token
 *token*

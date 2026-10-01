@@ -7,6 +7,7 @@ The V1 StudyVault, Basic Memory database, textbooks, exercise images, transcript
 ## Never commit
 
 - `.env`, local configuration, tokens, credentials, certificates, or private keys.
+- Hermes `.hermes/` configuration, memory, sessions, logs and credentials, at any depth.
 - `var/`, databases and SQLite `-wal`, `-shm`, and `-journal` sidecars, logs, caches, transcripts, archives, and local backups.
 - Personal study PDFs, scans, photographs, or other learning material.
 - Private `StudyVault`, History, Wrong Answer, Asset store, inbox, staging, OCR-cache, and QMD index directories.
