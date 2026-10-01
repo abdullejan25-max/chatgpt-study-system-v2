@@ -1,7 +1,7 @@
 # P12 Step 4 — Cross-Agent Integration checkpoint
 
 日期：2026-10-01。目标：v0.6.0。当前版本：**0.5.0**。
-状态：**Stage A REAL VALIDATED / WAITING_FOR_GUI**。
+状态：**Stage A REAL VALIDATED / WAITING_FOR_WORKBUDDY_TRUST**。
 最终 Gate：**7 PASS / 6 PARTIAL / 12 WAITING**。尚未完成 A → B → C，不得发布。
 
 ## Reality delta audit
@@ -60,6 +60,26 @@ Stage B prompt 已在 Git 外准备，只有自然语言任务和测试标记，
 当前 WorkBuddy native discovery cache 尚无新 alias，需重新加载配置后再建立新任务；
 配置文件存在不冒充 Host 工具已连接。
 
+### GUI 发送后的续接：真实 trust blocker
+
+用户确认已发送 Stage B。实际 WorkBuddy Desktop 已由 5.6.2 升至 **5.7.3**，
+新 task 的独立 Host session trace 可直接取得，不要求用户转贴 Agent 回答。
+Agent 自然语言选择 Gateway，却只有旧 study_system / Step 2 isolated 工具，
+对新 marker 的查询未找到记录；后来尝试 shared alias 的 health 请求被 Host 返回
+`Tool ... not found in the deferred tools index`，未到达 canonical Gateway，也未提交更新，
+不能计 cross-agent discovery/update PASS。
+
+只调查版本变化造成的配置 delta。当前安装 loader 源码明确将用户 MCP transport
+config hash 与 trust approval 绑定，未批准项为 `trust-pending`，不会提供给 Agent。
+新 alias 的持久 config 存在，但实际 approval snapshot 无对应记录；旧 study entry
+有记录。工具 cache 不含 server name 本身不足以证明连接失败；本轮结论依据
+实际 Agent trace、有效配置、trust 状态和 loader 的 blocked condition。
+
+需要 owner 在 WorkBuddy MCP 列表完成该 alias 的信任确认。未写 approval file、
+未伪造 trust、未借已批准旧名称覆盖 production，也未使用 CodeBuddy SDK 替代
+WorkBuddy。canonical target/v1 不变，原始 Host trace/诊断留在 Git 外。
+5.6.2 单 Host PASS 是历史 evidence，不将其冒充 5.7.3 cross-agent PASS。
+
 ## Gateway/SDK corroboration
 
 共享配置、能力和 workflow 已经 Gateway stdio 验证。后续必须通过 Gateway
@@ -88,7 +108,7 @@ skip 保持现有 optional Host/QMD/PyMuPDF 与 Windows 平台限制，不冒称
 | 1 | Baseline / Reality Delta Audit | PASS | live refs、clean baseline、Host version/config delta |
 | 2 | Shared Isolated Gateway Target | PASS | 三 persistent aliases 指向同一 canonical config/store |
 | 3 | Codex Real Host Connection | PARTIAL | 新 CLI workflow/search 成功，final target Stage C 待验 |
-| 4 | WorkBuddy Real Host Connection | WAITING | 新 alias 需实际 Agent invocation |
+| 4 | WorkBuddy Real Host Connection | WAITING | 5.7.3 新 alias trust-pending，需 owner GUI 确认 |
 | 5 | Hermes Real Host Connection | PASS | canonical target 真实新 CLI Agent 会话及官方 export |
 | 6 | Natural-Language Auto Routing | PARTIAL | 两 Host 已观察；WorkBuddy 待验 |
 | 7 | Agent A Create | PASS | canonical Document/source/v1 + 完整 readback，首轮 FAIL 保留 |

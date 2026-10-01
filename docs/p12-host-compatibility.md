@@ -24,6 +24,13 @@ production、controlled-write、实际 CLI Host restart 与 isolated Projection 
 
 ## WorkBuddy Step 2 superseding checkpoint (2026-10-01)
 
+Step 4 resume observed a Desktop upgrade to 5.7.3. Its installed user MCP
+loader blocks newly declared transports until owner trust approval for the
+configuration hash. The shared cross-agent alias is configured but trust-pending;
+a real fresh Agent session exposed only older approved servers. See the
+[Step 4 checkpoint](p12-step4-cross-agent-checkpoint.md). This is a current
+configuration/trust delta, not a repeat of the accepted 5.6.2 single-Host Gate.
+
 The WorkBuddy preparation-only row above is historical. Real WorkBuddy 5.6.2
 read-only/write/restart acceptance is now owner-verified, with Gateway and
 isolated Projection corroboration. Gate PASS, included in v0.4.0. No Hermes

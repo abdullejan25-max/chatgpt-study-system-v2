@@ -6,7 +6,9 @@
 shared isolated Gateway。原 production/已验收配置保留，Memory disabled。
 Codex 新 CLI 自然语言 no-result 真实调用成功；Hermes 首轮 Asset-only 不计 PASS，
 canonical target 重跑 Document/source/v1/readback 已真实验证通过。
-WorkBuddy 窗口捕获/点击存在真实 GUI automation blocker。
+用户发送 Stage B 后，已取得真实 WorkBuddy trace：Desktop 升至 5.7.3，
+新 alias 因缺 owner trust approval 未向 Agent 提供工具。当前等待该服务器的
+GUI 信任确认；未绕过批准记录或覆盖旧 production server。
 尚未完成 A → B → C，当前版本保持 0.5.0，未发布 v0.6.0。
 targeted 32 passed，full 622 passed / 12 skipped；证据层级、失败记录及续接任务
 见 [Step 4 checkpoint](p12-step4-cross-agent-checkpoint.md)。不重复已 PASS 的单 Host Gate。
