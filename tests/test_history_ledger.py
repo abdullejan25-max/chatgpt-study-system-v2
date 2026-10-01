@@ -84,6 +84,31 @@ def test_catalog_accounts_for_unavailable_categories_without_fabricated_sources(
     assert summary["catalog_state_counts"] == {"gateway_unavailable": 1, "waiting_for_export": 1}
 
 
+def test_pending_export_is_recorded_without_blocking_or_inventing_a_source(tmp_path):
+    path = tmp_path / "private/ledger.sqlite3"
+    ledger = HistoryMigrationLedger(path)
+    ledger.record_catalog("chatgpt_export", source_type="chatgpt", state="acquisition_pending")
+    summary = HistoryMigrationLedger(path).public_summary()
+    assert summary["catalog_state_counts"] == {"acquisition_pending": 1}
+    assert summary["unique_sources"] == 0
+
+
+def test_gateway_document_uri_is_a_valid_persistent_destination(tmp_path):
+    ledger = HistoryMigrationLedger(tmp_path / "private/ledger.sqlite3")
+    record = source(tmp_path)
+    ledger.discover(record)
+    ledger.record_outcome(record.fingerprint, "imported", evidence={
+        "authority": "study_system", "record_id": "document://sha256/" + "a" * 64,
+        "receipt_digest": "b" * 64,
+    })
+    assert ledger.public_summary()["current_state_counts"] == {"imported": 1}
+    with pytest.raises(HistoryLedgerError, match="gateway_evidence_required"):
+        ledger.record_outcome(record.fingerprint, "reused", evidence={
+            "authority": "study_system", "record_id": "document://sha256/../../private",
+            "receipt_digest": "b" * 64,
+        })
+
+
 def test_discover_rerun_does_not_inflate_exact_duplicate_copy_count(tmp_path):
     ledger = HistoryMigrationLedger(tmp_path / "private/ledger.sqlite3")
     record = source(tmp_path)

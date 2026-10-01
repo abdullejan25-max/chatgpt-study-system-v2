@@ -16,6 +16,19 @@ from chatgpt_study_system.migration.raw_archive import (
 )
 
 
+def test_reopening_existing_archive_store_recovers_exact_duplicate(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    source = tmp_path / "synthetic.zip"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.writestr("synthetic.txt", b"SYNTHETIC RESTART")
+    root = tmp_path / "private-store"
+    first = PrivateRawArchiveStore(root=root).ingest_zip(source, source_system="gemini")
+    reopened = PrivateRawArchiveStore(root=root).ingest_zip(source, source_system="gemini")
+    assert reopened.duplicate is True
+    assert reopened.sha256 == first.sha256
+    assert reopened.stored_path.read_bytes() == source.read_bytes()
+
+
 def test_limits_cannot_raise_hard_resource_ceilings() -> None:
     hard_maxima = {
         "max_archive_bytes": 512 * 1024 * 1024,

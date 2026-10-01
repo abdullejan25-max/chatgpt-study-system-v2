@@ -66,7 +66,11 @@ def default_raw_archive_root() -> Path:
 
 def _validate_state_root(path: Path) -> Path:
     try:
-        resolved = validate_private_journal_path(path)
+        # The journal validator's leaf is a regular file, whereas this API accepts a directory.
+        # Validate a non-created leaf under it so a restarted store can reuse an existing root.
+        resolved = validate_private_journal_path(path / ".root-validation").parent
+        if resolved.exists() and not resolved.is_dir():
+            raise ValueError
         configured = [Path(value).resolve(strict=False) for key in ("LOCALAPPDATA", "XDG_STATE_HOME")
                       if (value := os.environ.get(key)) and Path(value).is_absolute()]
         if not any(resolved.is_relative_to(root) for root in configured):

@@ -5,6 +5,19 @@ import json
 from chatgpt_study_system.migration.history_ledger import HistoryMigrationLedger
 
 
+def test_acquisition_pending_descriptor_is_non_error_without_input_scan(tmp_path):
+    from chatgpt_study_system.migration.history_acquire import acquire
+    path = tmp_path / "private/manifest.json"
+    path.parent.mkdir()
+    path.write_text(json.dumps({"schema_version": 1, "protected_paths": [], "sources": [
+        {"scope": "chatgpt_export", "source_type": "chatgpt", "state": "acquisition_pending"},
+    ]}), encoding="utf-8")
+    result = acquire(path, tmp_path / "private/ledger.sqlite3")
+    assert result["run_errors"] == {}
+    assert result["unique_sources"] == 0
+    assert result["catalog_state_counts"] == {"acquisition_pending": 1}
+
+
 def test_private_descriptor_runs_inventory_twice_without_importing(tmp_path, capsys):
     from chatgpt_study_system.migration.history_acquire import main
     root = tmp_path / "input"

@@ -18,8 +18,8 @@ from .manifest import validate_private_journal_path
 _STATES = frozenset({"discovered", "parsed", "imported", "reused", "skipped", "duplicate", "malformed", "unsupported", "ambiguous", "error"})
 _HASH = re.compile(r"[0-9a-f]{64}\Z")
 _CODE = re.compile(r"[a-z][a-z0-9_]{0,79}\Z")
-_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9:_.-]{0,255}\Z")
-_CATALOG_STATES = frozenset({"available", "waiting_for_export", "gateway_unavailable", "not_found", "retained_legacy", "review_required"})
+_ID = re.compile(r"(?:[A-Za-z0-9][A-Za-z0-9:_.-]{0,255}|(?:asset|document)://sha256/[0-9a-f]{64})\Z")
+_CATALOG_STATES = frozenset({"available", "waiting_for_export", "acquisition_pending", "gateway_unavailable", "not_found", "retained_legacy", "review_required"})
 _SCHEMA = {
     "ledger_meta": "key TEXT PRIMARY KEY, value TEXT NOT NULL",
     "sources": "fingerprint TEXT PRIMARY KEY, payload TEXT NOT NULL",

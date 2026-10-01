@@ -24,7 +24,7 @@ from .manifest import validate_private_journal_path
 
 _SCOPE = re.compile(r"[a-z][a-z0-9_]{0,79}\Z")
 _SUFFIX = re.compile(r"\.[a-z0-9]{1,8}\Z")
-_UNAVAILABLE = {"waiting_for_export", "gateway_unavailable", "not_found", "retained_legacy", "review_required"}
+_UNAVAILABLE = {"waiting_for_export", "acquisition_pending", "gateway_unavailable", "not_found", "retained_legacy", "review_required"}
 
 
 def _load_manifest(path: Path) -> dict:
