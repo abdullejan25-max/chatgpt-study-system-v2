@@ -1,8 +1,8 @@
 # P12 Step 4 — Cross-Agent Integration checkpoint
 
-日期：2026-10-01。目标：v0.6.0。当前版本：**0.5.0**。
-状态：**WORKBUDDY ATTEMPT FAIL / OWNER TRUST CONFIRMED / STAGE A/B REAL VALIDATED / WAITING_FOR_WORKBUDDY_EXIT**。
-最终 Gate：**15 PASS / 6 PARTIAL / 4 WAITING / 0 FAIL**。尚未完成 A → B → C，不得发布。
+日期：2026-10-01。目标：v0.6.0。当前版本：**0.6.0**。
+状态：**WORKBUDDY ATTEMPT FAIL / OWNER TRUST CONFIRMED / A → B → C REAL VALIDATED / 25/25 GATE PASS — v0.6.0 RELEASE CANDIDATE VERIFIED**。
+最终 Gate：**25 PASS / 0 PARTIAL / 0 WAITING / 0 FAIL**。发布流程及远端验收按下述授权边界执行。
 
 ## Reality delta audit
 
@@ -24,6 +24,8 @@ production read-only 的最小 Gateway health delta 正常，15 tools；isolated
 未读取生产学习正文或 private store；不重新跑单 Host production E2E。
 
 ## Real Host evidence
+
+以下初轮调查和 GUI 等待属于历史快照；最终结论由 Fresh Stage B / Stage C 与 Final Gate 表覆盖。
 
 Hermes 首轮自然语言请求保存了 Asset、immutable source、v1 和回读，但没有
 Document，题目文字也未包含 searchable marker。该轮 **FAIL**，不计 Stage A PASS。
@@ -140,11 +142,45 @@ manifest byte-identical、空 Study relations、稳定 document ref/no v3/no dup
 provenance 字段，逐版本与实际写入 DTO 对应；不声称 UI 显示完整 Agent 自报名称。
 完整 Hermes/WorkBuddy identity 在私有 Host DTO baseline 中比较，未改 Projection。
 
+### Stage C：独立读取、实际冲突与退出后持久性
+
+用户完全退出 WorkBuddy 后，测试 Host process 已不存在；Hermes process 先前已退出。
+全新 Codex CLI 0.159.2 ephemeral session 首轮只调用 resources/list，遇到既有
+Unexpected response type 后误判必需 workflow 不可读，该轮 FAIL，未读写数据。
+仅在 AGENTS.md 补充已知 URI 直接读取、P12 marker isolated 路由与禁止 fallback；
+无 Gateway 改动、无临时 inline MCP override、无前轮对象 IDs/DTO 加入 prompt。
+独立 reviewer 确认该变更是最小 Host 路由指引，符合已知 list issue 非阻塞边界。
+
+下一全新 Codex session 自主直接读取 canonical workflow、search marker、document、
+page、原始 Asset 与完整 bundle。初次 limit=100 查询被 INVALID_ARGUMENT 拒绝，
+改为合法 limit=20 后成功。所有 V2 内容和不存在查询均来自 shared Gateway，
+唯一 shell 读取是 using-superpowers 技术技能，不读取数据、Memory 或旧会话。
+Document/page/Asset/source/v1/v2 全 DTO 与 A/B baseline exact-equal，包含 server-side
+时间戳、provenance、logical refs、supersession 与空 Study relations。
+
+Codex 实际提交新的 key / expected_version=1 更新请求，Gateway 返回 CONFLICT。
+没有自动改用最新版本补写；末读仍 total=2/has_more=false/两个唯一版本 1/2，latest=2。
+不存在 marker 的正式查询返回 total=0/results=[]。三 Host 会话没有人工 DTO 中继，
+跨 Agent 数据来自同一 isolated store，而不是共享 conversation context。
+
+### Release validation
+
+功能 Gate 已验证后，将 pyproject/lock/config example 同步为 0.6.0；当前私有
+production、只读入口、shared isolated config 仅 gateway.version 改动，其他 TOML
+值 exact-equal，原值备份 Git 外。正式 targeted：144 passed / 4 skipped。
+full default/dev：622 passed / 12 skipped。实际 wheel42 files/sdist170 files/public169
+files privacy/metadata PASS；6 个既有 synthetic path fixtures 与 v0.5.0 原样相同。
+工作树、staged 候选、现有新增 reachable commit/tree/blob 已扫描通过。
+独立 wheel clean install 与真实 stdio：package/MCP/Gateway0.6.0、15 read-only tools、
+canonical workflow/health PASS；无 production access，未带 checkout PYTHONPATH。
+最终 release commit / annotated tag 在 push 前再次审计；远端 refs / fresh public clone
+frozen install / stdio / privacy 的实际回执追加至正式 GitHub Release。
+
 ## Gateway/SDK corroboration
 
 共享配置、能力和 workflow 已经 Gateway stdio 验证。真实 Host 已建立 A/B baseline，
 验证 historical provenance、v2/exact idempotency/no-v3；最终 scoped Projection
-也已完成。仍需真实 Stage C exact restart comparison、stale CONFLICT 和末读 no-v3。
+也已完成。Stage C exact restart comparison、stale CONFLICT 和末读 no-v3 也已真实验证。
 不能用 SDK 补称真实 Host 行为。
 
 native trace 中 WorkBuddy 展示的 5 个 Gateway tool schemas 与正式 MCP 业务语义相等：
@@ -177,41 +213,40 @@ skip 保持现有 optional Host/QMD/PyMuPDF 与 Windows 平台限制，不冒称
 | --- | --- | --- | --- |
 | 1 | Baseline / Reality Delta Audit | PASS | live refs、clean baseline、Host version/config delta |
 | 2 | Shared Isolated Gateway Target | PASS | 三 persistent aliases 指向同一 canonical config/store |
-| 3 | Codex Real Host Connection | PARTIAL | 新 CLI workflow/search 成功，final target Stage C 待验 |
+| 3 | Codex Real Host Connection | PASS | fresh Codex CLI direct canonical resource + native tools |
 | 4 | WorkBuddy Real Host Connection | PASS | 5.7.3 fresh native shared MCP dispatch + actual DTO |
 | 5 | Hermes Real Host Connection | PASS | 新目标全新 Hermes CLI + 官方 export；仅 configured Gateway tools |
-| 6 | Natural-Language Auto Routing | PARTIAL | Hermes/WorkBuddy marker-only 已验证；final Codex 待验 |
+| 6 | Natural-Language Auto Routing | PASS | 三个 fresh Host 自主路由；仅自然任务/marker，不传对象 IDs/DTO |
 | 7 | Agent A Create | PASS | 新 marker Document/source/v1 全回读；编码中间错误回读后自纠正，未新增分析 |
 | 8 | Agent B Cross-Agent Discovery | PASS | 新会话 search/bundle；首读 exact Stage A baseline |
 | 9 | Agent B Update | PASS | expected=1 append v2 / native readback |
-| 10 | Agent C Cross-Agent Discovery | WAITING | fresh Codex latest=v2 |
+| 10 | Agent C Cross-Agent Discovery | PASS | A/B exit 后 fresh Codex search，latest=2/完整历史 |
 | 11 | Version Graph | PASS | native bundle [1,2] / v2 supersedes v1 |
 | 12 | Cross-Agent Provenance | PASS | source/v1 字段与 provenance exact preserved；v2 WorkBuddy reported |
 | 13 | Idempotency | PASS | native 两次完整 request/key/DTO exact replay |
-| 14 | Stale Conflict | WAITING | Gateway CONFLICT with new key/stale version |
-| 15 | No v3 | PARTIAL | Stage B total=2/unique versions；final stale conflict 后待确认 |
-| 16 | Cross-Agent No-result | PASS | fresh WorkBuddy Gateway total=0/results=[]；Codex final coverage待验 |
-| 17 | Gateway-only Boundary | PARTIAL | 当前 A/B only configured MCP；C 待验，旧失败保留 |
-| 18 | No Human Data Relay | PARTIAL | 已执行步骤无 DTO 中继；final chain 待验 |
-| 19 | No Session/Memory Shortcut | PARTIAL | 当前 A/B fresh traces 无 inherited IDs/Memory/session 数据来源；C待验 |
-| 20 | Cross-Agent Persistence | WAITING | A/B 退出后 C exact comparison |
+| 14 | Stale Conflict | PASS | Codex 实际 new key/stale expected=1 Gateway CONFLICT |
+| 15 | No v3 | PASS | stale请求后末读 total=2/unique [1,2]，无v3 |
+| 16 | Cross-Agent No-result | PASS | fresh WorkBuddy Gateway total=0/results=[]；Codex final同样 total=0/results=[] |
+| 17 | Gateway-only Boundary | PASS | 最终三 Host only native Gateway data access；失败尝试留档 |
+| 18 | No Human Data Relay | PASS | 只需 GUI信任/发送/退出；无 source IDs/JSON/provenance人工中继 |
+| 19 | No Session/Memory Shortcut | PASS | 最终 fresh traces 无 inherited IDs/DTO 或 Memory/session data shortcut |
+| 20 | Cross-Agent Persistence | PASS | A/B退出后 C document/page/Asset/source/v1/v2 全 DTO exact-equal |
 | 21 | Projection Final E2E | PASS | 现有 scoped pipeline 两次14 Markdown/manifest byte-identical |
 | 22 | Memory Authority Boundary | PASS | 当前 fresh A/B 无 canonical Memory副本；仅工程状态摘要，旧FAIL保留 |
-| 23 | Privacy | WAITING | 原始 configs/traces/stores/Vault 均 Git 外；final audit 待验 |
-| 24 | Regression | PASS | targeted 32；full 622/12；review focused 1 |
-| 25 | Documentation | PASS | spec/plan/checkpoint、证据层级及等待状态明确 |
+| 23 | Privacy | PASS | public169/wheel42/sdist170/staged/existing object delta PASS；final commit/tag push前再核 |
+| 24 | Regression | PASS | 0.6.0 targeted144/4，full622/12，build/clean-install/stdio/diff PASS |
+| 25 | Documentation | PASS | spec/plan/checkpoint/architecture/Host compatibility/release notes；历史与最终证据分层 |
 
-## Resume and release boundary
+## Release boundary
 
-继续同一 branch 和私有 receipts；只重跑受到 Step 4 失败污染的跨 Agent 夹具。
-WorkBuddy 的新 session 仅收 marker/自然语言任务，通过 Gateway 找到 v1 并更新；
-新 Codex process 同样自己 discovery，不能继承 A/B 输出或 object IDs。
-三 Host contract parity 与 raw traces 检查留待实际三方调用完成。
+A → B → C 与三方真实 trace 检查已完成，不继承对象 IDs 或先前 DTO。
+功能、回归、实际包与候选隐私 Gate 已通过，版本为0.6.0。无需再问是否发布；
+继续 final review、release commit、新增 reachable objects / annotated tag push前
+审计、fast-forward main、正常 push、GitHub Release、fresh public clone frozen
+install 和 stdio/version/remote privacy 核验。禁止 force push。
 
-全部 Gate PASS 前保持 0.5.0，不 tag/push/Release。完成后无需再问是否发布，
-按已授权流程进行 0.6.0 regression、实际 wheel/sdist/privacy/reachable-object
-审计、正常 main/tag push、GitHub Release、fresh public clone frozen install 和
-stdio/version/remote privacy 核验。不 force push。
+Remote 验证完成的 SHA、tag object、包 hashes 与审计计数在正式 Release 的
+Remote verification 回执中记录，避免把当前文件自引用 hash 当成核验结果。
 
 Cross-Agent shared data ≠ Host sharing conversation context。
 Identity remains caller-reported / unverified。单 Host PASS 不等于 cross-Host PASS。

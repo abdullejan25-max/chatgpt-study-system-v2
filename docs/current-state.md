@@ -1,22 +1,24 @@
 # 当前状态
 
-## P12 Step 4 — Cross-Agent Integration（目标 v0.6.0，进行中）
+## P12 Step 4 — Cross-Agent Integration（v0.6.0，25/25 Gate PASS）
 
-从 live v0.5.0 main/tag 继续，三 persistent Host aliases 指向单一 synthetic
-shared isolated Gateway。原 production/已验收配置保留，Memory disabled。
-Codex 新 CLI 自然语言 no-result 真实调用成功；Hermes 首轮 Asset-only 不计 PASS，
-旧 canonical target 重跑 Document/source/v1/readback 已真实验证通过。
-用户发送 Stage B 后，已取得真实 WorkBuddy trace：Desktop 升至 5.7.3，
-新 alias 因缺 owner trust approval 未向 Agent 提供工具。完整日志进一步证明
-该会话自行用 direct stdio 脚本写入 v2，并将记录摘要存入本地 Memory；该轮 FAIL，
-不计真实 Host PASS。用户现已完成 GUI 信任，批准记录已核实。
-失败夹具和日志保留 Git 外；三 Host 共享配置切到新的隔离目标，已重新创建
-新 marker 的 v1 已通过原始字节与 DTO 回读验证；新 WorkBuddy native MCP 已完成发现、v2、exact replay 与回读，历史 source/v1
-不变。最终 scoped Projection 两次字节一致；当前因结束 Host 进程被 Windows 拒绝
-访问，等待 owner 完全退出 WorkBuddy 后运行 Codex Stage C 与持久性验证。未修改批准记录或覆盖旧 production server。
-尚未完成 A → B → C，当前版本保持 0.5.0，未发布 v0.6.0。
-targeted 32 passed，full 622 passed / 12 skipped；证据层级、失败记录及续接任务
-见 [Step 4 checkpoint](p12-step4-cross-agent-checkpoint.md)。不重复已 PASS 的单 Host Gate。
+从 live v0.5.0 main/tag 继续，真实 Hermes 0.20.0 → WorkBuddy 5.7.3 → Codex CLI
+0.159.2 fresh sessions 通过同一 shared isolated Gateway 完成 Document/source/v1、
+独立发现并追加 v2、exact replay、实际 stale CONFLICT、末读无 v3 和 no-result。
+A/B 退出后 C 原始 Asset/document/page/source/v1/v2 全 DTO exact-equal；历史
+provenance/timestamps/refs/supersession 未改变，identity 仍 caller-reported/unverified。
+
+最终三 Host 数据访问只用 native MCP；不共享上下文或人工转贴 DTO。旧失败尝试
+保留且不计 PASS：Hermes 首轮文档/marker 不完整；WorkBuddy trust 前 script fallback
+与 Memory 副本；Codex 初轮把 list 失败误当 workflow 不可读。仅补最小 Host 路由
+指引，不重构 Gateway；生产配置与旧已验收 server definitions 保留。
+
+现有 scoped Projection 两次生成14 Markdown，Markdown/manifest byte-identical。
+版本同步为 0.6.0；targeted144 passed/4 skipped，full622 passed/12 skipped。
+实际 public169/wheel42/sdist170 privacy、独立 clean install/stdio、diff 已通过。
+最终 commit/tag push前审计与正常发布/远端核验按已授权流程执行，最终远端回执
+记录于正式 GitHub Release。完整证据和已知 Host 展示限制见
+[Step 4 checkpoint](p12-step4-cross-agent-checkpoint.md)。不重验既有单 Host Gate。
 
 ## P12 Step 3 — Hermes Integration（v0.5.0，22/22 Gate PASS）
 

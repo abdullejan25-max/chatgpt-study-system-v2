@@ -14,7 +14,7 @@ prompts contain no inherited DTOs. Raw receipts remain outside Git.
 - Gateway-only reads/writes; no private store inspection.
 - No production writes; reported/unverified identity; no human data relay.
 - No re-audit of accepted P11/Step 1/2/3 without regression evidence.
-- Keep version 0.5.0 until all final Gates pass.
+- Keep version 0.5.0 until functional acceptance; final release validation is now 0.6.0.
 
 ## Tasks
 
@@ -25,16 +25,16 @@ prompts contain no inherited DTOs. Raw receipts remain outside Git.
   only that official Host session and retain formal DTO baseline privately.
 - [x] Run fresh WorkBuddy Stage B with marker-only discovery/revision request;
   verify Gateway v2, exact request replay and preserved v1 provenance.
-- [ ] Run fresh Codex Stage C with marker-only discovery; verify trace, complete
+- [x] Run fresh Codex Stage C with marker-only discovery; verify trace, complete
   graph, exact DTO persistence, nonexistent query and Gateway stale conflict.
 - [x] Extend `tests/test_cross_agent_stdio_parity.py` only where meaningful
   cross-client document/provenance/schema/persistence coverage is missing;
   run focused tests and require an observed failure before behavior changes.
 - [x] Run scoped Projection twice on the shared isolated target; compare
   Markdown and manifest bytes through the existing writer and Gateway DTOs.
-- [ ] Record 25 Gate outcomes in `docs/p12-step4-cross-agent-checkpoint.md`,
+- [x] Record 25 Gate outcomes in `docs/p12-step4-cross-agent-checkpoint.md`,
   update current state/architecture/compatibility and redact all public evidence.
-- [ ] After every real Gate passes, set version/config example/lock to 0.6.0,
+- [x] After every real Gate passes, set version/config example/lock to 0.6.0,
   write release notes, run targeted/full tests and `git diff --check`.
 - [ ] Build wheel/sdist, inspect actual contents and public candidate tree,
   inspect reachable objects since v0.5.0 including new annotated tag.
@@ -43,6 +43,8 @@ prompts contain no inherited DTOs. Raw receipts remain outside Git.
 
 If a real Host GUI/trust blocker occurs, finish independent preparation and
 record a resumable WAITING checkpoint; do not substitute SDK evidence or release.
+
+## Historical resume snapshots (superseded by final acceptance below)
 
 Resume delta: WorkBuddy upgraded to 5.7.3; owner MCP trust is confirmed.
 The first Stage B used direct stdio fallback and copied V2 content into local
@@ -63,3 +65,11 @@ engineering status was logged; no canonical content/IDs copy or memory reads.
 Scoped Projection rebuilt twice with 14 Markdown and byte-identical manifest.
 Windows denied stopping the finished Host process; owner application exit is
 pending before the prepared fresh Codex persistence/conflict session starts.
+
+## Final verified acceptance
+
+Final acceptance supersedes resume notes above: fresh Codex after A/B exit
+passed exact DTO/Asset persistence, actual Gateway stale CONFLICT, final no-v3
+and no-result. 25/25 Gate PASS; 0.6.0 targeted144/4, full622/12, wheel/sdist
+privacy, clean wheel install/stdio PASS. Final commit/tag audit and normal
+publish/fresh public-clone verification remain mandatory release transactions.

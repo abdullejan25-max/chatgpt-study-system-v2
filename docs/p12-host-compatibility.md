@@ -29,7 +29,9 @@ loader blocks newly declared transports until owner trust approval for the
 configuration hash. Owner approval is now present for the shared alias. The
 first fresh Agent session exposed only older approved servers, then used a
 direct stdio script fallback and wrote local Memory; that attempt is FAIL,
-does not count as Real Host PASS. A fresh shared fixture and session are required. See the
+does not count as Real Host PASS. A fresh shared fixture/session has since passed
+native WorkBuddy discovery, v2/exact replay/readback and no-result; Codex independently
+verified persistence and stale CONFLICT after A/B exit. See the
 [Step 4 checkpoint](p12-step4-cross-agent-checkpoint.md). This is a current
 configuration/trust delta, not a repeat of the accepted 5.6.2 single-Host Gate.
 

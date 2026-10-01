@@ -59,7 +59,7 @@ The existing collector consumes bounded `projection_snapshot` pages from configu
 
 The pure renderer produces deterministic Markdown maps. The writer restricts output to a dedicated manifest-owned `V2Projection`, validates Windows-safe paths, rejects repository overlap and unowned collisions, preserves user notes and rolls back handled failures through hard-link backups. It does not guarantee crash-atomic directory replacement. The explicit build entrypoint loads the official private config, requires an existing Vault containing the authoritative Study root, refuses Study/output overlap and reparse points, indexes original Study through relative links, and verifies read-back plus a second fresh collection/rebuild. Private output and raw assets/documents never enter Git or release packages.
 
-Real integration, Windows/Unicode and owner GUI acceptance are recorded in [P12 Step 1](p12-step1-real-projection-checkpoint.md). Metadata-only source views and independent store consistency points are deliberate limitations. WorkBuddy and Hermes integrations are recorded below; the final Cross-Agent stage, canonical normalization, deletion and incremental projection remain deferred.
+Real integration, Windows/Unicode and owner GUI acceptance are recorded in [P12 Step 1](p12-step1-real-projection-checkpoint.md). Metadata-only source views and independent store consistency points are deliberate limitations. WorkBuddy and Hermes integrations are recorded below; real Cross-Agent acceptance is recorded in Step 4. Canonical normalization, deletion and incremental projection remain deferred.
 
 ## Hermes integration (P12 Step 3, v0.5.0)
 
