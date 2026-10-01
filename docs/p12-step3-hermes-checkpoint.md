@@ -114,3 +114,19 @@ staged tree objects 在 commit 前审计；commit 后再检查 v0.4.0..HEAD 新�
 
 模型可回复后先真实 Hermes production Agent Gate，再独立 isolated controlled target。
 保留 branch/配置/私有回执，继续现有任务，不从零重做，不复用 native evidence 冒充 Agent PASS。
+
+### 从 b75c62d 继续的实际调用结果
+
+用户报告模型已可用，授权继续剩余 14 项，不重跑 8 项 PASS。
+本轮复用干净开发分支与持久配置，未重新验收原有 PASS 项。
+直接启动 production read-only Agent 验收，但持久 CLI 默认 provider/model 仍为旧入口，
+真实调用仍返回 Connection error，独立 HTTPS 复现 TLS EOF。
+现有备用 provider 的两个已配置模型也均返回 HTTP 403「无权访问 稳定组 分组」。
+单次 override 不修改用户默认模型；未替换凭证或关闭 TLS 校验。
+
+这些失败调用的 CLI 退出码为 0，必须检查错误输出与实际 tool trace，不能仅用退出码
+作为 E2E 成功证据。工具阶段尚未开始，Gate 仍为 8 PASS / 14 WAITING。
+尚无法确认用户成功的 GUI 会话使用哪个 provider/model；已请求这两个非敏感名称
+（或 profile），无需用户提供密钥或重复登录。
+已在 Git 外准备下一阶段 synthetic canonical prompt，但未执行、未建立隔离 store。
+未重复 regression/privacy Gate，未更新版本、tag、push 或 Release。
