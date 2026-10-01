@@ -49,7 +49,23 @@ The existing collector consumes bounded `projection_snapshot` pages from configu
 
 The pure renderer produces deterministic Markdown maps. The writer restricts output to a dedicated manifest-owned `V2Projection`, validates Windows-safe paths, rejects repository overlap and unowned collisions, preserves user notes and rolls back handled failures through hard-link backups. It does not guarantee crash-atomic directory replacement. The explicit build entrypoint loads the official private config, requires an existing Vault containing the authoritative Study root, refuses Study/output overlap and reparse points, indexes original Study through relative links, and verifies read-back plus a second fresh collection/rebuild. Private output and raw assets/documents never enter Git or release packages.
 
-Real integration, Windows/Unicode and owner GUI acceptance are recorded in [P12 Step 1](p12-step1-real-projection-checkpoint.md). Metadata-only source views and independent store consistency points are deliberate limitations. WorkBuddy integration is recorded below; Hermes, the final Cross-Agent stage, canonical normalization, deletion and incremental projection remain deferred.
+Real integration, Windows/Unicode and owner GUI acceptance are recorded in [P12 Step 1](p12-step1-real-projection-checkpoint.md). Metadata-only source views and independent store consistency points are deliberate limitations. WorkBuddy and Hermes integrations are recorded below; the final Cross-Agent stage, canonical normalization, deletion and incremental projection remain deferred.
+
+## Hermes integration (P12 Step 3, v0.5.0)
+
+Hermes uses the native standard MCP stdio client without a business adapter.
+Production `study_system` exposes read capability; the differently named isolated
+server owns independent synthetic test stores and a separate Projection Vault.
+Reads, counts, existence checks and writes all use Gateway operations. Tool-search
+schema/call bridges are Host protocol mechanisms, not a second data layer.
+
+Hermes built-in Memory and user profile persistence are disabled for the configured
+home. Product session/runtime metadata remains permitted, but cannot replace V2
+retrieval or become authoritative Study, History or Wrong Answers. Caller identity
+is reported/unverified. Actual CLI Host process exit/restart preserves the formal
+Gateway DTO identities, timestamps, provenance and version graph. Existing scoped
+collector, renderer and manifest-owned writer project isolated Hermes records;
+the Projection is derived and provenance is its established privacy summary.
 
 ## WorkBuddy integration (P12 Step 2, v0.4.0)
 

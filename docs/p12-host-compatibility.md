@@ -10,7 +10,8 @@ Checked: 2026-09-27. This checkpoint combines official product documentation wit
 ## Interpretation
 
 2026-10-01 Hermes Step 3 已开始：v0.20.0 (2026.8.3) native stdio discovery/health
-可用，生产只读 config 已持久保存；模型服务 TLS/403 故障阻塞真实 Agent E2E。
+可用，生产只读 config 已持久保存；旧 custom model TLS/403 故障已绕开：真实 Agent 使用现有内置 DeepSeek 入口，
+production、controlled-write、实际 CLI Host restart 与 isolated Projection 均已通过。
 下列早期调查表是历史快照，当前证据见 [Hermes checkpoint](p12-step3-hermes-checkpoint.md)
 与 [Host setup](hermes-host-setup.md)。尚无 Hermes v0.5.0 release。
 

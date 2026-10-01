@@ -16,12 +16,14 @@
 
 - [x] 核实根目录、状态、HEAD、远端 main/tag；核对 Hermes executable/version/source。
 - [x] 查标准 transport、user/profile/managed config、Memory、reload/restart 模型。
-- [ ] 配置持久 native stdio production read-only；私有备份和参数仅存 Git 外。
-- [ ] 验证 native discovery/health；修复可证实的模型连接问题。
-- [ ] 真正 Agent production retrieval、bounded refs、三类 no-result、Gateway-only。
-- [ ] 通过上项后建立独立 target，真实 Agent canonical v1/v2/idempotency/conflict。
-- [ ] 保存 baseline，退出/重启 Host，exact comparison；两次 scoped Projection。
-- [ ] targeted/full tests，增加有意义的 integration/privacy 测试（先失败后修复）。
-- [ ] docs/checkpoint 明确证据层级及 blocker；package/privacy/object audit。
+- [x] 配置持久 native stdio production read-only；私有备份和参数仅存 Git 外。
+- [x] 验证 native discovery/health；修复可证实的模型连接问题。
+- [x] 真正 Agent production retrieval、bounded refs、三类 no-result、Gateway-only。
+- [x] 通过上项后建立独立 target，真实 Agent canonical v1/v2/idempotency/conflict。
+- [x] 保存 baseline，退出/重启 Host，exact comparison；两次 scoped Projection。
+- [x] targeted/full tests，增加有意义的 integration/privacy 测试（先失败后修复）。
+- [x] docs/checkpoint 明确证据层级及 blocker；package/privacy/object audit。
 - [ ] 全 Gate PASS 后 version/release notes/build/commit/main/tag/push/Release。
 - [ ] remote verification、fresh clone clean install、stdio smoke。
+
+发布事务后两项的最终完成回执见 GitHub Release Remote verification 段；不预先勾选尚未执行的远端步骤。

@@ -1,15 +1,17 @@
 # 当前状态
 
-## P12 Step 3 — Hermes Integration（进行中，尚未发布）
+## P12 Step 3 — Hermes Integration（v0.5.0，22/22 Gate PASS）
 
-2026-10-01 从 v0.4.0 开始，真实 Hermes Agent v0.20.0 (2026.8.3)
-原生 stdio 连接生产 read-only Gateway，发现 15 个 read tools。
-native handler health 为 ok=true / gateway_version=0.4.0 / History sqlite；
-三类 no-result 经 native client 返回空结果。这些不是模型侧 Agent E2E。
-默认模型连接 TLS 失败，现有备用模型服务 HTTP 403 账号分组无权限；需要用户恢复
-Hermes 模型服务后继续真实 Agent Gate。Memory/profile 已关闭并保存私有配置备份。
-未执行隔离写入、restart baseline、Hermes Projection 或 v0.5.0 发布。
-回归为 622 passed / 12 skipped；完整证据见 [Hermes checkpoint](p12-step3-hermes-checkpoint.md)。
+从 v0.4.0/b75c62d checkpoint 继续，不重复已有 8 项 PASS。真实 Hermes Agent
+v0.20.0 (2026.8.3) 使用内置 deepseek / deepseek-v4-pro / high 入口，原生 stdio
+执行 production read-only 与独立 isolated controlled-write。官方 Host trace 证明
+仅 Gateway 数据访问、三类 no-result，隔离对象仅 v1/v2，exact idempotency replay
+与 stale CONFLICT 正常；身份仍 reported/unverified，Memory/profile disabled。
+当前 22/22 Gate PASS，restart 与 scoped Projection 已通过。初次 restart 因 Agent
+抄错 source ID 返回 INVALID_ARGUMENT，该轮不计 PASS，后续已用 Gateway search 回收实际 ID，并通过完整 DTO exact comparison。
+发布版本为 0.5.0。针对性回归 89 passed / 2 skipped，全量 622 passed / 12 skipped；
+完整历史与发布验证见 [Hermes checkpoint](p12-step3-hermes-checkpoint.md) 和
+[v0.5.0 release notes](releases/v0.5.0.md)。远端验收回执在正式 Release 中记录。
 
 ## P12 Step 2 — WorkBuddy Integration（v0.4.0，21/21 Gate PASS）
 

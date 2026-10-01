@@ -2,7 +2,8 @@
 
 P12 Step 3 以本机 Hermes Agent v0.20.0 (2026.8.3) 为调查对象。
 原生 stdio 可连接现有 Gateway，不需要 Hermes-specific business adapter。
-真实 Agent E2E 当前受模型服务连接故障阻塞，不能把 discovery 当作完整验收。
+真实 Agent 已通过生产只读及隔离写入；具体 Gate 与 Host 范围见 checkpoint。
+Discovery 本身不能替代 Agent E2E。
 
 ## Configuration
 
@@ -58,8 +59,24 @@ Hermes 自身 session/runtime metadata 可保留，但不作为 V2 权威层。
 1. `hermes mcp test` 是真实产品 CLI transport/discovery。
 2. Hermes native registered handler 的 health 调用是 native client/Gateway 证据。
 3. 模型发起工具调用并遵循边界才是 Agent E2E。
-4. SDK/pytest 是补充证据，不能替代第 3 项或 Desktop 重启。
+4. SDK/pytest 是补充证据，不能替代第 3 项或真实 Host 进程退出/重启。
+本轮测试对象为真实 Hermes CLI Agent Host；Desktop shell live reload、GUI 重启未单独验收。
 
 官方资料：[MCP guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp/)、
 [config reference](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/reference/mcp-config-reference.md)、
 [memory guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory/)。
+
+## Verified model entry
+
+用户成功会话的 Deepseek V4 Pro High 经实际 resolver/picker 核实：
+provider `deepseek`，model `deepseek-v4-pro`，reasoning `high`，既有 default profile。
+High 是推理设置，非独立 model ID。内置 provider 使用官方 API 和既有私有凭证，
+不同于先前失败的 custom provider。CLI 可明确选择相同会话入口：
+
+```powershell
+hermes --provider deepseek -m deepseek-v4-pro --reasoning high -z '<task>'
+```
+
+此命令不改变持久默认模型。GUI 当前会话 selection 可覆盖 picker 的旧 profile default；
+不要把某次成功 GUI 会话解释为所有 CLI 默认 provider 都可用。某些 API 失败时 CLI
+仍退出码 0，验收必须同时检查实际工具回执和错误输出。

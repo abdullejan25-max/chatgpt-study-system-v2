@@ -1,7 +1,8 @@
 # P12 Step 3 — Hermes Integration checkpoint
 
-日期：2026-10-01。状态：**WAITING_FOR_USER — model service authentication/connectivity**。
-目标 v0.5.0 未发布，当前仍 0.4.0。没有以 transport/SDK 证据替代真实 Agent Gate。
+日期：2026-10-01。状态：**REAL VALIDATED — 22/22 Gate PASS; v0.5.0 release candidate verified**。
+全部真实 Host Gate 通过后，发布版本更新为 0.5.0；真实 E2E 基线为 0.4.0。
+没有以 transport/SDK 证据替代真实 Agent Gate。
 
 ## Reality audit
 
@@ -32,7 +33,7 @@ memory.memory_enabled=false、user_profile_enabled=false 已由实际 config loa
 确认生效；外部 memory provider 未配置，未创建新的 Knowledge Base。
 这些为持久 user-level 设置，影响共享该 home 的后续 Hermes 会话；备份可恢复。
 既有记忆未删除。Hermes 原生会话/runtime 元数据可保留，但不可作为 V2 权威数据，
-不可用 session_search 补 Gateway 缺证据。尚未证明模型实际遵循此规则。
+不可用 session_search 补 Gateway 缺证据。初始 checkpoint 尚无 Agent 行为证据；后续真实 trace 验证遵循边界，见下文。
 
 ## Native transport evidence (not Agent E2E)
 
@@ -46,7 +47,7 @@ ok=true、gateway_version=0.4.0、history.backend=sqlite。
 原始 Gateway 回执仅存 Git 外。全程未打开 private DB/store。
 未提取或输出真实学习正文，也未以文件系统验证学习数据。
 
-## Model blocker
+## Historical model blocker (resolved)
 
 1. 现有默认 provider/model 的真实 `hermes -z` 重试三次后 Connection error。
 2. 独立 HTTPS 请求复现 TLS UNEXPECTED_EOF，直连及现有本机代理均失败。
@@ -55,11 +56,11 @@ ok=true、gateway_version=0.4.0、history.backend=sqlite。
 4. 无 TLS 校验绕过，无新增密钥，无账号修改；已请求用户在 Hermes 恢复有权限的
    模型并确认普通对话可回复。用户无需通过聊天提供 credentials。
 
-生产真实 Agent read-only 通过前不执行 controlled write。
-没有建立 synthetic Wrong Answer、v1/v2 或隔离 Projection；没有发布/tag/push v0.5.0。
+以下为初始阻塞时点的状态：生产真实 Agent read-only 通过前不执行 controlled write；
+当时未建立 synthetic Wrong Answer、v1/v2 或隔离 Projection，未发布/tag/push v0.5.0。
 不执行 Step 4、不迁移会话、不重验 WorkBuddy。
 
-## Final Gate (8 PASS / 14 WAITING; not release-ready)
+## Final Gate (22 PASS / 0 WAITING)
 
 | Item | Status | Evidence / remaining work |
 | --- | --- | --- |
@@ -67,23 +68,23 @@ ok=true、gateway_version=0.4.0、history.backend=sqlite。
 | Hermes Installation | PASS | executable/source/venv + CLI version |
 | MCP / Integration Configuration | PASS | 持久 native stdio user config，原 production 未覆盖，read-only capability |
 | Gateway Connection | PASS | 真实 Hermes native CLI discovery + handler health；尚非 Agent behavior |
-| Canonical Workflow | WAITING | 真实 Agent 读取 canonical resource 并按其执行 |
-| Study Retrieval | WAITING | Agent 存在/不存在检索 |
-| History/Source Retrieval | WAITING | Agent source-only 检索与有界回读 |
-| Wrong Answer Retrieval | WAITING | Agent active bundle/version |
-| Asset/Document References | WAITING | Agent 实际 logical refs / bounded reads；缺引用不构造 |
-| Gateway-only Boundary | WAITING | 规则已存在；未得到 Agent runtime 行为证据 |
-| No-result Guard | WAITING | native 空结果已验证；Agent 无幻觉仍待验证 |
-| Controlled Write | WAITING | 依赖 production Agent PASS，独立 server/target |
-| Versioning | WAITING | 同一隔离 source 仅 v1/v2 |
-| Idempotency | WAITING | exact request/key replay 不生成 v3 |
-| Stale Conflict | WAITING | new key + stale expected_version=1 返回 conflict |
-| Provenance | WAITING | Gateway timestamps/IDs + reported identity |
-| Restart Persistence | WAITING | 真实 Host 退出后重启与 exact baseline comparison |
-| Projection Interoperability | WAITING | scoped collector → renderer → writer，两次 byte-identical |
+| Canonical Workflow | PASS | 真实 Agent resource discovery/read + retrieval-only canonical workflow |
+| Study Retrieval | PASS | 真实 Agent QMD 查询 2 命中与唯一不存在查询 0 命中 |
+| History/Source Retrieval | PASS | 真实 Agent source search 与 128 bytes bounded fetch；source-only 语义保持 |
+| Wrong Answer Retrieval | PASS | 真实 Agent active bundle，实际 analysis_versions=[1] |
+| Asset/Document References | PASS | production real Asset bounded read + isolated real Agent document/page/original Asset refs |
+| Gateway-only Boundary | PASS | 官方 session export trace，仅 tool_describe/tool_call 桥接到生产 Gateway read tools |
+| No-result Guard | PASS | 真实 Agent 三类不存在检索均 ok=true/results=[]，回答明确无结果 |
+| Controlled Write | PASS | 真实 Hermes Agent 15 isolated Gateway calls；document/source/v1/v2/readback |
+| Versioning | PASS | final bundle total=2，versions=[1,2]，v2 supersedes v1 |
+| Idempotency | PASS | 两次 update 的完整 request args 与 response exact-equal，均返回 v2 |
+| Stale Conflict | PASS | new key + expected_version=1；实际 Gateway CONFLICT，无 v3 |
+| Provenance | PASS | Gateway timestamps/IDs/data_origin/source_refs 与 reported/unverified caller；provenance supersession |
+| Restart Persistence | PASS | actual CLI Host exited → new PID，Gateway search 回收实际 ID；document/page/full bundle exact-equal，无额外归一化 |
+| Projection Interoperability | PASS | 两次正式 isolated MCP → scoped collector → renderer → manifest-owned writer；14 Markdown 与 manifest byte-identical |
 | Hermes Memory Conflict Audit | PASS | native Memory/profile disabled，外部 provider 未配置；runtime metadata 边界明确 |
 | Privacy | PASS | 公开排除规则和针对性测试；本轮 tree/package/object 审计见后文，未来 release 必须重审 |
-| Regression | PASS | targeted 62 passed；full 622 passed / 12 skipped |
+| Regression | PASS | 原 checkpoint targeted 62 passed；发布 targeted 89 passed / 2 skipped，full 622 passed / 12 skipped |
 | Documentation | PASS | design/plan/setup/current-state/compatibility/checkpoint 明确真实证据和剩余 Gate |
 
 ## Automated verification and privacy
@@ -130,3 +131,96 @@ staged tree objects 在 commit 前审计；commit 后再检查 v0.4.0..HEAD 新�
 （或 profile），无需用户提供密钥或重复登录。
 已在 Git 外准备下一阶段 synthetic canonical prompt，但未执行、未建立隔离 store。
 未重复 regression/privacy Gate，未更新版本、tag、push 或 Release。
+
+### DeepSeek model resolution and production Agent acceptance
+
+界面名称 Deepseek V4 Pro High 经本机 picker/display source 与 provider resolver
+确认对应内置 provider=deepseek、model=deepseek-v4-pro、reasoning=high。
+profile 为既有 default；resolver 使用官方 DeepSeek API endpoint 与已配置凭证，
+没有修改持久旧默认模型、复制密钥或关闭 TLS 校验。真实 probe 回复成功。
+
+随后真实 Hermes CLI Agent 完成 production read-only E2E；官方 sessions export 的
+完整 trace 共 16 次 Gateway 工具调用，另有 tool_describe schema bridge。
+所有 bridge target 均为 study_system；没有 shell/filesystem/SQL/session_search/Memory
+或写入调用。官方 export 是 Host 调用证据，不是直接解析 V2/Hermes SQLite。
+Study 有 2 个实际命中、source 查询实际命中后读取 128 bytes、active Wrong Answer
+bundle 版本列表为 [1]，实际原始 Asset 读取 64 bytes。三类唯一不存在查询均为空，
+不提供 total 的 Study 仅报告结果数。production bundle 没有 Document URI，未伪造。
+最终 Agent 回答只输出有界结果元数据，原始 receipt/export 保存在 Git 外。
+
+已在真实 production PASS 后建立独立 isolated target/config/assets/store/inbox/Vault，
+server=study_system_p12_hermes_isolated，不同名覆盖 production。History 明确
+not_configured；Study 为独立空目录，QMD 未配置可用，不生成假 Study relations。
+production MCP definition 保持值相等；该时点 controlled write 正在真实 Agent 中执行。
+
+### Controlled write / provenance — REAL VALIDATED
+
+真实 Hermes CLI Agent 只调用 isolated server，官方 trace 记录 15 次 Gateway operations。
+canonical resource → exact synthetic text document ingest → document/page/original Asset reads
+→ immutable Wrong Answer source → v1 save/readback → expected_version=1 update v2/readback
+→ exact request/key replay → new key stale expected_version=1 conflict → final bundle。
+其 question/analysis 明确标注 P12 Hermes integration-test / SYNTHETIC ONLY，study_relations=[]。
+
+机器对账确认两次幂等更新所有 argument 值完全一致，response 完全一致；stale 请求
+仅 key 改变，仍 expected_version=1，实际 Gateway code=CONFLICT。Hermes bridge 将错误
+包装为 error JSON 字符串，校验时进一步解析，而非凭 Agent 口头声明。
+final bundle total=2、版本 [1,2]，v2 supersedes v1，未创建 v3。
+Document/source/v1/v2 的 write_provenance 身份均 reported、agent=Hermes；
+recorded_at、created_at、data_origin、logical refs、provenance IDs 与 supersession 由 Gateway 提供。
+
+完整 document/page/final bundle baseline 来自该 Host 退出前的真实工具回执，
+没有从 private DB/store 取数。第一 Host 已正常退出，随后启动不同 PID 的全新 Hermes
+CLI Host 做只读重连；不退出用户其他 Desktop/messaging 会话。restart exact comparison
+在该时点正在执行；本 Gate 范围是实际 CLI Agent Host，不冒称 Desktop shell 重启。
+
+### Restart / Projection — REAL VALIDATED
+
+首次 restart 的 source_id 被 Agent 抄为 65 hex chars，Gateway INVALID_ARGUMENT；
+该轮 FAIL，不作为通过证据，Document/page 已能正常读取。无需改 Gateway 或读取 DB。
+后续完全退出该 Host 并启动新 CLI Host，经 search_wrong_answers 实际返回的 ID 回读：
+完整 document、page、bundle 与首次写入 Host 退出前 trace 中 DTO 原样 exact-equal。
+比对未追加文本/时间/路径归一化；Gateway DTO 自身的既有隐私脱敏保留，不声称读取 raw store。
+所有 identities/timestamps/provenance/version graph 均一致，仅 v1/v2，无 v3。
+CLI Host PID/退出时序有私有工程回执；未将用户其他 Desktop 会话重启冒充该测试。
+
+Projection 通过持久 isolated server 的 native MCP client 调用 projection_snapshot，
+既有 collect_wrong_answer_projection 做两次独立完整采集；纯 renderer 与正式
+manifest-owned writer 在项目运行环境处理 Gateway 采集 DTO。没有私有 store 直读。
+History not_configured 明确 omitted，不断言为空。MCP optional None 参数按 schema 省略；
+初次脚本误传 null 被拒绝，修正 client 参数组装，不改变 Gateway 或增加业务 adapter。
+既有 Projection provenance 为四字段隐私摘要，与完整 readback provenance 对应字段相等，
+不把摘要称为全 provenance IDs。纯 renderer 的依赖使用项目 venv，未向 Hermes 安装新依赖。
+
+1 Source / 2 analyses，latest=v2，v2 supersedes v1；document ref 正确，Study relations=[]。
+两次产生 14 个 Markdown；每一文件及 manifest 回读相等，连续构建 byte-identical。
+无重复页面、私人绝对路径或 raw Asset bytes；bundle 构建前后 exact-equal；未访问生产。
+前期 helper 的宽松 drive regex 误匹配 logical URI，已改用既有 build 的边界 regex，
+不是放宽真实私人路径检查。未重开 Step 1 GUI 或执行 Step 4 cross-agent matrix。
+
+全部 22 项通过后进入已授权发布；原有 8 项不重新执行 Host Gate。
+版本变更后的 regression/package/privacy/object/clean-install 属发布验证，会独立执行。
+
+### v0.5.0 release verification
+
+独立最终复核确认 restart 三项正式 DTO exact comparison 与 scoped Projection 证据，
+并修正 architecture 中过时的 Hermes deferred 文字。无新增 business adapter 或 Gateway 行为变化。
+版本同步 pyproject、lock、config example 到 0.5.0；私有 production 原配置、Hermes
+read-only 配置与 isolated 配置仅 gateway.version 改为 0.5.0，其余 TOML 值完全一致，
+均在 Git 外备份。未修改学习内容或 WorkBuddy Host 配置。
+
+发布 targeted：89 passed / 2 skipped；full：622 passed / 12 skipped。
+skip 为现有可选 Codex/QMD/PyMuPDF 和 Windows symlink/junction/POSIX/FIFO 限制。
+git diff check 通过。公开候选 165 files；wheel 42 files；sdist 166 files。
+tracked/staged/untracked 和包扫描无 Host config/log/session/memory/credential、学习原件或
+新增私人路径。六个已有合成路径/检查代码文件与 v0.4.0 内容一致，逐文件复核，
+不是将宽泛排除规则当作隐私通过。
+
+独立新 venv 从 0.5.0 wheel clean install，通过未带 checkout PYTHONPATH 的真实 stdio：
+package/MCP/Gateway version 0.5.0、15 read-only tools、canonical resource、health PASS。
+只连接独立无数据配置，不访问生产。Apache-2.0 LICENSE 与 metadata 正常，PyMuPDF 仍为可选 extra。
+
+v0.4.0 之后的已有 commit/tree/blob 在提交前审计；实际 release commit 后、push 前
+再审计完整新增 reachable objects 及 annotated tag，回执留在 Git 外。
+正常 fast-forward main / annotated v0.5.0 / push / GitHub Release 后，远端 refs、
+公开 fresh-clone clean install / stdio 结果记录于正式 Release 的 Remote verification 段，
+不以本地轮子或历史 0.4.0 验证替代远端验收。

@@ -88,6 +88,16 @@ uv run --no-sync --project . --extra dev pytest -q
 
 P1–P10 已完成；P11 真实来源迁移与 V2 cutover Gate 已 PASS，P11 发布版本为 `v0.2.0`。当前证据与限制见 [当前状态](docs/current-state.md) 和 [P11 completion](docs/p11-real-migration-completion.md)。P12 Step 1 Obsidian Visualization Gate 已 PASS，版本为 `v0.3.0`；真实 Vault、回读、稳定重建与人工 GUI 证据见 [P12 Step 1](docs/p12-step1-real-projection-checkpoint.md)。项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
 
+## Hermes Integration（v0.5.0）
+
+Hermes Agent v0.20.0 经原生 stdio MCP 接入同一 Gateway，22/22 Gate 已通过。
+真实 CLI Agent 的生产只读、三类 no-result、隔离 v1/v2、幂等/冲突、reported/unverified
+provenance、Host 退出/重启与 isolated Projection 证据见 [Hermes checkpoint](docs/p12-step3-hermes-checkpoint.md)。
+生产与隔离服务器不同名；Hermes Memory/profile disabled，session/runtime metadata 不作为 V2 权威层。
+配置和已验证 DeepSeek 会话入口见 [Host setup](docs/hermes-host-setup.md)，
+范围与发布检查见 [v0.5.0 notes](docs/releases/v0.5.0.md)。Desktop shell live reload/GUI restart
+未单独验收；未执行 Step 4 跨 Agent 矩阵或会话迁移。
+
 ## WorkBuddy Integration（v0.4.0）
 
 P12 Step 2 的真实 WorkBuddy 验收与隔离 Projection 证据见
