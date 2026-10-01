@@ -5,10 +5,14 @@
 从 live v0.5.0 main/tag 继续，三 persistent Host aliases 指向单一 synthetic
 shared isolated Gateway。原 production/已验收配置保留，Memory disabled。
 Codex 新 CLI 自然语言 no-result 真实调用成功；Hermes 首轮 Asset-only 不计 PASS，
-canonical target 重跑 Document/source/v1/readback 已真实验证通过。
+旧 canonical target 重跑 Document/source/v1/readback 已真实验证通过。
 用户发送 Stage B 后，已取得真实 WorkBuddy trace：Desktop 升至 5.7.3，
-新 alias 因缺 owner trust approval 未向 Agent 提供工具。当前等待该服务器的
-GUI 信任确认；未绕过批准记录或覆盖旧 production server。
+新 alias 因缺 owner trust approval 未向 Agent 提供工具。完整日志进一步证明
+该会话自行用 direct stdio 脚本写入 v2，并将记录摘要存入本地 Memory；该轮 FAIL，
+不计真实 Host PASS。用户现已完成 GUI 信任，批准记录已核实。
+失败夹具和日志保留 Git 外；三 Host 共享配置切到新的隔离目标，已重新创建
+新 marker 的 v1 已通过原始字节与 DTO 回读验证；当前等待 WorkBuddy 新任务 GUI
+发送。未修改批准记录或覆盖旧 production server。
 尚未完成 A → B → C，当前版本保持 0.5.0，未发布 v0.6.0。
 targeted 32 passed，full 622 passed / 12 skipped；证据层级、失败记录及续接任务
 见 [Step 4 checkpoint](p12-step4-cross-agent-checkpoint.md)。不重复已 PASS 的单 Host Gate。

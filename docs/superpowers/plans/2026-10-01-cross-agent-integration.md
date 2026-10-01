@@ -18,7 +18,7 @@ prompts contain no inherited DTOs. Raw receipts remain outside Git.
 
 ## Tasks
 
-- [x] Verify clean worktree, remote main/tag baseline and unchanged Host versions.
+- [x] Verify clean worktree, remote main/tag baseline and Host version delta.
 - [x] Back up configs outside Git and add distinct persistent aliases pointing
   to one isolated Gateway config. Preserve production and disabled memory.
 - [x] Run Hermes Stage A with natural-language synthetic save request; export
@@ -43,3 +43,15 @@ prompts contain no inherited DTOs. Raw receipts remain outside Git.
 
 If a real Host GUI/trust blocker occurs, finish independent preparation and
 record a resumable WAITING checkpoint; do not substitute SDK evidence or release.
+
+Resume delta: WorkBuddy upgraded to 5.7.3; owner MCP trust is confirmed.
+The first Stage B used direct stdio fallback and copied V2 content into local
+Memory, so it is rejected. Preserve that fixture/evidence outside Git; rerun
+only the affected chain on a fresh single shared target with a fresh marker.
+Require native MCP tools and actual trace proof; do not use SDK as Host PASS.
+
+Fresh shared target Stage A is now REAL VALIDATED. Hermes corrected an initial
+Base64 encoding mistake after Gateway readback; the final source references
+the correct Document/Asset, with exactly v1. Intermediate Document is retained.
+Official WorkBuddy task deeplink prefilled a fresh marker-only task; GUI send
+is pending because window capture is unavailable.

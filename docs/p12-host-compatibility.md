@@ -26,8 +26,10 @@ production、controlled-write、实际 CLI Host restart 与 isolated Projection 
 
 Step 4 resume observed a Desktop upgrade to 5.7.3. Its installed user MCP
 loader blocks newly declared transports until owner trust approval for the
-configuration hash. The shared cross-agent alias is configured but trust-pending;
-a real fresh Agent session exposed only older approved servers. See the
+configuration hash. Owner approval is now present for the shared alias. The
+first fresh Agent session exposed only older approved servers, then used a
+direct stdio script fallback and wrote local Memory; that attempt is FAIL,
+does not count as Real Host PASS. A fresh shared fixture and session are required. See the
 [Step 4 checkpoint](p12-step4-cross-agent-checkpoint.md). This is a current
 configuration/trust delta, not a repeat of the accepted 5.6.2 single-Host Gate.
 

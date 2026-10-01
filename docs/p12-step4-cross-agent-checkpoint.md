@@ -1,15 +1,15 @@
 # P12 Step 4 — Cross-Agent Integration checkpoint
 
 日期：2026-10-01。目标：v0.6.0。当前版本：**0.5.0**。
-状态：**Stage A REAL VALIDATED / WAITING_FOR_WORKBUDDY_TRUST**。
-最终 Gate：**7 PASS / 6 PARTIAL / 12 WAITING**。尚未完成 A → B → C，不得发布。
+状态：**WORKBUDDY ATTEMPT FAIL / OWNER TRUST CONFIRMED / FRESH STAGE A REAL VALIDATED / WAITING_FOR_WORKBUDDY_SEND**。
+最终 Gate：**6 PASS / 5 PARTIAL / 13 WAITING / 1 FAIL**。尚未完成 A → B → C，不得发布。
 
 ## Reality delta audit
 
 干净 linked worktree 从 v0.5.0 的 33570d69516d8e1f61653d200696204f82c697bc
 创建 `codex/p12-step4-cross-agent-final-e2e`。远端 main/tag target 相等；annotated
 tag object 为 af192cd4c6cec1f84b537de7669da69f6a95e2e6。
-WorkBuddy executable/UI 仍为 5.6.2，Hermes CLI 仍为 v0.20.0 (2026.8.3)，
+初始 WorkBuddy executable/UI 为 5.6.2，后升至 5.7.3；Hermes CLI 为 v0.20.0 (2026.8.3)，
 Codex CLI 为 0.159.2。复用既有单 Host PASS，不重验 P11 或 Step 1/2/3。
 
 持久配置增加 distinct `study_system_p12_crossagent`；三个定义引用同一个
@@ -66,7 +66,7 @@ Stage B prompt 已在 Git 外准备，只有自然语言任务和测试标记，
 新 task 的独立 Host session trace 可直接取得，不要求用户转贴 Agent 回答。
 Agent 自然语言选择 Gateway，却只有旧 study_system / Step 2 isolated 工具，
 对新 marker 的查询未找到记录；后来尝试 shared alias 的 health 请求被 Host 返回
-`Tool ... not found in the deferred tools index`，未到达 canonical Gateway，也未提交更新，
+`Tool ... not found in the deferred tools index`，该 native MCP 请求未到达 canonical Gateway；后续完整日志显示脚本替代调用，
 不能计 cross-agent discovery/update PASS。
 
 只调查版本变化造成的配置 delta。当前安装 loader 源码明确将用户 MCP transport
@@ -77,8 +77,36 @@ config hash 与 trust approval 绑定，未批准项为 `trust-pending`，不会
 
 需要 owner 在 WorkBuddy MCP 列表完成该 alias 的信任确认。未写 approval file、
 未伪造 trust、未借已批准旧名称覆盖 production，也未使用 CodeBuddy SDK 替代
-WorkBuddy。canonical target/v1 不变，原始 Host trace/诊断留在 Git 外。
+WorkBuddy。原始 Host trace/诊断留在 Git 外。该段是 owner 信任前的调查快照，最终结果以以下续接为准。
 5.6.2 单 Host PASS 是历史 evidence，不将其冒充 5.7.3 cross-agent PASS。
+
+
+### Owner trust 后：完整日志揭示替代调用失败
+
+用户已完成 GUI 信任；持久 approval snapshot 中出现 shared alias 的正式配置 hash，
+未由 Codex 修改 approval file。完整 WorkBuddy 原会话 trace 证明，native MCP 工具
+未加载后，Agent 自行读取技术配置并生成 direct stdio 驱动脚本，调用 Gateway 写入
+v2 / 重放 / 回读，又把对象 IDs、分析摘要和环境细节写入本地 Memory。
+该轮 **FAIL**：SDK 调用不能替代真实 Host MCP，且违反 Memory authority boundary。
+早期截断日志未包含这部分后续行为；原先“未提交更新”不能作为完整会话结论。
+该失败仅属于 Step 4 新场景，不推翻既有 5.6.2 单 Host 验收。
+
+拒绝 fixture 与完整 Host trace 保留 Git 外，没有直接读取、删除或修改 store。
+同一共享持久 transport 配置现指向新的单一 isolated target，三 Host 不复制数据库；
+新 marker 已由全新 Hermes session 创建 Document/source/v1 并完成回读，正式
+baseline 来自该 session DTO。过程先有 schema 拒绝，再有一次 Base64 编码错误的
+成功导入；Agent 回读发现后重新提交正确原始字节。中间 Document 保留，未创建
+额外 Wrong Answer/source/analysis。最终 Source 引用正确 Document，原始 Asset
+与成功请求 bytes exact-equal，版本仅 v1；错误中间文档不计正式链路结果。
+旧 Stage A 是历史 PASS，不能替代新目标 baseline。新 WorkBuddy 工作区规则明确禁止 direct-client fallback、
+V2 内容/IDs/provenance 的本地 Memory 副本；工具不可用必须停止。
+
+WorkBuddy 5.7.3 当前窗口 accessibility 只有窗口节点，截图仍报
+`FrameArrived timed out`。未猜坐标或使用自制 UI 自动化。安装产品的正式
+`workbuddy://task?action=start` 入口可预填新任务及自然语言请求；发送仍需要 GUI。
+已通过正式 task deeplink 预填全新任务，renderer 日志确认 coordinator 已接收，
+从已完成旧会话导航至新任务；当前等待 GUI 发送。新任务只提供新 marker /
+自然语言任务，不传 IDs、前轮 DTO 或回答。Hermes 创建进程已正常退出。
 
 ## Gateway/SDK corroboration
 
@@ -108,10 +136,10 @@ skip 保持现有 optional Host/QMD/PyMuPDF 与 Windows 平台限制，不冒称
 | 1 | Baseline / Reality Delta Audit | PASS | live refs、clean baseline、Host version/config delta |
 | 2 | Shared Isolated Gateway Target | PASS | 三 persistent aliases 指向同一 canonical config/store |
 | 3 | Codex Real Host Connection | PARTIAL | 新 CLI workflow/search 成功，final target Stage C 待验 |
-| 4 | WorkBuddy Real Host Connection | WAITING | 5.7.3 新 alias trust-pending，需 owner GUI 确认 |
-| 5 | Hermes Real Host Connection | PASS | canonical target 真实新 CLI Agent 会话及官方 export |
+| 4 | WorkBuddy Real Host Connection | WAITING | owner trust 已确认；fresh native session/call 待验 |
+| 5 | Hermes Real Host Connection | PASS | 新目标全新 Hermes CLI + 官方 export；仅 configured Gateway tools |
 | 6 | Natural-Language Auto Routing | PARTIAL | 两 Host 已观察；WorkBuddy 待验 |
-| 7 | Agent A Create | PASS | canonical Document/source/v1 + 完整 readback，首轮 FAIL 保留 |
+| 7 | Agent A Create | PASS | 新 marker Document/source/v1 全回读；编码中间错误回读后自纠正，未新增分析 |
 | 8 | Agent B Cross-Agent Discovery | WAITING | fresh WorkBuddy marker-only prompt |
 | 9 | Agent B Update | WAITING | append v2、readback |
 | 10 | Agent C Cross-Agent Discovery | WAITING | fresh Codex latest=v2 |
@@ -121,19 +149,19 @@ skip 保持现有 optional Host/QMD/PyMuPDF 与 Windows 平台限制，不冒称
 | 14 | Stale Conflict | WAITING | Gateway CONFLICT with new key/stale version |
 | 15 | No v3 | WAITING | final total=2 / unique versions and IDs |
 | 16 | Cross-Agent No-result | PARTIAL | Codex real no-result；其他覆盖待验 |
-| 17 | Gateway-only Boundary | PARTIAL | 已执行两 Host 经 Gateway；WorkBuddy 待验 |
+| 17 | Gateway-only Boundary | PARTIAL | 原 WorkBuddy direct stdio 仍经过 Gateway，但不能替代 native MCP；新会话待验 |
 | 18 | No Human Data Relay | PARTIAL | 已执行步骤无 DTO 中继；final chain 待验 |
-| 19 | No Session/Memory Shortcut | PARTIAL | 新会话、最小 prompt；final traces 待验 |
+| 19 | No Session/Memory Shortcut | WAITING | 原 WorkBuddy 会话写 Memory 副本；新会话需 trace 排除 shortcut |
 | 20 | Cross-Agent Persistence | WAITING | A/B 退出后 C exact comparison |
 | 21 | Projection Final E2E | WAITING | 最终 shared target 两次正式 build |
-| 22 | Memory Authority Boundary | PASS | disabled configs、Gateway-only guidance、无新 Memory |
+| 22 | Memory Authority Boundary | FAIL | Basic Memory disabled 未阻止 native Memory 实际写入；新会话重新验收 |
 | 23 | Privacy | WAITING | 原始 configs/traces/stores/Vault 均 Git 外；final audit 待验 |
 | 24 | Regression | PASS | targeted 32；full 622/12；review focused 1 |
 | 25 | Documentation | PASS | spec/plan/checkpoint、证据层级及等待状态明确 |
 
 ## Resume and release boundary
 
-继续同一 branch、shared canonical target 和私有 receipts，不能从头重新验收。
+继续同一 branch 和私有 receipts；只重跑受到 Step 4 失败污染的跨 Agent 夹具。
 WorkBuddy 的新 session 仅收 marker/自然语言任务，通过 Gateway 找到 v1 并更新；
 新 Codex process 同样自己 discovery，不能继承 A/B 输出或 object IDs。
 三 Host contract parity 与 raw traces 检查留待实际三方调用完成。
