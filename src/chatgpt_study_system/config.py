@@ -15,3 +15,9 @@ class AppConfig:
     asset_database: Path | None = None
     asset_ingest_root: Path | None = None
     history_migration_inbox: Path | None = None
+    recovery_root: Path | None = None
+    recovery_sidecar_root: Path | None = None
+    recovery_sidecar_exclusions: tuple[str, ...] = ()
+    gateway_config_file: Path | None = None
+    qmd_snapshot_config: Path | None = None
+    qmd_snapshot_index: Path | None = None

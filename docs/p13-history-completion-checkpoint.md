@@ -1,7 +1,7 @@
 # P13 — History Completion & Normalization checkpoint
 
 日期：2026-10-02。起点：**v0.6.0 / 02d1ed2**。
-当前状态：**已取得来源 Phase A/B PASS；Phase C normalization/reconciliation PASS；Phase D 两个真实 Host PASS，WorkBuddy GUI 验收待恢复；Phase E NOT_STARTED**。
+当前状态：**已取得来源 Phase A/B PASS；Phase C normalization/reconciliation PASS；Phase D 两个真实 Host PASS，WorkBuddy GUI 由 owner 操作；真实 recovery 执行中；Phase E NOT_STARTED**。
 这是持续推进 checkpoint，不是 P13 完成报告，也不是 v0.7.0 release。
 
 ## 当前已取得的证据
@@ -117,12 +117,12 @@ V1 runtime/physical deletion 仍在 normalization、backup/restore Gate 之后�
 | 19 | Normalization Idempotency | PASS_REAL | 56 native normalization calls，两轮完整处理；第二轮新增 conversation/message/view 均为 0 |
 | 20 | Cross-source Reconciliation | PASS_ACQUIRED | 1,776 source outcomes 两轮稳定；每个 source 有持久 native receipts，未解释来源 0 |
 | 21 | Production Gateway Readback | PASS_CODEX | initiating Desktop 原生 source search/verify、canonical category search/conversation/message read 均成功 |
-| 22 | Cross-Agent History Read | PARTIAL | Codex Desktop + Hermes native Agent 同一 history PASS；WorkBuddy GUI input geometry unavailable，未替代为 SDK PASS |
+| 22 | Cross-Agent History Read | PARTIAL | Codex Desktop + Hermes native Agent 同一 history PASS；WorkBuddy GUI 由 owner 操作，结果尚未取得，不替代为 SDK PASS |
 | 23 | No-result | PASS_TWO_HOSTS | Codex Desktop 与 Hermes native Agent 专用 literal canonical query 均返回 total=0、empty list |
 | 24 | Privacy | PASS_PUBLIC / PRIVATE_REFS_RETAINED | 当前 staged/wheel/sdist/current branch/main 无私人标记；旧 Codex private turn-diff refs 的配置命中单独记账，禁止发布这些 refs |
-| 25 | Regression | PASS_CODE | canonical targeted51 passed；full774 passed/12 skipped；后续 recovery 扩展须单独验证 |
-| 26 | Recovery Backup | NOT_STARTED | own-ledger smoke 通过；V2 backup 未执行 |
-| 27 | Isolated Restore Smoke | NOT_STARTED | V2 isolated restore 未执行 |
+| 25 | Regression | PASS_CODE | canonical targeted51 passed；recovery 扩展及心跳修复后 full816 passed/12 skipped |
+| 26 | Recovery Backup | IN_PROGRESS | Gateway plan 完成；上次中断未发布快照、保留空 partial attempt；真实 native create 重试中，未计 PASS |
+| 27 | Isolated Restore Smoke | PENDING_BACKUP | synthetic isolated restore 已验证；真实 V2 restore 等待 verified snapshot |
 | 28 | V1 Unique-data Audit | NOT_STARTED | 前置 Gate 未通过，不能宣布无 unique data |
 | 29 | V1 Logical Retirement | NOT_STARTED | P13 retirement 不提前执行 |
 | 30 | Documentation | PARTIAL | 当前 checkpoint 与 Phase A design/plan 已写；最终报告待所有 Gate |
@@ -178,8 +178,46 @@ turn-diff refs 持有，不在当前 branch 或 main 历史中。完整 ref/obje
 保留本地快照，不把全仓库扫描误称零命中。未来仅发布明确的公开 branch/tag，禁止
 push --all、mirror 或发布 private turn-diff refs。本轮未 bump/tag/push/release。
 
-V2 full backup、isolated restore、V1 unique-data final audit、logical retirement 仍未执行；
-不在 Cross-Agent Gate 未通过时声称 retirement ready，也未请求 physical deletion。
+V2 full backup 正通过真实 native Host 执行，isolated restore、V1 unique-data final audit、
+logical retirement 尚未执行；不在前置 Gate 未通过时声称 retirement ready，也未请求
+physical deletion。WorkBuddy GUI 已交由 owner 操作，后台工程和 recovery 自主推进。
+
+## Recovery engineering 与真实执行状态
+
+新增三个 opt-in、admin-only native MCP 工具：snapshot plan、immutable snapshot create、
+snapshot verify/isolated restore。路径只来自私有配置，不接受任意路径或删除操作。
+SQLite backup 捕获 committed WAL；大 BLOB 流式校验，Study、Assets、History、ledger、
+原始 Gateway/QMD 配置和 migration evidence 纳入完整快照。公开说明见
+[p13-recovery.md](p13-recovery.md)。
+
+快照验证检查完整文件集合、字节 checksum、schema/row digest、source/canonical identity
+和 provenance；manifest 另有独立 catalog checksum anchor。复制结束重新校验源文件，
+防止同长度修改后恢复 mtime 掩盖变动。capacity 同时考虑 SQLite logical pages/WAL 与
+独立 restore 空间，恢复前再次检查；未完成尝试保留，不覆盖或清理。
+
+独立 review 发现的文件变动竞态、WAL capacity、manifest omission/forgery、publish
+failure、restore capacity 与 legacy ambient QMD isolation 均有 synthetic 回归。
+Windows 长路径曾使 normalization receipt 写入失败，已修复并通过深路径合成用例。
+最新 full suite **816 passed / 12 skipped**；包含 partial-attempt aggregate 与慢速
+recovery 期间 native ping 的回归。这些结果仅为公开工程证据，不能代替生产
+backup/restore Gate。
+
+真实 Gateway plan 返回 **3,778 files、44,380,473,022 required bytes**。上轮被中断的
+create 尚未产生已发布目录，仅留下一个 **0-byte incomplete attempt**，原 Host 配置
+已恢复。保留中断回执及未完成目录，真实 create 重试通过 configured native Hermes
+Host 执行；没有 Agent-side snapshot/SQLite 检查。awaiting native verification result，
+Recovery Backup 尚不计 PASS。V1 未退役或删除。
+
+真实长调用暴露同步 recovery handler 阻塞 MCP event loop，导致 Host keepalive
+重连。Synthetic regression 先复现 ping 延迟失败，再以 recovery-only worker thread
+修复并通过；其余工具路径保持原样。独立 review 通过，新的真实 configured Host
+create 重试继续运行。取消请求不能证明 worker 已停止，必须通过 Gateway 核实结果。
+
+最新 wheel 在独立环境完成 synthetic snapshot/reuse/restore 和慢速 native MCP ping
+测试；深路径 receipt 回归通过。215 staged candidates、62 wheel members、216 sdist
+members 的扫描仅在全 reachable Git 中保留两份已知历史 private config 命中；当前
+候选、包、当前 branch/main 清洁。历史私有 refs 保留在本地并禁止发布。本轮保持
+package 0.6.0，未 tag/push/release。
 
 ## Phase A 工程验证
 

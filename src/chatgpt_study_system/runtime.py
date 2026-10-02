@@ -1,6 +1,7 @@
 """Compose the local Gateway only from an explicitly supplied TOML file."""
 
 from pathlib import Path
+from dataclasses import replace
 import re
 import shutil
 import tomllib
@@ -95,6 +96,20 @@ def load_gateway_from_config(config_file: Path) -> Gateway:
                        Path(asset_database) if asset_database else None,
                        Path(ingest_root) if ingest_root else None,
                        Path(migration_inbox) if migration_inbox else None)
+    recovery = raw.get("recovery")
+    if recovery is not None:
+        if type(recovery) is not dict or "root" not in recovery \
+                or set(recovery)-{"root","sidecar_root","exclude_sidecar_paths"}:
+            raise ValueError("Invalid local configuration")
+        paths=[recovery.get(k) for k in ("root","sidecar_root")]
+        exclusions=recovery.get("exclude_sidecar_paths",[])
+        if any(p is not None and (type(p) is not str or not p or not Path(p).is_absolute()) for p in paths) \
+                or paths[0] is None or type(exclusions) is not list \
+                or any(type(p) is not str or not p or len(p)>500 or "\\" in p or ":" in p
+                       or any(ord(c)<32 for c in p) or any(c in {"",".",".."} for c in p.split("/")) for p in exclusions):
+            raise ValueError("Invalid local configuration")
+        config=replace(config,recovery_root=Path(paths[0]),recovery_sidecar_root=Path(paths[1]) if paths[1] else None,
+                       recovery_sidecar_exclusions=tuple(exclusions),gateway_config_file=Path(config_file).resolve())
     runtime_raw = study.get("qmd_runtime")
     if runtime_raw is None:
         executable = study.get("qmd_executable")
@@ -120,6 +135,7 @@ def load_gateway_from_config(config_file: Path) -> Gateway:
             sources.node_executable, sources.cli_entrypoint, sources.source_config, sources.source_index,
         )):
             raise ValueError("Invalid local configuration")
+        config=replace(config,qmd_snapshot_config=sources.source_config,qmd_snapshot_index=sources.source_index)
         study_backend = QmdStudyBackend(
             config,
             runtime_provider=lambda: create_disposable_qmd_runtime(sources),

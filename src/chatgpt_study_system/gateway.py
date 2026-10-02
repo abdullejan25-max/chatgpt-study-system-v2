@@ -671,6 +671,18 @@ class Gateway:
         self._require_capability("read")
         return self._canonical_history_store().summary()
 
+    def recovery_snapshot_plan(self):
+        from .recovery.service import plan
+        return plan(self)
+
+    def create_recovery_snapshot(self, snapshot_key):
+        from .recovery.service import create
+        return create(self, snapshot_key)
+
+    def verify_recovery_snapshot(self, snapshot_key, *, restore=False):
+        from .recovery.service import verify
+        return verify(self, snapshot_key, restore=restore)
+
     def verify_canonical_history(self, *, reparse=False):
         from .normalization.integrity import verify
         return verify(self,reparse=reparse)

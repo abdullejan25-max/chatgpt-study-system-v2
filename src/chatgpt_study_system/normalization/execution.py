@@ -3,6 +3,7 @@ from contextlib import closing
 import hashlib
 import os
 import re
+from pathlib import Path
 from uuid import uuid4
 from .adapters import normalize_source
 from .contracts import encoded, result
@@ -69,12 +70,16 @@ def normalize(gateway, source_set_sha256, *, cursor=0, limit=16):
               "reused_sources":sum(r["reused"] for r in outcomes),"errors":sum(r["state"]=="error" for r in outcomes),
               **{key:sum(r[key] for r in outcomes) for key in ("new_conversations","new_messages","new_views")}}
     folder=root/"normalization-receipts"
+    io_folder=folder
+    if os.name=="nt" and not str(folder).startswith("\\\\?\\"):
+        value=str(folder.absolute())
+        io_folder=Path("\\\\?\\UNC\\"+value[2:] if value.startswith("\\\\") else "\\\\?\\"+value)
     try:
-        folder.mkdir(exist_ok=True)
-        if _path_has_reparse_point(folder): raise GatewayError("OUTSIDE_ALLOWLIST","Unsafe receipt target")
+        io_folder.mkdir(exist_ok=True)
+        if _path_has_reparse_point(io_folder): raise GatewayError("OUTSIDE_ALLOWLIST","Unsafe receipt target")
         name=source_set_sha256+"-"+str(cursor)+"-"+uuid4().hex+".json"
         data=encoded(response).encode()
-        with (folder/name).open("xb") as stream: stream.write(data); stream.flush(); os.fsync(stream.fileno())
+        with (io_folder/name).open("xb") as stream: stream.write(data); stream.flush(); os.fsync(stream.fileno())
     except OSError: raise GatewayError("STORAGE_UNAVAILABLE","Normalization receipt could not be persisted") from None
     response["receipt"]={"relative_path":"normalization-receipts/"+name,"sha256":hashlib.sha256(data).hexdigest()}
     return response

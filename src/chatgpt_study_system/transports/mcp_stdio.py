@@ -369,6 +369,8 @@ def create_mcp_server(gateway: Gateway) -> Server:
         tools.extend(source_tools(gateway,read_only,write_only,reported_provenance))
         from .canonical_tools import canonical_tools
         tools.extend(canonical_tools(gateway,read_only,write_only))
+        from .recovery_tools import recovery_tools
+        tools.extend(recovery_tools(gateway,read_only,write_only))
         ingest_tools = {"register_asset", "ingest_documents", "ingest_document_file", "ingest_history_sources",
                         "process_document_ocr_pages"}
         write_tools = {"register_wrong_answer_source", "save_wrong_answer_analysis",
@@ -509,6 +511,12 @@ def create_mcp_server(gateway: Gateway) -> Server:
     @server.call_tool(validate_input=False)
     async def call_tool(name: str, arguments: dict) -> dict | types.CallToolResult:
         try:
+            from .recovery_tools import SHAPES, call_recovery_tool
+            if name in SHAPES:
+                # Full snapshots must not block protocol pings while copying/checking data.
+                import asyncio
+                recovery_result=await asyncio.to_thread(call_recovery_tool,gateway,name,arguments)
+                return {"ok":True,**recovery_result}
             from .canonical_tools import call_canonical_tool
             canonical_result=call_canonical_tool(gateway,name,arguments)
             if canonical_result is not None:
