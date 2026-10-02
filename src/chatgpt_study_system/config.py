@@ -14,3 +14,4 @@ class AppConfig:
     asset_root: Path | None = None
     asset_database: Path | None = None
     asset_ingest_root: Path | None = None
+    history_migration_inbox: Path | None = None

@@ -640,6 +640,36 @@ class Gateway:
     def list_legacy_sources(self) -> dict:
         return {"sources": list(self._legacy_source_store().list_sources())}
 
+    def _source_evidence_store(self):
+        from .adapters.history import SQLiteHistoryBackend
+        from .adapters.history_sources import SourceEvidenceStore
+        if not isinstance(self._history_backend(), SQLiteHistoryBackend):
+            raise GatewayError("HISTORY_UNAVAILABLE", "History is unavailable")
+        return SourceEvidenceStore(self.history_backend.database_path)
+
+    def ingest_history_sources(self, relative_manifest, expected_manifest_sha256, *, cursor=0, limit=128, provenance=None):
+        from .migration.gateway_sources import ingest
+        return ingest(self,relative_manifest,expected_manifest_sha256,cursor=cursor,limit=limit,provenance=provenance)
+
+    def history_source_summary(self):
+        self._require_capability("read")
+        return self._source_evidence_store().summary()
+
+    def search_history_sources(self, *, source_system=None, query="", limit=20, offset=0):
+        self._require_capability("read")
+        return self._source_evidence_store().search(source_system=source_system,query=query,limit=limit,offset=offset)
+
+    def fetch_history_source(self, source_id, offset=0, length=65536):
+        from .migration.gateway_sources import resolve_manifest
+        self._require_capability("read")
+        r=self._source_evidence_store().fetch(source_id,offset,length,manifest_resolver=lambda s,o,n:resolve_manifest(self,s,o,n))
+        return {"source":r["source"],"offset":r["offset"],"content_base64":base64.b64encode(r["content"]).decode("ascii"),"has_more":r["has_more"]}
+
+    def verify_history_source(self, source_id):
+        from .migration.gateway_sources import resolve_manifest
+        self._require_capability("read")
+        return self._source_evidence_store().verify(source_id,manifest_resolver=lambda s,o,n:resolve_manifest(self,s,o,n))
+
     @staticmethod
     def _public_legacy_source(record: dict) -> dict:
         result = dict(record)

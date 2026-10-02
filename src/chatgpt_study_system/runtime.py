@@ -39,8 +39,13 @@ def load_gateway_from_config(config_file: Path) -> Gateway:
 
     if history == "sqlite":
         database = history_config.get("database")
-        if set(history_config) != {"backend", "database"} \
+        migration_inbox = history_config.get("migration_inbox")
+        if set(history_config) - {"backend", "database", "migration_inbox"} \
+                or not {"backend", "database"} <= set(history_config) \
                 or type(database) is not str or not database or not Path(database).is_absolute():
+            raise ValueError("Invalid local configuration")
+        if migration_inbox is not None and (type(migration_inbox) is not str or not migration_inbox
+                                            or not Path(migration_inbox).is_absolute()):
             raise ValueError("Invalid local configuration")
         history_backend = SQLiteHistoryBackend(Path(database))
         history_database = Path(database)
@@ -49,6 +54,7 @@ def load_gateway_from_config(config_file: Path) -> Gateway:
             raise ValueError("Invalid local configuration")
         history_backend = NotConfiguredHistoryBackend()
         history_database = None
+        migration_inbox = None
 
     assets_config = raw.get("assets", {"backend": "not_configured"})
     if type(assets_config) is not dict:
@@ -87,7 +93,8 @@ def load_gateway_from_config(config_file: Path) -> Gateway:
     config = AppConfig(version, Path(root), collection, qmd_version, history_database,
                        Path(asset_root) if asset_root else None,
                        Path(asset_database) if asset_database else None,
-                       Path(ingest_root) if ingest_root else None)
+                       Path(ingest_root) if ingest_root else None,
+                       Path(migration_inbox) if migration_inbox else None)
     runtime_raw = study.get("qmd_runtime")
     if runtime_raw is None:
         executable = study.get("qmd_executable")

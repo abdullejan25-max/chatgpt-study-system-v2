@@ -365,7 +365,9 @@ def create_mcp_server(gateway: Gateway) -> Server:
                     "required": ["relative_path"], "additionalProperties": False},
                 annotations=write_only,
             ))
-        ingest_tools = {"register_asset", "ingest_documents", "ingest_document_file",
+        from .source_tools import source_tools
+        tools.extend(source_tools(gateway,read_only,write_only,reported_provenance))
+        ingest_tools = {"register_asset", "ingest_documents", "ingest_document_file", "ingest_history_sources",
                         "process_document_ocr_pages"}
         write_tools = {"register_wrong_answer_source", "save_wrong_answer_analysis",
                        "update_wrong_answer_analysis"}
@@ -505,6 +507,10 @@ def create_mcp_server(gateway: Gateway) -> Server:
     @server.call_tool(validate_input=False)
     async def call_tool(name: str, arguments: dict) -> dict | types.CallToolResult:
         try:
+            from .source_tools import call_source_tool
+            source_result=call_source_tool(gateway,name,arguments)
+            if source_result is not None:
+                return {"ok":True,**source_result}
             if name == "projection_snapshot":
                 allowed = {"domain", "operation", "snapshot_token", "cursor", "source_id", "limit"}
                 if set(arguments) - allowed or not {"domain", "operation"} <= set(arguments) \

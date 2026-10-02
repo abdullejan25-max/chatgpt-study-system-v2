@@ -30,6 +30,18 @@ def test_runtime_uses_only_explicit_private_sqlite_path(tmp_path: Path) -> None:
     assert gateway.health_report()["history"] == {"backend": "sqlite", "status": "unavailable"}
 
 
+def test_optional_history_migration_inbox_is_explicit_and_backward_compatible(tmp_path: Path):
+    root=tmp_path/"study"
+    root.mkdir()
+    config=tmp_path/"local.toml"
+    database=tmp_path/"private-history.db"
+    _write_config(config,root,f'backend="sqlite"\ndatabase="{database.as_posix()}"\n')
+    assert load_gateway_from_config(config).config.history_migration_inbox is None
+    with config.open("a",encoding="utf-8") as stream:
+        stream.write(f'migration_inbox="{(tmp_path/"private-inbox").as_posix()}"\n')
+    assert load_gateway_from_config(config).config.history_migration_inbox==tmp_path/"private-inbox"
+
+
 @pytest.mark.parametrize("history", [
     'backend = "sqlite"\n',
     'backend = "sqlite"\ndatabase = "relative.db"\n',
