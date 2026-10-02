@@ -19,14 +19,14 @@ Agent
 ```
 
 - **Study**：通过显式配置的 QMD collection 搜索学习资料。搜索使用隔离的临时副本；原始索引保持为用户管理的数据源。
-- **Personal History**：读取显式登记的本地 History store；系统不会扫描聊天记录或自动导入历史。
+- **Personal History**：读取显式登记的本地 History store；原始来源证据与确定性生成的 canonical conversations/messages 分开保存。规范化只接受可靠结构，不能确定的记录继续 source-only；系统不会扫描聊天记录或自动导入历史。
 - **Legacy Sources**：读取经过显式迁移的旧来源文档，保留原始字节、类型与 provenance；聊天档案、旧错题笔记、派生事实和 Codex JSONL 与原始消息模型分开。`list_legacy_sources`、`search_legacy_sources`、`fetch_legacy_source` 提供只读检索和有界原文读取。
 - **Wrong Answers**：原始图片或文档作为证据，Agent 提供分析，Gateway 按权限保存来源和带版本的分析，并记录 provenance。不同 MCP Agent 使用同一套 `study-workflow://wrong-answer` 工作流。
 - **Assets & Documents**：Gateway 对明确提交的来源做边界检查、哈希与登记；原始证据和派生文字保持可区分。
 
 更完整的组件职责和安全约束见 [架构说明](docs/architecture.md)、[隐私边界](docs/privacy-boundary.md) 和 [ADR](docs/adr/)；已验证的错题链路证据见 [Real Wrong Answer E2E checkpoint](docs/real-wrong-answer-e2e-checkpoint.md)。
 
-`v0.2.0 — Legacy Migration` 的范围是 V1 来源迁移与 V2 cutover。真实迁移、恢复、幂等重跑及 MCP 检索证据见 [P11 completion](docs/p11-real-migration-completion.md)。旧错题的完整业务语义和 Codex canonical conversation normalization 仍有明确限制；ChatGPT/Gemini/Hermes/WorkBuddy 统一 History 扩展未被报告为已完成。既有 MCP 客户端更新后需重连以加载私有配置和新增只读工具。
+`v0.2.0 — Legacy Migration` 的历史范围是 V1 来源迁移与 V2 cutover，证据见 [P11 completion](docs/p11-real-migration-completion.md)。P13 在正式 `v0.6.0` 基线上推进已取得来源的补齐与规范化，当前本地结果见 [P13 checkpoint](docs/p13-history-completion-checkpoint.md)、[source-only ingestion](docs/history-source-ingestion.md) 和 [canonical History](docs/history-normalization.md)。P13 尚未发布；旧错题的完整业务语义仍保留原有限制。
 
 ## 安装
 
@@ -60,6 +60,17 @@ python .codex/setup_mcp.py
 
 如不使用 Codex Desktop，可通过 stdio MCP client 启动同一 Gateway；本项目当前不启用 HTTP listener 或公开服务端点。
 
+### 后续 v0.7.0 升级流程
+
+当前正式版本仍为 `v0.6.0`。待 `v0.7.0` 正式发布后，按以下顺序升级：
+
+1. 通过已配置 Gateway 创建并验证私有备份，保留现有配置；恢复步骤见 [private recovery](docs/p13-recovery.md)。
+2. 切换到正式发布的 checkout，在仓库根目录运行 `uv sync --project . --frozen --no-editable`；需要的 optional extras 按既有配置保留。
+3. 在被忽略的私有 Gateway 配置中同步 `[gateway].version`，保留原有数据位置和 capability 设置。
+4. 重载各 Host 的 MCP，在新会话用原生 `study_system` 验证 `health_report`、来源检索、canonical History 读取与 no-result。
+
+隔离恢复副本只用于恢复验收，不能配置成第二份权威数据层。升级不会自动导入或删除历史来源。
+
 ## 测试
 
 ```powershell
@@ -86,7 +97,11 @@ uv run --no-sync --project . --extra dev pytest -q
 
 ## 状态
 
-P1–P10 已完成；P11 真实来源迁移与 V2 cutover Gate 已 PASS，P11 发布版本为 `v0.2.0`。当前证据与限制见 [当前状态](docs/current-state.md) 和 [P11 completion](docs/p11-real-migration-completion.md)。P12 Step 1 Obsidian Visualization Gate 已 PASS，版本为 `v0.3.0`；真实 Vault、回读、稳定重建与人工 GUI 证据见 [P12 Step 1](docs/p12-step1-real-projection-checkpoint.md)。项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
+当前正式基线为 **`v0.6.0 — Cross-Agent Integration`**，P12 已完成，既有 Codex、WorkBuddy、Hermes Host PASS 保留。P13 是尚未发布的本地工程与私有迁移：已验证 1,776 个来源、487 个 canonical conversations、7,334 条 distinct messages、494 个 source-specific views；1,323 个来源完全保留 source-only。
+
+ChatGPT 官方导出为 `acquisition_pending`，到达后做增量幂等补录。WorkBuddy 的 P13 History Host 验收为 `DEFERRED`，不阻塞后续工作。真实 V2 backup 已获 `PASS_NATIVE`；isolated restore、V1 unique-data audit 和 logical retirement 待执行。生产 writable ingress 将复用 Gateway，验收尚未完成。V1 physical deletion 必须另获 owner 明确确认。当前证据与限制见 [当前状态](docs/current-state.md) 和 [P13 checkpoint](docs/p13-history-completion-checkpoint.md)；项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
+
+P11 与 P12 Step 1 的历史迁移、投影和人工 GUI 证据分别见 [P11 completion](docs/p11-real-migration-completion.md) 和 [P12 Step 1](docs/p12-step1-real-projection-checkpoint.md)。
 
 ## Hermes Integration（v0.5.0）
 
@@ -96,7 +111,7 @@ provenance、Host 退出/重启与 isolated Projection 证据见 [Hermes checkpo
 生产与隔离服务器不同名；Hermes Memory/profile disabled，session/runtime metadata 不作为 V2 权威层。
 配置和已验证 DeepSeek 会话入口见 [Host setup](docs/hermes-host-setup.md)，
 范围与发布检查见 [v0.5.0 notes](docs/releases/v0.5.0.md)。Desktop shell live reload/GUI restart
-未单独验收；未执行 Step 4 跨 Agent 矩阵或会话迁移。
+未单独验收；Step 4 跨 Agent 矩阵与会话迁移不属于该 v0.5.0 发布范围，后续状态见上文。
 
 ## WorkBuddy Integration（v0.4.0）
 
@@ -104,12 +119,12 @@ P12 Step 2 的真实 WorkBuddy 验收与隔离 Projection 证据见
 [WorkBuddy Integration checkpoint](docs/p12-step2-workbuddy-checkpoint.md)。
 WorkBuddy 5.6.2 经正式 MCP 使用同一 Gateway；读、计数、存在性判断与写入均经过 Gateway。
 隔离 controlled-write、版本/幂等/冲突、reported/unverified provenance、真实重启和隔离 Projection Gate 全部 PASS。
-Basic Memory disabled；production 入口与隔离测试入口分开，未开展 WorkBuddy 聊天历史迁移。
+Basic Memory disabled；production 入口与隔离测试入口分开。WorkBuddy 聊天历史迁移不属于该 v0.4.0 发布范围；P13 本地来源与 Host 验收状态见上文。
 发布范围、验证与限制见 [v0.4.0 release notes](docs/releases/v0.4.0.md)。
 
 ## Obsidian Visualization（v0.3.0 起）
 
-既有 Gateway → collector → renderer → writer 将真实数据投影到私有 Vault 的 `V2Projection`，通过 manifest 管理所有权与安全重建。Dashboard 提供四类 Sources、Wrong Answers、Knowledge Points、Error Types、Study 相对引用以及 Asset/Document logical refs。来源页面是元数据视图，不复制聊天正文、不推断消息角色或会话边界；当前 canonical messages 为 0。Study 保持单一权威来源，不复制或重写原文件。
+既有 Gateway → collector → renderer → writer 将真实数据投影到私有 Vault 的 `V2Projection`，通过 manifest 管理所有权与安全重建。Dashboard 提供四类 Sources、Wrong Answers、Knowledge Points、Error Types、Study 相对引用以及 Asset/Document logical refs。来源页面是元数据视图，不复制聊天正文、不推断消息角色或会话边界；P12 Step 1 验收时 canonical messages 为 0，后续 P13 canonical History 保持独立 derived layer。Study 保持单一权威来源，不复制或重写原文件。
 
 批量读取需在忽略的私有配置中显式启用 `projection`。在仓库根目录执行：
 

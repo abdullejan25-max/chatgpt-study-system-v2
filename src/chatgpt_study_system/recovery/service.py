@@ -1,5 +1,5 @@
 """Full snapshots and isolated restore, exclusively executed by the Gateway."""
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from dataclasses import replace
 import hashlib
 import os
@@ -14,7 +14,7 @@ from ..contracts import GatewayError
 from ..migration.inventory import InventoryError
 from ..provenance import utc_now
 from .io import (copy_file,digest_file,encoded,fail,files,read_json,relative,reserve,
-                 safe,signature,sqlite_copy,sqlite_proof,sqlite_size,write_json)
+                 safe,signature,sqlite_copy,sqlite_proof,sqlite_size,restore_capacity,write_json)
 
 
 def operation(method):
@@ -93,12 +93,14 @@ def plan(g):
     root=roots(g);entries,exclusions=inventory(g)
     ancestor=root
     while not ancestor.exists(): ancestor=ancestor.parent
-    required=sum(sqlite_size(e['source']) if e['database'] else e['signature'][2] for e in entries)
+    sizes=[(e,sqlite_size(e['source']) if e['database'] else e['signature'][2]) for e in entries]
+    required=sum(size for _,size in sizes)
     components={}
-    for entry in entries:
+    for entry,size in sizes:
         category=entry['relative'].split('/')[0]
-        components[category]=components.get(category,0)+(sqlite_size(entry['source']) if entry['database'] else entry['signature'][2])
+        components[category]=components.get(category,0)+size
     state={'published_directories':0,'incomplete_attempts':0,'incomplete_bytes':0}
+    published_bytes=0
     snapshots=safe(root/'snapshots',directory=True,private=True)
     if snapshots.exists():
         attempts=list(snapshots.iterdir())
@@ -110,8 +112,12 @@ def plan(g):
                 state['incomplete_bytes']+=sum(sig[2] for _,_,sig in files(attempt))
             else:
                 key(attempt.name);state['published_directories']+=1
+                published_bytes+=sum(sig[2] for _,_,sig in files(attempt))
     return {'file_count':len(entries),'required_bytes':required,'free_bytes':shutil.disk_usage(ancestor).free,
             'component_bytes':components,'recovery_state':state,
+            'published_snapshot_bytes':published_bytes,
+            'restore_capacity':{**restore_capacity(root,required,components.get('qmd-index.sqlite3',0)),
+                                'estimate_basis':'configured_inputs'},
             'excluded_sidecar_paths':len(exclusions),'configured_study':g.config.study_root is not None,
             'configured_assets':g.config.asset_root is not None,'configured_ledger':g.config.recovery_sidecar_root is not None}
 
@@ -284,11 +290,67 @@ def prepare_restore_config(g,target):
     return path
 
 
+def domain_readback(isolated,manifest):
+    """Locate bounded IDs inside the restored adapter; prove reads through Gateway APIs."""
+    item=next((v for v in manifest['files'] if v['relative']=='assets.sqlite3'),None)
+    tables=item['sqlite_proof']['tables'] if item else {}
+    count=lambda name:tables.get(name,{}).get('rows',0)
+    asset_count=count('assets');document_count=count('documents')
+    source_count=count('wrong_sources');analysis_count=count('wrong_analyses')
+    default='empty' if item else 'not_configured'
+    proof={'assets':{'state':default,'records':asset_count,'readback_verified':False},
+           'documents':{'state':default,'records':document_count,'readback_verified':False,'no_result_verified':False},
+           'wrong_answers':{'state':default,'source_records':source_count,'analysis_records':analysis_count,
+                            'source_readback_verified':False,'analysis_version_readback_verified':False,
+                            'analysis_versions_read_back':0,'no_result_verified':False}}
+    if item is None:return proof
+    document_id=asset_id=source=None
+    # No content/title is inspected here. Counts already have whole-table logical
+    # proof; these read-only LIMIT 1 lookups merely choose API readback candidates.
+    with closing(isolated._documents()._connect()) as c:
+        c.execute('BEGIN')
+        if document_count:document_id=c.execute('SELECT uri FROM documents ORDER BY uri LIMIT 1').fetchone()[0]
+        if asset_count:asset_id=c.execute('SELECT uri FROM assets ORDER BY uri LIMIT 1').fetchone()[0]
+        if source_count:
+            source=c.execute('SELECT s.source_id,(SELECT MAX(version) FROM wrong_analyses a WHERE a.source_id=s.source_id) AS latest '
+                             'FROM wrong_sources s ORDER BY latest DESC,s.source_id LIMIT 1').fetchone()
+    query='P13_RECOVERY_NO_RESULT_'+uuid4().hex
+    if document_id:
+        document=isolated.fetch_document(document_id)['document']
+        if document['document_uri']!=document_id:fail()
+        asset_id=document['asset_uri']
+        proof['documents'].update(state='verified',readback_verified=True)
+    else:
+        result=isolated.search_documents(query,limit=1)
+        if result['total']!=0 or result['results']:fail()
+        proof['documents']['no_result_verified']=True
+    if asset_id:
+        asset=isolated.fetch_asset(asset_id,length=1)
+        if asset['asset_uri']!=asset_id or asset['size']<1 or not asset['content_base64']:fail()
+        proof['assets'].update(state='verified',readback_verified=True)
+    wrong=proof['wrong_answers']
+    if source:
+        bundle=isolated.get_wrong_answer_bundle(source[0],limit=1)
+        if bundle['source']['source_id']!=source[0]:fail()
+        wrong.update(state='source_only',source_readback_verified=True)
+        if source[1] is not None:
+            if bundle['total']<1 or len(bundle['analyses'])!=1 or bundle['analyses'][0]['version']!=source[1]:fail()
+            wrong.update(state='verified',analysis_version_readback_verified=True,analysis_versions_read_back=1)
+        elif bundle['total']!=0 or bundle['analyses']:fail()
+    else:
+        result=isolated.search_wrong_answers(query,limit=1)
+        if result['total']!=0 or result['results']:fail()
+        wrong['no_result_verified']=True
+    return proof
+
+
 def restore_snapshot(g,folder,manifest,digest):
     root=roots(g);target=safe(root/'restores'/manifest['snapshot_key'],directory=True,private=True)
+    capacity=restore_capacity(root,sum(item['bytes'] for item in manifest['files']),
+                              next((v['bytes'] for v in manifest['files'] if v['relative']=='qmd-index.sqlite3'),0),
+                              reuse=target.exists())
+    if not capacity['sufficient']:fail('STORAGE_UNAVAILABLE')
     if not target.exists():
-        required=sum(item['bytes'] for item in manifest['files'])+64*1024*1024
-        if shutil.disk_usage(root).free<required: fail('STORAGE_UNAVAILABLE')
         target.parent.mkdir(parents=True,exist_ok=True);safe(target.parent,directory=True,private=True)
         target.mkdir();(target/'payload').mkdir()
         for component,included in manifest['components'].items():
@@ -306,11 +368,14 @@ def restore_snapshot(g,folder,manifest,digest):
         if not study_verified: fail()
     proof=history_proof(isolated)
     if proof!=manifest['history_proof']: fail()
+    domains=domain_readback(isolated,manifest)
     ledger=next((i for i in manifest['files'] if i['relative']=='sidecar/ledger.sqlite3'),None)
     if ledger and sqlite_proof(target/'payload/sidecar/ledger.sqlite3')!=ledger['sqlite_proof']: fail()
-    receipt={'verified':True,'manifest_sha256':digest,'history_proof':proof,'ledger_verified':ledger is not None,'study_read_verified':study_verified}
+    receipt={'verified':True,'manifest_sha256':digest,'history_proof':proof,'ledger_verified':ledger is not None,
+             'study_read_verified':study_verified,'domain_readback':domains}
     if not (target/'restore-proof.json').exists(): write_json(target/'restore-proof.json',receipt)
-    return {'isolated_restore_verified':True,'ledger_verified':ledger is not None,'study_read_verified':study_verified,'restore_ref':'recovery://restore/'+manifest['snapshot_key']}
+    return {'isolated_restore_verified':True,'ledger_verified':ledger is not None,'study_read_verified':study_verified,
+            'restore_capacity':capacity,'domain_readback':domains,'restore_ref':'recovery://restore/'+manifest['snapshot_key']}
 
 
 @operation

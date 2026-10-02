@@ -20,13 +20,17 @@ from chatgpt_study_system.adapters.history_sources import SourceEvidenceStore, S
 from chatgpt_study_system.adapters.documents import SQLiteDocumentStore, DocumentInput
 
 
-def setup(tmp_path):
+def setup(tmp_path, *, documents=True):
     production=tmp_path/'production';production.mkdir()
     study=production/'study';study.mkdir();(study/'invented.txt').write_bytes(b'Invented Study evidence')
     objects=production/'objects';objects.mkdir()
     db=production/'history.sqlite3';SQLiteHistoryBackend(db).initialize()
     assets=production/'assets.sqlite3';store=SQLiteDocumentStore(objects,assets)
-    store.ingest_documents([DocumentInput('Invented document','text/plain',b'Invented text')])
+    if documents:
+        store.ingest_documents([DocumentInput('Invented document','text/plain',b'Invented text')])
+    else:
+        with closing(store._connect(write=True)) as c:
+            store._schema(c);c.commit()
     sidecar=tmp_path/'sidecar';sidecar.mkdir()
     inbox=sidecar/'source-inbox';inbox.mkdir()
     with closing(sqlite3.connect(sidecar/'ledger.sqlite3')) as c:
@@ -396,3 +400,83 @@ def test_plan_accounts_for_interrupted_attempts_without_claiming_verified(tmp_pa
     stage=g.config.recovery_root/'snapshots/planned-two.partial-invented';stage.mkdir()
     (stage/'partial.bin').write_bytes(b'x'*256)
     assert g.recovery_snapshot_plan()['recovery_state']=={'published_directories':1,'incomplete_attempts':1,'incomplete_bytes':256}
+
+
+def test_restore_requires_reserve_above_copy_size_before_creating_target(tmp_path,monkeypatch):
+    from chatgpt_study_system.recovery import service
+    g=setup(tmp_path);snapshot=g.create_recovery_snapshot('reserved-space')
+    monkeypatch.setattr(service.shutil,'disk_usage',lambda _:type('Capacity',(),{'free':snapshot['total_bytes']+128*1024*1024})())
+    with pytest.raises(GatewayError):g.verify_recovery_snapshot('reserved-space',restore=True)
+    assert not (g.config.recovery_root/'restores/reserved-space').exists()
+
+
+def test_plan_reports_restore_budget_and_published_allocation_without_private_refs(tmp_path):
+    g=setup(tmp_path);snapshot=g.create_recovery_snapshot('budget-one')
+    plan=g.recovery_snapshot_plan();budget=plan['restore_capacity']
+    assert budget['restore_reserve_bytes']>=4*1024**3
+    assert budget['restore_temp_bytes']>=64*1024**2 and budget['restore_wal_bytes']>=64*1024**2
+    assert budget['restore_required_bytes']==budget['restore_copy_bytes']+budget['restore_temp_bytes']+budget['restore_wal_bytes']+budget['restore_reserve_bytes']
+    assert plan['published_snapshot_bytes']>=snapshot['total_bytes']
+    assert str(tmp_path) not in json.dumps(plan)
+
+
+def test_existing_restore_does_not_budget_the_payload_copy_twice(tmp_path,monkeypatch):
+    from chatgpt_study_system.recovery import service
+    g=setup(tmp_path);g.create_recovery_snapshot('reuse-budget');g.verify_recovery_snapshot('reuse-budget',restore=True)
+    monkeypatch.setattr(service.shutil,'disk_usage',lambda _:type('Capacity',(),{'free':4*1024**3+128*1024**2})())
+    result=g.verify_recovery_snapshot('reuse-budget',restore=True)
+    assert result['restore_capacity']['restore_copy_bytes']==0
+    assert result['restore_capacity']['sufficient']
+
+
+def test_isolated_domain_readback_uses_formal_api_and_preserves_analysis_versions(tmp_path,monkeypatch):
+    g=setup(tmp_path);g.capabilities=frozenset({'read','ingest','write','admin'})
+    doc=g.search_documents('Invented',limit=1)['results'][0]['document_uri']
+    source=g.register_wrong_answer_source(doc,'Invented arithmetic question','Invented incorrect answer')['source']
+    analysis={'error_type':'invented','knowledge_points':['invented arithmetic'],'reasoning':'Invented explanation',
+              'correct_solution':'Invented correction','review_advice':'Invented practice'}
+    g.save_wrong_answer_analysis(source['source_id'],analysis,[doc],[],'invented-analysis-one')
+    g.update_wrong_answer_analysis(source['source_id'],{**analysis,'review_advice':'Invented second practice'},[doc],[],
+                                   'invented-analysis-two',expected_version=1)
+    g.create_recovery_snapshot('domain-one')
+    seen={name:0 for name in ('fetch_document','fetch_asset','get_wrong_answer_bundle')}
+    for name in seen:
+        method=getattr(Gateway,name)
+        def checked(self,*args,_method=method,_name=name,**kwargs):
+            if self is not g:
+                assert self.config.asset_database.is_relative_to(g.config.recovery_root/'restores/domain-one')
+                seen[_name]+=1
+            return _method(self,*args,**kwargs)
+        monkeypatch.setattr(Gateway,name,checked)
+    result=g.verify_recovery_snapshot('domain-one',restore=True);proof=result['domain_readback']
+    assert proof['assets']['state']=='verified' and proof['assets']['readback_verified']
+    assert proof['documents']['state']=='verified' and proof['documents']['readback_verified']
+    wrong=proof['wrong_answers']
+    assert wrong['source_records']==1 and wrong['analysis_records']==2
+    assert wrong['source_readback_verified'] and wrong['analysis_version_readback_verified']
+    assert wrong['analysis_versions_read_back']==1
+    assert all(seen.values())
+    private=json.dumps(result)
+    assert str(tmp_path) not in private and source['source_id'] not in private and doc not in private
+    assert 'Invented explanation' not in private
+    assert g.get_wrong_answer_bundle(source['source_id'])['total']==2
+
+
+def test_empty_domains_cannot_claim_object_or_analysis_version_readback(tmp_path):
+    g=setup(tmp_path,documents=False);g.create_recovery_snapshot('empty-domains')
+    proof=g.verify_recovery_snapshot('empty-domains',restore=True)['domain_readback']
+    assert proof['assets']['state']=='empty' and proof['assets']['records']==0 and not proof['assets']['readback_verified']
+    assert proof['documents']['state']=='empty' and proof['documents']['no_result_verified'] and not proof['documents']['readback_verified']
+    wrong=proof['wrong_answers']
+    assert wrong['state']=='empty' and wrong['source_records']==0 and wrong['analysis_records']==0
+    assert wrong['no_result_verified'] and not wrong['analysis_version_readback_verified']
+
+
+def test_source_only_wrong_answer_is_not_reported_as_analysis_version_verified(tmp_path):
+    g=setup(tmp_path)
+    doc=g.search_documents('Invented',limit=1)['results'][0]['document_uri']
+    g.register_wrong_answer_source(doc,'Invented question','Invented answer')
+    g.create_recovery_snapshot('source-only-domains')
+    wrong=g.verify_recovery_snapshot('source-only-domains',restore=True)['domain_readback']['wrong_answers']
+    assert wrong['state']=='source_only' and wrong['source_readback_verified']
+    assert wrong['analysis_records']==0 and not wrong['analysis_version_readback_verified']

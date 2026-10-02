@@ -53,13 +53,56 @@ P11 adds immutable legacy source documents alongside raw History messages. `lega
 
 See the accepted [ADRs](adr/) for decision context and consequences.
 
+## P13 history completion and recovery (local, not released)
+
+The formal release baseline remains v0.6.0. P13 extends the configured History
+store with immutable source evidence and a separate deterministic canonical
+derived layer. Adapters map only proven boundaries, roles, ordering and optional
+occurrence time. Ambiguous or unsupported inputs remain source-only; normalization
+does not use an LLM, replace source bytes or infer attachment files. Stable
+identities exclude private paths and migration clocks, and source-specific views
+preserve independent export order and conversation branches. Import and
+normalization retries reuse evidence, canonical identities and provenance.
+
+The acquired-data verification covers 1,776 sources, 487 canonical conversations,
+7,334 distinct messages and 494 source-specific views; 1,323 sources remain wholly
+source-only. Native Codex Desktop and Hermes History reads/no-result have passed.
+ChatGPT is acquisition_pending for incremental ingestion after its export arrives.
+WorkBuddy's P13 History Host acceptance is DEFERRED and nonblocking; its established
+P12 integration/cross-agent PASS remains valid. Neither pending acquisition nor
+deferred Host acceptance is claimed as a real-data or Host PASS.
+
+Agents perform all V2 reads, counts, existence checks and writes through configured
+native Gateway/MCP tools, including recovery targets. Source ingestion and
+normalization require explicit read+ingest capabilities; recovery requires the
+existing admin capability and trusted private roots. Offline utilities may prepare
+selected legacy inputs and their private migration ledger, but cannot replace
+Agent Gateway access with direct V2 database or store inspection.
+
+The real V2 backup is PASS_NATIVE: 3,778 files / 44,380,473,111 bytes, supported by
+actual native tool traces and positive Agent usage. Snapshot/restore operations
+preserve source and canonical identity, provenance, configured Study/Assets data,
+and private ledger/configuration evidence. The isolated restore, V1 unique-data
+audit and logical retirement remain pending. A restore target is a verification
+copy and never a second authoritative data layer. Production writable ingress
+will reuse existing Gateway permissions, versioning and provenance; its current
+acceptance is pending. Physical V1 deletion requires separate owner confirmation.
+
+Protocol details are documented in [source ingestion](history-source-ingestion.md),
+[canonical History](history-normalization.md) and [private recovery](p13-recovery.md).
+Actual Gate states live in the [P13 checkpoint](p13-history-completion-checkpoint.md).
+Public code, packages and fixtures contain no real sources, transcripts, ledger,
+receipts, stores, configuration or backups. The future release upgrade sequence
+is backup, frozen/non-editable install, private Gateway version update, then Host
+reload and native readback; the current P13 engineering is not a v0.7.0 release.
+
 ## Obsidian projection (P12 Step 1)
 
 The existing collector consumes bounded `projection_snapshot` pages from configured Gateway stores. Canonical History, Wrong Answers and immutable imported source documents use independent append-only watermarks, not a cross-store atomic snapshot. The separate `projection` capability controls bulk enumeration; ordinary read does not include it. Legacy source pages contain allowlisted metadata/provenance and logical asset references only. Source documents remain distinct from canonical messages, with unknown role/author/conversation boundaries.
 
 The pure renderer produces deterministic Markdown maps. The writer restricts output to a dedicated manifest-owned `V2Projection`, validates Windows-safe paths, rejects repository overlap and unowned collisions, preserves user notes and rolls back handled failures through hard-link backups. It does not guarantee crash-atomic directory replacement. The explicit build entrypoint loads the official private config, requires an existing Vault containing the authoritative Study root, refuses Study/output overlap and reparse points, indexes original Study through relative links, and verifies read-back plus a second fresh collection/rebuild. Private output and raw assets/documents never enter Git or release packages.
 
-Real integration, Windows/Unicode and owner GUI acceptance are recorded in [P12 Step 1](p12-step1-real-projection-checkpoint.md). Metadata-only source views and independent store consistency points are deliberate limitations. WorkBuddy and Hermes integrations are recorded below; real Cross-Agent acceptance is recorded in Step 4. Canonical normalization, deletion and incremental projection remain deferred.
+Real integration, Windows/Unicode and owner GUI acceptance are recorded in [P12 Step 1](p12-step1-real-projection-checkpoint.md). Metadata-only source views and independent store consistency points are deliberate limitations. WorkBuddy and Hermes integrations are recorded below; real Cross-Agent acceptance is recorded in Step 4. Canonical normalization is now validated in the separate P13 History layer; this does not assert refreshed Projection coverage. Physical deletion and incremental projection remain deferred.
 
 ## Hermes integration (P12 Step 3, v0.5.0)
 
@@ -82,8 +125,9 @@ the Projection is derived and provenance is its established privacy summary.
 WorkBuddy performs V2 reads, counts, existence checks and writes through the
 same Gateway. The project rule points to canonical tools/workflow; it contains
 no domain implementation. Caller identity remains reported/unverified.
-Basic Memory is disabled without deletion or history migration. An independent
-temporary `study_system_p12_isolated` entry avoids relying on unresolved
+At the P12 Step 2 boundary, Basic Memory was disabled without deletion or history
+migration; later P13 source acquisition remains a separate migration operation.
+An independent temporary `study_system_p12_isolated` entry avoids relying on unresolved
 Desktop 5.6.2 same-name configuration precedence; the managed production
 entry is preserved. Real Host evidence and its limits are recorded in the
 [Step 2 checkpoint](p12-step2-workbuddy-checkpoint.md).

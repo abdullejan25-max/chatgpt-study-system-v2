@@ -8,6 +8,8 @@ from pathlib import Path
 import re
 import sqlite3
 import stat
+import shutil
+import tempfile
 from ..adapters.documents import _path_has_reparse_point, _stream_signature
 from ..contracts import GatewayError
 from ..migration.inventory import _open_verified_source
@@ -167,6 +169,29 @@ def sqlite_size(path):
     with closing(sqlite3.connect(path.as_uri()+'?mode=ro',uri=True)) as c:
         c.execute('BEGIN')
         return c.execute('PRAGMA page_count').fetchone()[0]*c.execute('PRAGMA page_size').fetchone()[0]
+
+
+def restore_capacity(root,payload_bytes,qmd_index_bytes=0,*,reuse=False):
+    """Conservative additional space, including the disposable QMD runtime volume."""
+    ancestor=Path(root)
+    while not ancestor.exists(): ancestor=ancestor.parent
+    temporary=Path(tempfile.gettempdir())
+    same_volume=ancestor.stat().st_dev==temporary.stat().st_dev
+    reserve_bytes=max(4*1024**3,(payload_bytes+9)//10)
+    # Restored History/Assets are read-only. Only the copied QMD index is writable;
+    # allow another full index for its WAL plus bounded cache/receipt overhead.
+    temporary_bytes=qmd_index_bytes+64*1024**2
+    wal_bytes=max(64*1024**2,qmd_index_bytes)
+    copy_bytes=0 if reuse else payload_bytes
+    required=copy_bytes+temporary_bytes+wal_bytes+reserve_bytes
+    temporary_required=0 if same_volume else temporary_bytes+wal_bytes+reserve_bytes
+    free=shutil.disk_usage(ancestor).free;temporary_free=shutil.disk_usage(temporary).free
+    return {'restore_payload_bytes':payload_bytes,'restore_copy_bytes':copy_bytes,
+            'restore_temp_bytes':temporary_bytes,'restore_wal_bytes':wal_bytes,
+            'restore_reserve_bytes':reserve_bytes,'restore_required_bytes':required,'restore_free_bytes':free,
+            'temporary_volume_required_bytes':temporary_required,'temporary_volume_free_bytes':temporary_free,
+            'temporary_volume_same_as_restore':same_volume,
+            'sufficient':free>=required and temporary_free>=temporary_required}
 
 
 @contextmanager

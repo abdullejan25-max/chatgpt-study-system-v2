@@ -1,5 +1,34 @@
 # 当前状态
 
+## P13 — History Completion & Recovery（本地执行中，未发布）
+
+正式基线仍为 **`v0.6.0 — Cross-Agent Integration`**。以下 P13 结果是本地工程
+与私有数据验收，不代表 `v0.7.0` 已发布；既有 P11/P12 PASS 保留，历史数字见下文。
+
+已取得来源的 source-only completion、dedup、幂等重跑与 deterministic normalization
+已验证：1,776 个 persisted sources、487 个 canonical conversations、7,334 条 distinct
+messages、494 个 source-specific views，1,323 个来源完全保留 source-only。
+原始证据不被 canonical 覆盖，未知角色、时间、顺序或会话边界继续保留不确定状态。
+Codex Desktop 与 Hermes native Agent 的同一 History 读取和 no-result 已 PASS。
+
+ChatGPT 官方导出为 `acquisition_pending`，不作为当前 blocker；到达后做增量幂等补录。
+WorkBuddy 的 P13 History Host 验收为 `DEFERRED`，不阻塞后续推进，既有 P12 WorkBuddy
+integration 与 cross-agent PASS 不变。这不将 deferred 验收冒充为 P13 Host PASS。
+
+真实 V2 backup 状态为 **`PASS_NATIVE`**：3,778 files / 44,380,473,111 bytes。
+实际配置的原生 MCP 调用、完整 Host tool trace 与正数 Agent usage 证明备份完成；
+私有 manifest、checksum、ledger、配置和原始数据全部留在 Git 外。
+**Isolated restore、V1 unique-data audit 和 logical retirement 仍待执行**。
+恢复副本只用于隔离验收，不成为第二份权威数据层；备份完成不等于恢复或退役完成。
+生产 writable ingress 将复用正式 Gateway 与现有权限/版本/provenance 路径，当前尚未
+完成其验收。V1 physical deletion 必须等待 owner 单独明确确认。
+
+当前 Gate 以 [P13 checkpoint](p13-history-completion-checkpoint.md) 为准；通用协议见
+[source-only ingestion](history-source-ingestion.md)、[canonical History](history-normalization.md)
+和 [private recovery](p13-recovery.md)。后续 v0.7.0 升级顺序见
+[README 升级流程](../README.md#后续-v070-升级流程)：先备份，再 frozen/non-editable
+安装、同步私有 Gateway version、重载 Host 并用原生 MCP 验证。
+
 ## P12 Step 4 — Cross-Agent Integration（v0.6.0，25/25 Gate PASS）
 
 从 live v0.5.0 main/tag 继续，真实 Hermes 0.20.0 → WorkBuddy 5.7.3 → Codex CLI
@@ -51,7 +80,7 @@ package、Gateway 配置与 MCP metadata 同步到 0.4.0，独立 installed-pack
 [v0.4.0 release notes](releases/v0.4.0.md) 为准。
 下文 P11 / Step 1 版本与验证数字是历史基线，不代表当前 package 版本。
 
-更新时间：2026-10-01。P1–P10 已完成；**P11 V1 来源迁移与 V2 cutover Gate：PASS**。P11 发布版本为 `0.2.0`；[正式 tag/Release](https://github.com/abdullejan25-max/chatgpt-study-system-v2/releases/tag/v0.2.0) 对应本次迁移范围。最终默认/dev 环境测试为 605 passed、12 skipped；完整验收见 [P11 Real Migration Completion](p11-real-migration-completion.md)。
+P11 历史 checkpoint：P1–P10 已完成；**P11 V1 来源迁移与 V2 cutover Gate：PASS**。P11 发布版本为 `0.2.0`；[正式 tag/Release](https://github.com/abdullejan25-max/chatgpt-study-system-v2/releases/tag/v0.2.0) 对应该次迁移范围。最终默认/dev 环境测试为 605 passed、12 skipped；完整验收见 [P11 Real Migration Completion](p11-real-migration-completion.md)。
 
 V1 既有 1,209 项对账：150 项新增、1,052 项复用、7 项 skip、0 error。537 个 Study Markdown 与 511 个 Documents 原地复用。55 篇聊天档案、28 篇错题档案、1 条派生事实以明确类型保留原始字节；70 张图片中新增 66 个 Asset、复用 4 个内容重复。另有 82 个已验证 Codex JSONL 来源文件迁入，独立于 V1 对账。来源文档总数为 166，不能当作会话或消息数量。
 
@@ -59,15 +88,15 @@ V1 既有 1,209 项对账：150 项新增、1,052 项复用、7 项 skip、0 err
 
 旧错题有 97 个明确文档图片引用，覆盖 70 张图；完整业务语义仍有 28 篇 unresolved。未猜测题目、答案、图片角色或分析；现有 active Wrong Answer 为 5 个 Source、5 个 Analysis，未改变。Atomic Fact 是 derived source，Codex 是 source-only JSONL；canonical raw History message import 为 0。
 
-私有配置选择 V2 为本项目权威运行系统。V1 未删除；[Deletion Candidate Report](v1-deletion-candidates.md) 将 Study 保留为权威来源，将原件和备份保留为档案。当前 Codex 对话已运行的 MCP 连接仍缓存旧 not_configured 配置与旧工具列表，需要重连；新进程验证不代表该旧连接已重载。
+P11 cutover 时，私有配置选择 V2 为本项目权威运行系统。V1 未删除；[Deletion Candidate Report](v1-deletion-candidates.md) 将 Study 保留为权威来源，将原件和备份保留为档案。该次 cutover 的旧 Codex MCP 连接缓存 not_configured 配置与旧工具列表，需重连；这是历史 Host 状态，当前 P13 原生读取结果见上文。
 
-ChatGPT/Gemini 的私有 registry 保留 WAITING_FOR_USER；Hermes/WorkBuddy 后续来源规范化和客户端验证 deferred，不冒充迁移完成，也不作为本次 V1 迁移 blocker。P11 完成时，P12 Obsidian、WorkBuddy、Hermes 与合成跨客户端成果仅为准备状态；见 [P12 Host Compatibility](p12-host-compatibility.md) 与 [P12 Obsidian Reality Audit](p12-obsidian-reality-audit.md)。
+P11 完成时，ChatGPT/Gemini 的私有 registry 保留 WAITING_FOR_USER；Hermes/WorkBuddy 后续来源规范化和客户端验证 deferred，不冒充迁移完成，也不作为该次 V1 迁移 blocker。P12 Obsidian、WorkBuddy、Hermes 与合成跨客户端成果当时仅为准备状态；见 [P12 Host Compatibility](p12-host-compatibility.md) 与 [P12 Obsidian Reality Audit](p12-obsidian-reality-audit.md)。这些历史状态由后续 P12/P13 checkpoint 续接。
 
 架构保持 Agent thinks; Gateway executes。新增 migration 是本机内部、受领域校验的确定性写路径；新增 MCP API 只有来源读取，未开放 arbitrary SQL 或通用 Agent import。真实配置、数据、journal、源 hash 和恢复材料均留在 Git 外。v0.1.0 与旧发布历史未修改。
 
 ## P12 Step 1 — Obsidian Visualization
 
-**Gate：PASS；目标发布版本 `0.3.0`。** 复用既有 collector、renderer 和 manifest-owned writer，新增 opt-in `legacy_sources` metadata 分页与现有 Vault 构建入口。166 个来源按 82 / 55 / 28 / 1 分类；canonical messages 保持 0；5 个 Wrong Answer Source 与 5 个 Analysis 未改变。
+**历史 Gate：PASS；发布版本 `0.3.0`。** 复用既有 collector、renderer 和 manifest-owned writer，新增 opt-in `legacy_sources` metadata 分页与现有 Vault 构建入口。166 个来源按 82 / 55 / 28 / 1 分类；该次验收 canonical messages 为 0；5 个 Wrong Answer Source 与 5 个 Analysis 未改变。
 
 真实私有 Vault 生成 184 个 Markdown 文件及 manifest；逐文件 UTF-8 回读、相对链接和第二次独立构建字节一致。当前 Study root 为 1,146 files / 564 Markdown，索引引用原文件，大小/mtime 前后不变，不复制 Study。2026-10-01 用户人工确认 Dashboard、Sources、Wrong Answers、Knowledge Points、Error Types、Study 和关系图谱正常，V1/V2 共存边界清楚，无明显乱码、断链、重复页、私人路径泄露或原文异常。
 

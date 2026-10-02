@@ -28,6 +28,19 @@ Use actual configured native MCP tools:
    database schema/row multiset, source/canonical identity and provenance, ledger,
    and the isolated Study no-result query. Production is never overwritten.
 
+The plan separately reports published snapshot allocation and the additional
+restore budget. That budget includes the full payload copy, disposable QMD
+index/cache, a writable-index WAL estimate, and a reserve of at least 4 GiB or
+10% of payload size, whichever is larger. It checks the system temporary volume
+as well as the configured restore volume. Existing restore targets budget no
+second payload copy, but still require temporary space and the reserve.
+
+Restore readback uses the isolated Gateway's formal Asset, Document and Wrong
+Answer APIs after whole-table logical digest verification. Aggregate states
+distinguish a retrieved object/version, source-only evidence, empty domains and
+unconfigured domains. An empty collection never claims an analysis-version
+readback. Candidate IDs and content remain private.
+
 Snapshot creation reserves database writers in deterministic order, recomputes
 WAL-aware capacity, compares inventory and rehashes source files before publish.
 Large BLOBs are streamed. Manifests have a bounded size and a separate immutable
