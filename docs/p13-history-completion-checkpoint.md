@@ -1,7 +1,7 @@
 # P13 — History Completion & Normalization checkpoint
 
 日期：2026-10-02。起点：**v0.6.0 / 02d1ed2**。
-当前状态：**已取得来源 Phase A/B PASS；Phase C 进入设计；Phase D/E NOT_STARTED**。
+当前状态：**已取得来源 Phase A/B PASS；Phase C normalization/reconciliation PASS；Phase D 两个真实 Host PASS，WorkBuddy GUI 验收待恢复；Phase E NOT_STARTED**。
 这是持续推进 checkpoint，不是 P13 完成报告，也不是 v0.7.0 release。
 
 ## 当前已取得的证据
@@ -107,20 +107,20 @@ V1 runtime/physical deletion 仍在 normalization、backup/restore Gate 之后�
 | 9 | Source Dedup | PASS | 2 acquired exact copies；9 Gemini member copies 保留；1 candidate 不合并 |
 | 10 | Idempotent Import | PASS | 1,776 identity/byte/provenance signatures 跨重跑稳定 |
 | 11 | Source Preservation | PASS | 全部原字节 Gateway 校验；immutable evidence；无 source 覆盖 |
-| 12 | Canonical Schema | IN_PROGRESS | source-only Gate 已通过，进入设计 |
-| 13 | Deterministic Normalization | NOT_STARTED | 同上 |
-| 14 | Ambiguity Guard | NOT_STARTED | probe 不猜角色/时间/边界；canonical guard 尚未实现 |
-| 15 | Timestamp Semantics | PARTIAL | source time 与获取 recorded_at 分开，未知不填 mtime |
-| 16 | Ordering Semantics | NOT_STARTED | 未生成 canonical 顺序 |
+| 12 | Canonical Schema | PASS | additive immutable conversation/message/source-specific view/evidence/outcome tables |
+| 13 | Deterministic Normalization | PASS_REAL | Codex/WorkBuddy/Hermes deterministic adapters；ChatGPT synthetic tree adapter 为后续增量准备 |
+| 14 | Ambiguity Guard | PASS | 32 ambiguous sources、237 ambiguous candidates 保留；不猜 role/time/order/boundary |
+| 15 | Timestamp Semantics | PASS | occurred/imported/normalized 分离；不明单位保持 unknown；reparse 与 provenance 时间校验 |
+| 16 | Ordering Semantics | PASS | source physical sequence / explicit tree；不按 import time 排序 |
 | 17 | Attachment Mapping | PARTIAL | Gemini 149 个其它文件作为 opaque archive members 保留；实际附件数未知，不伪造 individual asset refs |
-| 18 | Canonical Provenance | NOT_STARTED | 尚无 canonical records |
-| 19 | Normalization Idempotency | NOT_STARTED | 尚未 normalization |
-| 20 | Cross-source Reconciliation | PASS_SOURCE | 1,692 acquired fingerprints 加84 existing-source indexes全部有解释 |
-| 21 | Production Gateway Readback | PARTIAL | source byte/provenance/counts/search native PASS；canonical 待完成 |
-| 22 | Cross-Agent History Read | NOT_STARTED | normalization 后最小 read E2E，不重跑 P12 |
-| 23 | No-result | PARTIAL | 既有 legacy/History 与本轮 Gemini document synthetic no-result 均成功；canonical/跨 Agent 尚未执行 |
-| 24 | Privacy | PARTIAL | Phase A 排除测试/包扫描通过；P13 后续真实执行与发布仍须重新审计 |
-| 25 | Regression | PARTIAL | source targeted21 passed；full723 passed/12 skipped；normalization 待完成 |
+| 18 | Canonical Provenance | PASS | 所有 derived records 指向 immutable source；全量校验/reparse PASS |
+| 19 | Normalization Idempotency | PASS_REAL | 56 native normalization calls，两轮完整处理；第二轮新增 conversation/message/view 均为 0 |
+| 20 | Cross-source Reconciliation | PASS_ACQUIRED | 1,776 source outcomes 两轮稳定；每个 source 有持久 native receipts，未解释来源 0 |
+| 21 | Production Gateway Readback | PASS_CODEX | initiating Desktop 原生 source search/verify、canonical category search/conversation/message read 均成功 |
+| 22 | Cross-Agent History Read | PARTIAL | Codex Desktop + Hermes native Agent 同一 history PASS；WorkBuddy GUI input geometry unavailable，未替代为 SDK PASS |
+| 23 | No-result | PASS_TWO_HOSTS | Codex Desktop 与 Hermes native Agent 专用 literal canonical query 均返回 total=0、empty list |
+| 24 | Privacy | PASS_PUBLIC / PRIVATE_REFS_RETAINED | 当前 staged/wheel/sdist/current branch/main 无私人标记；旧 Codex private turn-diff refs 的配置命中单独记账，禁止发布这些 refs |
+| 25 | Regression | PASS_CODE | canonical targeted51 passed；full774 passed/12 skipped；后续 recovery 扩展须单独验证 |
 | 26 | Recovery Backup | NOT_STARTED | own-ledger smoke 通过；V2 backup 未执行 |
 | 27 | Isolated Restore Smoke | NOT_STARTED | V2 isolated restore 未执行 |
 | 28 | V1 Unique-data Audit | NOT_STARTED | 前置 Gate 未通过，不能宣布无 unique data |
@@ -128,6 +128,58 @@ V1 runtime/physical deletion 仍在 normalization、backup/restore Gate 之后�
 | 30 | Documentation | PARTIAL | 当前 checkpoint 与 Phase A design/plan 已写；最终报告待所有 Gate |
 
 Physical deletion 独立于自动 Gate；必须等待 owner 明确确认。
+
+## Canonical normalization real execution
+
+Source-only completion 通过后才执行 normalization。真实 configured Codex Host 完成
+28 批首轮与 28 批重跑；共 1,776 个 immutable sources，0 unresolved execution errors。
+第二轮 new conversations/messages/views 均为 0；所有 sources 有两份 durable private
+normalization receipts，结果逐 source 对账稳定。原字节 reparse 与全量 identity、
+content digest、source/view/evidence/outcome/provenance 校验 PASS。
+
+| 指标 | 数量 | 口径 |
+| --- | ---: | --- |
+| Canonical conversations | 487 | Codex 95、Hermes 42、WorkBuddy 350 |
+| Canonical messages | 7,334 | distinct canonical identity，不等于原消息 appearances |
+| Source-specific views | 494 | 每份 evidence 的原顺序/tree 独立保留 |
+| Source outcomes | 1,776 | normalized 441、partial 12、ambiguous 32、unsupported 1,290、malformed 1 |
+| Message candidates | 7,729 | adapter candidates，不作为成功 message 数 |
+| Canonical appearances | 7,492 | exact 5,468、derived-safe 2,024；confidence 数量按 appearances 统计 |
+| Reused canonical appearances | 158 | appearances 减 distinct messages，不是 source-file duplicates |
+| Ambiguous candidates | 237 | 未生成 canonical message；原 evidence 保留 |
+| Source-only retained | 1,323 | unsupported + ambiguous + malformed；partial 另行计数 |
+
+Normalization 的 1 malformed source outcome 与 acquisition 的 2 malformed raw records
+属于不同层级，不能相加成同一种错误。所有原 sources 保持不变。ChatGPT 仍为
+acquisition_pending；Gemini activity/opaque members、legacy Markdown/DB 不猜成聊天。
+附件原始 part metadata 保留 unresolved；本轮没有声称附件均已映射为 asset refs。
+
+Initiating Codex Desktop 已使用加载后的原生 MCP 工具完成三类 category searches、
+conversation/source-specific view 读取、bounded message byte read、源 checksum/provenance
+校验及 canonical no-result。Hermes fresh native Agent 独立查询同一首条 Codex history，
+完成 summary/search/conversation/message/source verify 六次实际 Gateway reads；正式
+session export 和 token usage 在 Git 外保存。未传入来自 Codex 的 IDs 或 DTO。
+
+WorkBuddy 原生配置已持久更新为当前代码、同一生产目标、read-only capabilities，
+旧配置在 Git 外备份。但 Windows capture 返回 FrameArrived timeout，支持的 input
+返回 coordinate input geometry unavailable；GUI read E2E 尚未执行，不能计 PASS。
+一次后续 Codex CLI readback 遇 account usage limit；initiating Desktop 的真实读取
+成功，account limit 不被误报为 Gateway failure。私有失败记录和成功读取证据均留存。
+
+Full regression 774 passed / 12 skipped；针对 canonical 的 51 tests 覆盖 malformed/
+ambiguous/branching/missing timestamp/attachment preservation/rerun/corruption detection。
+这些真实迁移和 Host receipts 不在公开 fixtures 或 Git 中。
+
+51 targeted tests 再次通过。wheel/sdist 构建成功；58 wheel members、207 sdist members、
+206 staged candidates 的扫描未命中 3,567 个私有 identity/location markers 或受限内容。
+新 wheel 在独立环境安装后，纯人工 synthetic normalization 两次结果一致，未访问生产。
+全仓库 798 reachable blobs 扫描发现两份旧 Host config blob，仅由 Codex 私有
+turn-diff refs 持有，不在当前 branch 或 main 历史中。完整 ref/object 明细 Git 外保存；
+保留本地快照，不把全仓库扫描误称零命中。未来仅发布明确的公开 branch/tag，禁止
+push --all、mirror 或发布 private turn-diff refs。本轮未 bump/tag/push/release。
+
+V2 full backup、isolated restore、V1 unique-data final audit、logical retirement 仍未执行；
+不在 Cross-Agent Gate 未通过时声称 retirement ready，也未请求 physical deletion。
 
 ## Phase A 工程验证
 

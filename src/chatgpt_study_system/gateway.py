@@ -655,6 +655,38 @@ class Gateway:
         self._require_capability("read")
         return self._source_evidence_store().summary()
 
+    def _canonical_history_store(self):
+        from .adapters.canonical_history import CanonicalHistoryStore
+        return CanonicalHistoryStore(self._source_evidence_store().database_path)
+
+    def history_normalization_snapshot(self):
+        self._require_capability("read")
+        return self._canonical_history_store().snapshot()
+
+    def normalize_history_sources(self, source_set_sha256, *, cursor=0, limit=16):
+        from .normalization.execution import normalize
+        return normalize(self,source_set_sha256,cursor=cursor,limit=limit)
+
+    def canonical_history_summary(self):
+        self._require_capability("read")
+        return self._canonical_history_store().summary()
+
+    def verify_canonical_history(self, *, reparse=False):
+        from .normalization.integrity import verify
+        return verify(self,reparse=reparse)
+
+    def search_canonical_conversations(self, *, source_system=None, query="", limit=20, offset=0):
+        self._require_capability("read")
+        return self._canonical_history_store().search(source_system=source_system,query=query,limit=limit,offset=offset)
+
+    def fetch_canonical_conversation(self, conversation_id, *, offset=0, limit=50, view_offset=0, view_limit=20, node_offset=0, node_limit=50):
+        self._require_capability("read")
+        return self._canonical_history_store().conversation(conversation_id,offset=offset,limit=limit,view_offset=view_offset,view_limit=view_limit,node_offset=node_offset,node_limit=node_limit)
+
+    def fetch_canonical_message(self, message_id, *, offset=0, length=65536, evidence_offset=0, evidence_limit=20):
+        self._require_capability("read")
+        return self._canonical_history_store().message(message_id,offset=offset,length=length,evidence_offset=evidence_offset,evidence_limit=evidence_limit)
+
     def search_history_sources(self, *, source_system=None, query="", limit=20, offset=0):
         self._require_capability("read")
         return self._source_evidence_store().search(source_system=source_system,query=query,limit=limit,offset=offset)

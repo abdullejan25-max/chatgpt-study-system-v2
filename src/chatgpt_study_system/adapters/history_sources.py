@@ -78,7 +78,10 @@ class SourceEvidenceStore:
         result["source_schema_version"]=1
         result["importer_version"]="p13-source-evidence-1"
         result["source_fingerprint"]=result["source_id"].split(":",1)[1]
-        result["normalization_state"]="not_normalized"
+        outcome=None
+        if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='p13_normalization_outcomes'").fetchone():
+            outcome=c.execute("SELECT payload FROM p13_normalization_outcomes WHERE source_id=? AND version='p13-normalize-1'",(result["source_id"],)).fetchone()
+        result["normalization_state"]=json.loads(outcome[0])["state"] if outcome else "not_normalized"
         return result
 
     def _register(self, *, system, fmt, kind, digest, size, payload_kind, payload_ref,

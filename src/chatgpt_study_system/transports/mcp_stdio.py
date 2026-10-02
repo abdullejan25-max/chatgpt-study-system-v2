@@ -367,6 +367,8 @@ def create_mcp_server(gateway: Gateway) -> Server:
             ))
         from .source_tools import source_tools
         tools.extend(source_tools(gateway,read_only,write_only,reported_provenance))
+        from .canonical_tools import canonical_tools
+        tools.extend(canonical_tools(gateway,read_only,write_only))
         ingest_tools = {"register_asset", "ingest_documents", "ingest_document_file", "ingest_history_sources",
                         "process_document_ocr_pages"}
         write_tools = {"register_wrong_answer_source", "save_wrong_answer_analysis",
@@ -507,6 +509,10 @@ def create_mcp_server(gateway: Gateway) -> Server:
     @server.call_tool(validate_input=False)
     async def call_tool(name: str, arguments: dict) -> dict | types.CallToolResult:
         try:
+            from .canonical_tools import call_canonical_tool
+            canonical_result=call_canonical_tool(gateway,name,arguments)
+            if canonical_result is not None:
+                return {"ok":True,**canonical_result}
             from .source_tools import call_source_tool
             source_result=call_source_tool(gateway,name,arguments)
             if source_result is not None:
