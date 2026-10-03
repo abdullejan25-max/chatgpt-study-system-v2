@@ -1,13 +1,13 @@
 # 当前状态
 
-## P13 — History Completion & Recovery（本地执行中，未发布）
+## P13 — History Completion & Recovery（v0.7.0）
 
-正式基线仍为 **`v0.6.0 — Cross-Agent Integration`**。以下 P13 结果是本地工程
-与私有数据验收，不代表 `v0.7.0` 已发布；既有 P11/P12 PASS 保留，历史数字见下文。
+正式发布为 **`v0.7.0 — History Completion & Recovery`**。P13 私有数据始终
+本地保存；既有 P11/P12 PASS 保留，历史数字见下文。
 
 已取得来源的 source-only completion、dedup、幂等重跑与 deterministic normalization
-已验证：1,776 个 persisted sources、487 个 canonical conversations、7,334 条 distinct
-messages、494 个 source-specific views，1,323 个来源完全保留 source-only。
+已验证：1,802 个 persisted sources、487 个 canonical conversations、7,334 条 distinct
+messages、494 个 source-specific views，1,349 个来源完全保留 source-only。
 原始证据不被 canonical 覆盖，未知角色、时间、顺序或会话边界继续保留不确定状态。
 Codex Desktop 与 Hermes native Agent 的同一 History 读取和 no-result 已 PASS。
 
@@ -15,13 +15,20 @@ ChatGPT 官方导出为 `acquisition_pending`，不作为当前 blocker；到达
 WorkBuddy 的 P13 History Host 验收为 `DEFERRED`，不阻塞后续推进，既有 P12 WorkBuddy
 integration 与 cross-agent PASS 不变。这不将 deferred 验收冒充为 P13 Host PASS。
 
-真实 V2 backup 状态为 **`PASS_NATIVE`**：3,778 files / 44,380,473,111 bytes。
-实际配置的原生 MCP 调用、完整 Host tool trace 与正数 Agent usage 证明备份完成；
-私有 manifest、checksum、ledger、配置和原始数据全部留在 Git 外。
-**Isolated restore、V1 unique-data audit 和 logical retirement 仍待执行**。
-恢复副本只用于隔离验收，不成为第二份权威数据层；备份完成不等于恢复或退役完成。
-生产 writable ingress 将复用正式 Gateway 与现有权限/版本/provenance 路径，当前尚未
-完成其验收。V1 physical deletion 必须等待 owner 单独明确确认。
+真实 V2 backup 与 isolated restore 状态均为 **`PASS_NATIVE`**：
+3,778 files / 44,380,473,111 bytes。实际配置的原生 MCP 调用、完整 Host tool trace
+与正数 Agent usage 支持这些结果；manifest、全部 logical digests 与 ledger equality
+校验通过。恢复后的 1,776 sources、487 conversations、7,334 messages、494 views、
+1,776 source outcomes 与 1,323 source-only retained 均与原目标一致。
+
+Isolated Study read verified；Assets 197、Documents 29、Wrong Answer sources 5 /
+analyses 5 的正式有界回读与 whole logical digests 均 PASS。真实 native capacity plan
+纳入 copy、temp、WAL 与显式 reserve，余量取 4 GiB 和 10% 计算值中的较大者，
+确认当前空间足够。私有 manifest、checksum、ledger、配置和原始数据全部留在 Git 外。
+**V1 unique-data audit PASS / logically retired / data retained**。恢复副本只用于隔离验收，
+不成为第二份权威数据层；V1 原始数据保留，6 个旧 Basic Memory writer hooks 已可恢复停用。
+生产 writable ingress 已通过 Codex native synthetic smoke 与 fresh Hermes 完整
+回读；source/v1/v2 重放、stale conflict、原字节、provenance/版本链通过。V1 physical deletion 必须等待 owner 单独明确确认。
 
 当前 Gate 以 [P13 checkpoint](p13-history-completion-checkpoint.md) 为准；通用协议见
 [source-only ingestion](history-source-ingestion.md)、[canonical History](history-normalization.md)
@@ -105,3 +112,9 @@ Fresh official MCP stdio 正常；Codex Host resources/list 的兼容问题独�
 ## Final release verification (2026-10-01)
 
 The default/dev full suite passed **614 tests, 12 skipped**. Skips cover existing platform/symlink, opt-in Host/QMD and optional PDF/OCR conditions; actual fresh official MCP and real-Vault checks were run separately. Wheel and source distribution build passed. Package audits confirm version `0.3.0`, Apache-2.0 license metadata/LICENSE, canonical workflow data and optional-only PyMuPDF; no private config, Vault, images, databases or raw exports are included. The public tree and new Git objects are audited before push. Real 0.3.0 Gateway health and stable 166-source/184-file projection were revalidated after installation.
+
+P13 bounded V1 audit额外导入26个source-only输入，producer freeze后442个原始输入
+均有映射，V1-only unknown=0。补充 mutable-domain backup/isolated readback均PASS_NATIVE：
+237 files / 1,048,793,838 bytes，1,802 sources/outcomes；它排除Study，配合上面的完整
+Study备份使用。完整最新canonical数量不变，source-only retained=1,349。
+当前公开工程回归targeted380/1 skip、full828/12 skips；wheel clean-install synthetic9 PASS。

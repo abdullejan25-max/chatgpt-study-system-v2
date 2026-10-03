@@ -81,3 +81,21 @@ fresh Gateway readback 和字面空结果。PNG 是带 synthetic metadata 的手
 
 真实生产 smoke 的结果、Host trace 与回执另行核实并保存于 Git 外。自动化回归不能
 替代真实 Host PASS，也不重做既有 P12 验收。
+
+## P13 native production result
+
+Codex 原生生产 MCP 已完成 marked synthetic Asset/source/v1/v2、source 与两版
+分析的精确重放、stale CONFLICT、原始 PNG 字节回读、reported/unverified provenance、
+版本链与 no-result。Fresh Hermes 原生 Host 从持久 production profile 按 marker
+重新发现记录，完整 bundle、原字节与 provenance 等于首轮；Gateway version 0.7.0。
+实际 native traces 和 positive usage 在 Git 外核验。最终只有一个 synthetic source
+和两个 analysis versions，不存在 v3。
+
+正式 production 与 readonly profiles 已持久配置到 Codex、WorkBuddy 和 Hermes，
+指向同一生产后端；P12 isolated 定义保持不变。WorkBuddy GUI 由 owner 操作，本页
+不声称本轮 WorkBuddy Desktop write PASS。首次启动新会话需正常重载持久 MCP 配置。
+生产 smoke 晚于 recovery checkpoint，额外一份 marked source / 两版合成分析是已知
+测试增量，不属于不可恢复的 V1 unique data；原人工 fixture 和正式请求回执留在本地。
+
+Fresh Hermes 还通过同一持久 writable profile 原生执行 v2 完全重放：请求、响应、
+provenance 和 bundle 均与 Codex 回执一致，版本链仍为 [2, 1]。

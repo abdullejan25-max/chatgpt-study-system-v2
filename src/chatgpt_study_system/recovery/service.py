@@ -55,7 +55,7 @@ def roots(g):
 def inventory(g):
     cfg=g.config;entries=[];excluded=[]
     databases=[('history.sqlite3',cfg.history_database),('assets.sqlite3',cfg.asset_database),
-               ('qmd-index.sqlite3',cfg.qmd_snapshot_index)]
+               ('qmd-index.sqlite3',cfg.qmd_snapshot_index if cfg.recovery_include_study else None)]
     if cfg.recovery_sidecar_root: databases.append(('sidecar/ledger.sqlite3',cfg.recovery_sidecar_root/'ledger.sqlite3'))
     for rel,path in databases:
         if path is None: continue
@@ -67,14 +67,14 @@ def inventory(g):
         entries.append({'relative':rel,'source':path,'root':path.parent,'database':True,'signature':signature(path)})
     database_paths={e['source'] for e in entries}
     aux={Path(str(p)+suffix) for p in database_paths for suffix in ('-wal','-shm','-journal')}
-    for component,path in (('study',cfg.study_root),('objects',cfg.asset_root),('sidecar',cfg.recovery_sidecar_root)):
+    for component,path in (('study',cfg.study_root if cfg.recovery_include_study else None),('objects',cfg.asset_root),('sidecar',cfg.recovery_sidecar_root)):
         if path is None: continue
         exclusions=cfg.recovery_sidecar_exclusions if component=='sidecar' else ()
         for rel,source,sig in files(path,excluded=exclusions):
             if source in database_paths or source in aux: continue
             entries.append({'relative':component+'/'+rel,'source':source,'root':path,'database':False,'signature':sig})
         excluded.extend(component+'/'+relative(v) for v in exclusions)
-    for rel,path in (('gateway-original.toml',cfg.gateway_config_file),('qmd-config.yml',cfg.qmd_snapshot_config)):
+    for rel,path in (('gateway-original.toml',cfg.gateway_config_file),('qmd-config.yml',cfg.qmd_snapshot_config if cfg.recovery_include_study else None)):
         if path:
             path=safe(path)
             if not path.is_file(): fail('STORAGE_UNAVAILABLE')
@@ -118,7 +118,7 @@ def plan(g):
             'published_snapshot_bytes':published_bytes,
             'restore_capacity':{**restore_capacity(root,required,components.get('qmd-index.sqlite3',0)),
                                 'estimate_basis':'configured_inputs'},
-            'excluded_sidecar_paths':len(exclusions),'configured_study':g.config.study_root is not None,
+            'excluded_sidecar_paths':len(exclusions),'configured_study':g.config.study_root is not None and g.config.recovery_include_study,
             'configured_assets':g.config.asset_root is not None,'configured_ledger':g.config.recovery_sidecar_root is not None}
 
 
@@ -141,6 +141,7 @@ def history_proof(g):
 
 def public(manifest,digest,*,reused=False):
     return {'verified':True,'reused':reused,'snapshot_ref':'recovery://snapshot/'+manifest['snapshot_key'],
+            'scope':'full_configured_domains' if manifest['components']['study'] else 'mutable_domains_supplement',
             'manifest_sha256':digest,'file_count':len(manifest['files']),
             'total_bytes':sum(e['bytes'] for e in manifest['files']),**manifest['history_proof']}
 
@@ -182,13 +183,13 @@ def validate_manifest(g,manifest):
     if type(manifest) is not dict or set(manifest)!={'schema_version','snapshot_key','recorded_at','files','history_proof','excluded_sidecar_paths','components'}: fail()
     if type(manifest['schema_version']) is not int or manifest['schema_version']!=1: fail()
     cfg=g.config
-    components={'study':cfg.study_root is not None,'objects':cfg.asset_root is not None,'sidecar':cfg.recovery_sidecar_root is not None}
+    components={'study':cfg.study_root is not None and cfg.recovery_include_study,'objects':cfg.asset_root is not None,'sidecar':cfg.recovery_sidecar_root is not None}
     if type(manifest['components']) is not dict or set(manifest['components'])!=set(components) \
             or any(type(v) is not bool for v in manifest['components'].values()) or manifest['components']!=components: fail()
     if manifest['excluded_sidecar_paths']!=['sidecar/'+relative(v) for v in cfg.recovery_sidecar_exclusions]: fail()
     required={'history.sqlite3':True}
-    for rel,p,db in [('assets.sqlite3',cfg.asset_database,True),('qmd-index.sqlite3',cfg.qmd_snapshot_index,True),
-                     ('qmd-config.yml',cfg.qmd_snapshot_config,False),('gateway-original.toml',cfg.gateway_config_file,False),
+    for rel,p,db in [('assets.sqlite3',cfg.asset_database,True),('qmd-index.sqlite3',cfg.qmd_snapshot_index if cfg.recovery_include_study else None,True),
+                     ('qmd-config.yml',cfg.qmd_snapshot_config if cfg.recovery_include_study else None,False),('gateway-original.toml',cfg.gateway_config_file,False),
                      ('sidecar/ledger.sqlite3',cfg.recovery_sidecar_root,True)]:
         if p is not None: required[rel]=db
     if type(manifest['files']) is not list: fail()
@@ -208,7 +209,7 @@ def create(g,snapshot_key):
     entries,excluded=inventory(g)
     root.mkdir(parents=True,exist_ok=True);parent=root/'snapshots';parent.mkdir(exist_ok=True);safe(parent,directory=True,private=True)
     stage=parent/(snapshot_key+'.partial-'+uuid4().hex);stage.mkdir();(stage/'payload').mkdir()
-    for component,p in [('study',g.config.study_root),('objects',g.config.asset_root),('sidecar',g.config.recovery_sidecar_root)]:
+    for component,p in [('study',g.config.study_root if g.config.recovery_include_study else None),('objects',g.config.asset_root),('sidecar',g.config.recovery_sidecar_root)]:
         if p is not None:(stage/'payload'/component).mkdir()
     saved=[]
     with reserve([e['source'] for e in entries if e['database']]):
@@ -233,7 +234,7 @@ def create(g,snapshot_key):
         if hproof!=history_proof(g): fail()
     manifest={'schema_version':1,'snapshot_key':snapshot_key,'recorded_at':utc_now(),'files':saved,
               'history_proof':hproof,'excluded_sidecar_paths':excluded,
-              'components':{'study':g.config.study_root is not None,'objects':g.config.asset_root is not None,
+              'components':{'study':g.config.study_root is not None and g.config.recovery_include_study,'objects':g.config.asset_root is not None,
                             'sidecar':g.config.recovery_sidecar_root is not None}}
     digest=write_json(stage/'manifest.json',manifest)
     with (stage/'manifest.sha256').open('x',encoding='ascii') as stream:stream.write(digest);stream.flush();os.fsync(stream.fileno())
@@ -252,7 +253,7 @@ def restored_gateway(g,target):
     from ..gateway import Gateway
     payload=target/'payload'
     cfg=replace(g.config,history_database=payload/'history.sqlite3',asset_database=payload/'assets.sqlite3',
-                asset_root=payload/'objects',study_root=payload/'study',history_migration_inbox=None,
+                asset_root=payload/'objects',study_root=payload/'study' if g.config.recovery_include_study else None,history_migration_inbox=None,
                 recovery_root=None,recovery_sidecar_root=None,gateway_config_file=None,
                 qmd_snapshot_config=payload/'qmd-config.yml',qmd_snapshot_index=payload/'qmd-index.sqlite3')
     store=SQLiteDocumentStore(cfg.asset_root,cfg.asset_database) if cfg.asset_database.is_file() else None
@@ -360,7 +361,7 @@ def restore_snapshot(g,folder,manifest,digest):
     elif not (target/'restore-origin.json').is_file() or read_json(target/'restore-origin.json')!={'manifest_sha256':digest}: fail()
     check_payload(target,manifest)
     isolated=restored_gateway(g,target);study_verified=False
-    if g.config.gateway_config_file is not None:
+    if g.config.gateway_config_file is not None and manifest['components']['study']:
         from ..runtime import load_gateway_from_config
         isolated=load_gateway_from_config(prepare_restore_config(g,target))
         result=isolated.search_study('P13_RECOVERY_NO_RESULT_20261002_37c6',limit=1)
@@ -375,6 +376,7 @@ def restore_snapshot(g,folder,manifest,digest):
              'study_read_verified':study_verified,'domain_readback':domains}
     if not (target/'restore-proof.json').exists(): write_json(target/'restore-proof.json',receipt)
     return {'isolated_restore_verified':True,'ledger_verified':ledger is not None,'study_read_verified':study_verified,
+            'study_restore_state':'verified' if study_verified else 'excluded_by_configuration' if not manifest['components']['study'] else 'not_verified',
             'restore_capacity':capacity,'domain_readback':domains,'restore_ref':'recovery://restore/'+manifest['snapshot_key']}
 
 

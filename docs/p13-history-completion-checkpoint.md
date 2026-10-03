@@ -1,7 +1,7 @@
 # P13 — History Completion & Normalization checkpoint
 
 日期：2026-10-03。起点：**v0.6.0 / 02d1ed2**。
-当前状态：**已取得来源 Phase A/B PASS；Phase C normalization/reconciliation PASS；Phase D 两个真实 Host PASS，WorkBuddy History DEFERRED；真实 V2 backup PASS，isolated restore 待执行；Phase E NOT_STARTED**。
+当前状态：**已取得来源 Phase A/B PASS；Phase C normalization/reconciliation PASS；Phase D 两个真实 Host PASS，WorkBuddy History DEFERRED；真实 V2 backup/isolated restore PASS_NATIVE；Phase E unique-data audit PASS / logically retired / data retained**。
 这是持续推进 checkpoint，不是 P13 完成报告，也不是 v0.7.0 release。
 
 ## 当前已取得的证据
@@ -90,7 +90,7 @@ source 与 History 的合成 no-result 查询均 `ok=true / total=0`；这是当
 
 ChatGPT 请求已提交，等待数据到达，不需重复申请；Gemini 包已取得并完成本轮处理。
 已取得来源 source-only completion PASS，自动进入 deterministic normalization 设计。
-V1 runtime/physical deletion 仍在 normalization、backup/restore Gate 之后。未 bump/tag/push/release。
+这是历史 source completion checkpoint；当前 V1/runtime/release 结果见末尾最终接续。Physical deletion 始终等待 owner。
 
 ## P13 Gate
 
@@ -120,11 +120,11 @@ V1 runtime/physical deletion 仍在 normalization、backup/restore Gate 之后�
 | 22 | Cross-Agent History Read | PASS_TWO_HOSTS / WORKBUDDY_DEFERRED | Codex Desktop + Hermes native Agent 同一 history PASS；owner 明确将 WorkBuddy P13 History 延后，不阻塞 P13 |
 | 23 | No-result | PASS_TWO_HOSTS | Codex Desktop 与 Hermes native Agent 专用 literal canonical query 均返回 total=0、empty list |
 | 24 | Privacy | PASS_PUBLIC / PRIVATE_REFS_RETAINED | 当前 staged/wheel/sdist/current branch/main 无私人标记；旧 Codex private turn-diff refs 的配置命中单独记账，禁止发布这些 refs |
-| 25 | Regression | PASS_TARGETED / FINAL_PENDING | canonical targeted51；此前full816/12；新增恢复余量/各域readback后recovery48 passed，final full待全部工程稳定 |
-| 26 | Recovery Backup | PASS_NATIVE | 实际 configured Host 原生 create verified；官方 session export、positive token usage、manifest anchor/provenance/counts Git 外保存 |
-| 27 | Isolated Restore Smoke | IN_PREPARATION | 复用已验证 snapshot；补齐恢复容量余量与各域 readback 后执行真实隔离恢复 |
-| 28 | V1 Unique-data Audit | NOT_STARTED | 前置 Gate 未通过，不能宣布无 unique data |
-| 29 | V1 Logical Retirement | NOT_STARTED | P13 retirement 不提前执行 |
+| 25 | Regression | PASS | final targeted380/1 skipped；full828/12 skipped；recovery53 passed，新增 supplemental scope 有 RED→GREEN |
+| 26 | Recovery Backup | PASS_NATIVE | 3,778 files / 44,380,473,111 bytes；实际 native create verified、positive usage、manifest/provenance/logical digests/ledger Git 外保存 |
+| 27 | Isolated Restore Smoke | PASS_NATIVE | 同一已验证 snapshot；各域 logical digests/manifest/ledger/counts 一致；Study read 与 Assets197/Documents29/WA sources5/analyses5 正式有界回读 PASS；native capacity sufficient |
+| 28 | V1 Unique-data Audit | PASS | 442 个 bounded original inputs 精确映射；26 份增量已 source-only 导入并重放；producer freeze 后 V1-only unknown=0 |
+| 29 | V1 Logical Retirement | PASS_DATA_RETAINED | 旧 router 无 active process/schedule；Basic Memory Host disabled；6 个 legacy writer hooks 可恢复停用；原始数据未删除 |
 | 30 | Documentation | PARTIAL | 当前 checkpoint 与 Phase A design/plan 已写；最终报告待所有 Gate |
 
 Physical deletion 独立于自动 Gate；必须等待 owner 明确确认。
@@ -182,9 +182,9 @@ turn-diff refs 持有，不在当前 branch 或 main 历史中。完整 ref/obje
 保留本地快照，不把全仓库扫描误称零命中。未来仅发布明确的公开 branch/tag，禁止
 push --all、mirror 或发布 private turn-diff refs。本轮未 bump/tag/push/release。
 
-V2 full backup 已通过真实 native Host 验证，isolated restore、V1 unique-data final audit、
-logical retirement 尚未执行；不在前置 Gate 未通过时声称 retirement ready，也未请求
-physical deletion。WorkBuddy History 按 owner 决定 DEFERRED，后台工程和 recovery 自主推进。
+V2 full backup 与 isolated restore 已通过真实 native Host 验证；V1 unique-data final audit、
+logical retirement 尚未执行，不能声称 retirement ready，也未请求 physical deletion。
+WorkBuddy History 按 owner 决定 DEFERRED，后续非破坏性工作自主推进。
 
 ## Recovery engineering 与真实执行状态
 
@@ -196,8 +196,9 @@ SQLite backup 捕获 committed WAL；大 BLOB 流式校验，Study、Assets、Hi
 
 快照验证检查完整文件集合、字节 checksum、schema/row digest、source/canonical identity
 和 provenance；manifest 另有独立 catalog checksum anchor。复制结束重新校验源文件，
-防止同长度修改后恢复 mtime 掩盖变动。capacity 同时考虑 SQLite logical pages/WAL 与
-独立 restore 空间，恢复前再次检查；未完成尝试保留，不覆盖或清理。
+防止同长度修改后恢复 mtime 掩盖变动。capacity 同时考虑 SQLite logical pages/WAL、
+copy、temp 与独立 restore 空间，恢复前再次检查；显式 reserve 取 4 GiB 和 10% 计算值
+中的较大者。真实 native plan 确认空间足够；未完成尝试保留，不覆盖或清理。
 
 独立 review 发现的文件变动竞态、WAL capacity、manifest omission/forgery、publish
 failure、restore capacity 与 legacy ambient QMD isolation 均有 synthetic 回归。
@@ -214,6 +215,20 @@ Host 执行；没有 Agent-side snapshot/SQLite 检查。
 44,380,473,111 bytes、1,776 sources、487 conversations、7,334 messages、494 views**。
 官方 export 中实际 native call 与 positive usage 均已核验；原 Host 配置恢复。
 Production → snapshot canonical/source proofs 一致。V1 未退役或删除。
+
+随后复用该 immutable snapshot 完成真实 configured native isolated restore，
+不是 direct SDK 或 Agent-side DB/store 验收。**Gate 26 / 27 均为 PASS_NATIVE**：
+3,778 files / 44,380,473,111 bytes；全部 logical digests、manifest 与 ledger equality PASS。
+恢复目标的 **1,776 sources、487 conversations、7,334 messages、494 views、
+1,776 source outcomes、1,323 source-only retained** 与原目标一致，source/canonical
+identity、provenance 与原始证据保持一致。
+
+Isolated Study read verified。Assets **197**、Documents **29**、Wrong Answer
+sources **5** / analyses **5** 的正式有界 native readback 与 whole logical digests
+均 PASS。实际 native capacity 已纳入 copy/temp/WAL/显式 reserve 并确认足够。
+恢复副本只用于隔离证明，不是第二 authority；生产目标未被覆盖。真实 tool trace、
+positive usage、per-domain proofs 与 checksum 均 Git 外保存。V1 unique-data audit、
+logical retirement 和 production writable ingress 验收仍待完成。
 
 真实长调用暴露同步 recovery handler 阻塞 MCP event loop，导致 Host keepalive
 重连。Synthetic regression 先复现 ping 延迟失败，再以 recovery-only worker thread
@@ -283,7 +298,8 @@ copies 仍保留在原 ZIP 中；不同格式/packaging 不作 semantic merge。
 
 原始输入、raw copy、payloads、native write/readback receipts、ledger destination mapping
 及 isolated reconstructed ZIP 均 Git 外。这是 **Gemini archive recovery proof**，
-不替代尚未执行的 full V2 backup/isolated restore Gate。V1 未进行逻辑退役或物理删除。
+不替代 full V2 backup/isolated restore Gate；后续完整恢复已在 Gate 26/27 单独取得
+PASS_NATIVE。V1 未进行逻辑退役或物理删除。
 
 独立 code review 的 HTML 附件误识别、protected-output ancestor overlap 两项问题均有
 synthetic RED→GREEN 回归；atomic replacement failure、raw-store reopen、不同包不覆盖旧
@@ -292,3 +308,50 @@ full **701 passed / 12 skipped**。46 wheel members / 185 sdist members 及公�
 candidate 隐私扫描通过；实际来源路径、指纹/member names 与真实活动文本 sentinels 无命中。
 fresh installed wheel 的两次 synthetic CLI plan identity 相同，未访问生产。
 没有 bump、tag、push 或 Release；工程改动仅提交本地 P13 branch。
+
+## V1 audit incremental reconciliation (current)
+
+P11 accepted accounting is reused. A bounded current audit found seven previously
+skipped Personal files and 19 later archive files. All 26 are source-only imported
+through native Gateway, exact rerun reuses all 26, errors=0. Only these new inputs
+received deterministic unsupported outcomes; the earlier normalization was not
+rerun. Current source index/outcomes=1,802; conversations=487/messages=7,334/views=494
+remain unchanged. Unsupported outcomes=1,316 and wholly source-only retained=1,349.
+Categories: basic_memory378/codex120/gemini1/hermes67/v1 93/workbuddy1,143.
+
+V1-only unknown=0 after freezing the legacy Basic Memory archive writer. Exact
+private mappings, both raw DB versions, config backups and producer/runtime
+audit remain outside Git. Details: [V1 retirement](p13-v1-retirement.md).
+The original full backup remains a valid point-in-time checkpoint. A new scoped
+mutable-domain supplement captures the 26 later sources; its native create is
+verified (237 files/1,048,793,838 bytes), isolated readback is PASS_NATIVE. It
+explicitly excludes Study and accompanies the full Study backup/restore proof.
+Production native synthetic smoke + fresh Hermes exact readback are PASS; final package/privacy/release verification is recorded below.
+
+## Final non-destructive completion
+
+V1 audit PASS; source-only increment26 exact rerun26 reused/errors0; no full
+Gemini or existing normalization rerun. Current logical sources/outcomes1,802,
+conversations487/messages7,334/source-only1,349. Two raw DBs are retained separately.
+V1-only unknown=0 after producer freeze. V1 is logically retired/data retained:
+6 legacy Basic Memory writer hooks disabled with exact private config rollback,
+no Native Memory router process or scheduled dependency. Static StudyVault remains
+authoritative and outside the physical transaction.
+
+Supplemental native backup AND isolated restore PASS:237 files/1,048,793,838 bytes,
+manifest/source/canonical/ledger proof equality; Assets197/Documents29/WA5/analysis5
+formal readback. Study is explicitly excluded here; its full 3,778-file baseline
+backup/restore remains PASS. This supplements, rather than replaces, that backup.
+
+Persistent production ingress(read/ingest/write) and readonly(read) preserve all
+P12 isolated aliases across Codex/WorkBuddy/Hermes. Codex native production smoke
+passes source/v1/v2 exact replay/staleCONFLICT/bytes/provenance/onlyversions[1,2];
+fresh Hermes from persisted Gateway0.7.0 returns the identical bundle and Asset
+plus no-result. Marked synthetic1source/2versions are retained and are a known
+post-backup test increment. WorkBuddy Desktop new-write verification is not claimed.
+
+Engineering full828/12existing skips; targeted380/1; installed-wheel9PASS;
+version/stdio38/1. Wheel/sdist and intended-public-ancestry privacy are verified
+with real private markers kept solely in local audit inputs. Release: see
+[v0.7.0](releases/v0.7.0.md). Physical deletion is an owner-confirmed transaction,
+not an automatically passing Gate.

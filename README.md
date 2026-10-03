@@ -26,7 +26,7 @@ Agent
 
 更完整的组件职责和安全约束见 [架构说明](docs/architecture.md)、[隐私边界](docs/privacy-boundary.md) 和 [ADR](docs/adr/)；已验证的错题链路证据见 [Real Wrong Answer E2E checkpoint](docs/real-wrong-answer-e2e-checkpoint.md)。
 
-`v0.2.0 — Legacy Migration` 的历史范围是 V1 来源迁移与 V2 cutover，证据见 [P11 completion](docs/p11-real-migration-completion.md)。P13 在正式 `v0.6.0` 基线上推进已取得来源的补齐与规范化，当前本地结果见 [P13 checkpoint](docs/p13-history-completion-checkpoint.md)、[source-only ingestion](docs/history-source-ingestion.md) 和 [canonical History](docs/history-normalization.md)。P13 尚未发布；旧错题的完整业务语义仍保留原有限制。
+`v0.2.0 — Legacy Migration` 的历史范围是 V1 来源迁移与 V2 cutover，证据见 [P11 completion](docs/p11-real-migration-completion.md)。P13 在正式 `v0.6.0` 基线上推进已取得来源的补齐与规范化，当前本地结果见 [P13 checkpoint](docs/p13-history-completion-checkpoint.md)、[source-only ingestion](docs/history-source-ingestion.md) 和 [canonical History](docs/history-normalization.md)。P13 发布范围见 [v0.7.0 release notes](docs/releases/v0.7.0.md)；旧错题的完整业务语义仍保留原有限制。
 
 ## 安装
 
@@ -62,7 +62,7 @@ python .codex/setup_mcp.py
 
 ### 后续 v0.7.0 升级流程
 
-当前正式版本仍为 `v0.6.0`。待 `v0.7.0` 正式发布后，按以下顺序升级：
+`v0.7.0 — History Completion & Recovery` 按以下顺序升级：
 
 1. 通过已配置 Gateway 创建并验证私有备份，保留现有配置；恢复步骤见 [private recovery](docs/p13-recovery.md)。
 2. 切换到正式发布的 checkout，在仓库根目录运行 `uv sync --project . --frozen --no-editable`；需要的 optional extras 按既有配置保留。
@@ -97,9 +97,9 @@ uv run --no-sync --project . --extra dev pytest -q
 
 ## 状态
 
-当前正式基线为 **`v0.6.0 — Cross-Agent Integration`**，P12 已完成，既有 Codex、WorkBuddy、Hermes Host PASS 保留。P13 是尚未发布的本地工程与私有迁移：已验证 1,776 个来源、487 个 canonical conversations、7,334 条 distinct messages、494 个 source-specific views；1,323 个来源完全保留 source-only。
+当前发布为 **`v0.7.0 — History Completion & Recovery`**；P12 的 Codex、WorkBuddy、Hermes Host PASS 保留。P13 工程与私有迁移：已验证 1,802 个来源、487 个 canonical conversations、7,334 条 distinct messages、494 个 source-specific views；1,349 个来源完全保留 source-only。
 
-ChatGPT 官方导出为 `acquisition_pending`，到达后做增量幂等补录。WorkBuddy 的 P13 History Host 验收为 `DEFERRED`，不阻塞后续工作。真实 V2 backup 已获 `PASS_NATIVE`；isolated restore、V1 unique-data audit 和 logical retirement 待执行。生产 writable ingress 将复用 Gateway，验收尚未完成。V1 physical deletion 必须另获 owner 明确确认。当前证据与限制见 [当前状态](docs/current-state.md) 和 [P13 checkpoint](docs/p13-history-completion-checkpoint.md)；项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
+ChatGPT 官方导出为 `acquisition_pending`，到达后做增量幂等补录。WorkBuddy 的 P13 History Host 验收为 `DEFERRED`，不阻塞后续工作。真实 V2 backup 与 isolated restore 均已获 `PASS_NATIVE`，来源/canonical/ledger、Study 和 Assets/Documents/Wrong Answers 恢复回读一致；V1 unique-data audit PASS，已逻辑退役并保留原始数据。生产 writable ingress 通过正式 Gateway 完成 marked synthetic native smoke 和 fresh Hermes 完整回读。V1 physical deletion 必须另获 owner 明确确认。当前证据与限制见 [当前状态](docs/current-state.md) 和 [P13 checkpoint](docs/p13-history-completion-checkpoint.md)；项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
 
 P11 与 P12 Step 1 的历史迁移、投影和人工 GUI 证据分别见 [P11 completion](docs/p11-real-migration-completion.md) 和 [P12 Step 1](docs/p12-step1-real-projection-checkpoint.md)。
 

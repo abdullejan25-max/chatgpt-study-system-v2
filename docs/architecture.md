@@ -55,7 +55,7 @@ See the accepted [ADRs](adr/) for decision context and consequences.
 
 ## P13 history completion and recovery (local, not released)
 
-The formal release baseline remains v0.6.0. P13 extends the configured History
+The formal release is v0.7.0 — History Completion & Recovery. P13 extends the configured History
 store with immutable source evidence and a separate deterministic canonical
 derived layer. Adapters map only proven boundaries, roles, ordering and optional
 occurrence time. Ambiguous or unsupported inputs remain source-only; normalization
@@ -64,8 +64,8 @@ identities exclude private paths and migration clocks, and source-specific views
 preserve independent export order and conversation branches. Import and
 normalization retries reuse evidence, canonical identities and provenance.
 
-The acquired-data verification covers 1,776 sources, 487 canonical conversations,
-7,334 distinct messages and 494 source-specific views; 1,323 sources remain wholly
+The acquired-data verification covers 1,802 sources, 487 canonical conversations,
+7,334 distinct messages and 494 source-specific views; 1,349 sources remain wholly
 source-only. Native Codex Desktop and Hermes History reads/no-result have passed.
 ChatGPT is acquisition_pending for incremental ingestion after its export arrives.
 WorkBuddy's P13 History Host acceptance is DEFERRED and nonblocking; its established
@@ -79,14 +79,20 @@ existing admin capability and trusted private roots. Offline utilities may prepa
 selected legacy inputs and their private migration ledger, but cannot replace
 Agent Gateway access with direct V2 database or store inspection.
 
-The real V2 backup is PASS_NATIVE: 3,778 files / 44,380,473,111 bytes, supported by
-actual native tool traces and positive Agent usage. Snapshot/restore operations
-preserve source and canonical identity, provenance, configured Study/Assets data,
-and private ledger/configuration evidence. The isolated restore, V1 unique-data
-audit and logical retirement remain pending. A restore target is a verification
-copy and never a second authoritative data layer. Production writable ingress
-will reuse existing Gateway permissions, versioning and provenance; its current
-acceptance is pending. Physical V1 deletion requires separate owner confirmation.
+The real V2 backup and isolated restore are PASS_NATIVE: 3,778 files /
+44,380,473,111 bytes, supported by actual native tool traces and positive Agent
+usage. Manifest, whole logical digests and ledger equality match; restored source,
+canonical and outcome counts match the acquired-data verification above, including
+all 1,776 source outcomes. Isolated Study read is verified. Formal bounded native
+readback and whole logical digests pass for 197 Assets, 29 Documents and 5 Wrong
+Answer sources / 5 analyses. Capacity planning includes copy, temporary storage,
+WAL and an explicit reserve using the greater of 4 GiB and a 10% reserve calculation;
+the actual native plan confirmed sufficient capacity.
+
+V1 unique-data audit passes with zero unknown inputs; the legacy runtime is logically retired and its data retained. A restore target is a
+verification copy and never a second authoritative data layer. Production writable
+ingress will reuse existing Gateway permissions, versioning and provenance; its current
+native production synthetic acceptance passes. Physical V1 deletion requires separate owner confirmation.
 
 Protocol details are documented in [source ingestion](history-source-ingestion.md),
 [canonical History](history-normalization.md) and [private recovery](p13-recovery.md).
@@ -139,3 +145,12 @@ empty. The default three-domain collector remains unchanged and still reports
 unavailable backends. Rendering and writing use the existing deterministic,
 manifest-owned pipeline; output stays outside the repository, with logical
 references only and no invented Study links or original Asset bytes.
+
+Late V1 audit adds 26 source-only outcomes, retaining 1,802 sources/outcomes and
+1,349 wholly source-only records; the canonical message graph is unchanged. A
+scoped mutable supplement (237 files/1,048,793,838 bytes) is natively backed up and
+restored with exact logical/provenance/ledger comparison. It explicitly excludes
+Study and accompanies the full static Study recovery checkpoint. Daily writable
+and preserved readonly profiles share production bindings; no second authority
+is introduced. Old Basic Memory writer hooks are reversibly disabled; cold data
+remains retained pending owner physical-deletion confirmation.

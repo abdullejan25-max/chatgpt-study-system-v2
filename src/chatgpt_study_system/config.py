@@ -21,3 +21,4 @@ class AppConfig:
     gateway_config_file: Path | None = None
     qmd_snapshot_config: Path | None = None
     qmd_snapshot_index: Path | None = None
+    recovery_include_study: bool = True
