@@ -1,124 +1,110 @@
-# ChatGPT Study System V2
+<p align="center">
+  <img src="docs/assets/cognivault-logo.png" alt="CogniVault logo" width="420">
+</p>
 
-**Local-first、Agent-agnostic 的个人学习基础设施。** 让不同 Agent Host 通过同一个本地 Gateway 使用个人学习数据，同时由用户掌控数据位置和访问权限。
+<h1 align="center">CogniVault</h1>
+<p align="center">A local-first learning and memory layer for AI agents.</p>
 
-## What it is / 项目简介
+CogniVault connects AI agents to a user-configured local learning and memory layer. Agent Hosts interpret requests and choose tools; the Gateway validates typed operations, enforces configured capabilities, and records provenance. The core runtime and Gateway do not depend on Codex Desktop.
 
-ChatGPT Study System V2 将 Study 学习资料、Personal History、Wrong Answers 错题和原始文档接入兼容的 Agent Host。Agent 负责理解需求、推理和选择工具；Gateway 执行明确、可验证并受权限控制的数据操作。
-
-系统不会自动扫描个人目录、导入聊天历史或上传 StudyVault。用户自行选择要配置的数据源，并明确发起导入。
-
-## Architecture / 核心架构
+## Architecture
 
 ```text
-User → Agent Host → MCP (local stdio) → Gateway → Adapters → Local data
+Agent Host (Codex Desktop, WorkBuddy, Hermes, or another stdio MCP client)
+       │ local stdio MCP
+       ▼
+    Gateway → Services and adapters → Explicitly configured local data
 ```
 
-**Agent thinks; Gateway executes.** Gateway 校验请求、检查 capability 并记录 provenance。它不运行第二个 LLM，也不开放任意 Shell。
+**Agent thinks; Gateway executes.** The current transport is local stdio MCP. CogniVault does not provide an HTTP listener or public endpoint.
 
-## Core data domains / 核心数据域
+## What CogniVault manages
 
-- **Study** — 通过明确配置的 QMD collection 检索学习资料；搜索使用隔离的临时副本，原始资料和索引仍由用户管理。
-- **Personal History** — 保存原始来源证据，并以确定性方式生成派生的 canonical conversations 与 messages。
-- **Wrong Answers** — 保留题目原始证据，Agent 分析另行保存并版本化。
-- **Assets & Documents** — 显式登记原始文件及其派生文档文本。
-- **Legacy / Source Evidence** — 保留有明确类型的历史输入；无法安全规范化的内容仍作为 source-only 证据。
+- **Study** — Search a user-selected QMD collection. StudyVault remains the authoritative source; search does not replace or rewrite the original materials.
+- **Personal History** — Keep source evidence separate from deterministic canonical conversations and messages. Uncertain or unsupported input remains source-only.
+- **Wrong Answers** — Preserve the original question evidence and store Agent analysis separately as versioned records.
+- **Assets and Documents** — Explicitly register original files and keep extracted text or OCR as derived data linked to its source.
+- **Legacy source evidence** — Preserve typed historical input without guessing roles, ordering, timestamps, or conversation boundaries.
 
-## Key properties / 设计特点
+## Quick start
 
-- **Local-first：** 私有数据和配置保存在用户选择的本机位置。
-- **保留来源：** 原始证据与规范化或分析后的数据分开保存。
-- **确定性处理：** Gateway 不猜测缺失的角色、顺序、时间或会话边界。
-- **可追溯：** 记录保留来源引用、provenance 和分析版本链。
-- **Capability-controlled：** Gateway 执行 read、ingest、write、projection、admin 权限检查。
-- **共享数据、各自对话：** 不同 Agent 可访问同一 Gateway 数据层，但不会因此共享对话上下文。
+### Prerequisites
 
-## Host validation records / Host 验证记录
+The core runtime needs Python 3.11 or later and [`uv`](https://docs.astral.sh/uv/). It works independently of any particular Agent Host.
 
-| Host | 项目记录的状态 |
-| --- | --- |
-| Codex | Codex Desktop 原生 MCP History readback：**PASS**。 |
-| Hermes | 原生 MCP History readback：**PASS**。 |
-| WorkBuddy | P12 integration：**PASS**；P13 History 专项 GUI verification：**DEFERRED**。 |
+### Install and configure the Gateway
 
-ChatGPT hosted MCP 与 Secure MCP Tunnel 尚未实现；ChatGPT 官方 export 仍为 `acquisition_pending`。详情见[当前状态](docs/current-state.md)。
-
-## Local data and privacy / 本地数据与隐私
-
-StudyVault 是 Study 的唯一权威来源。History、Assets、Documents 和 Wrong Answers 只使用私有配置中明确选定的本机数据位置。原始证据与派生 History、文档文本和版本化分析保持区分。
-
-- `config.local.toml`、`.codex/config.toml`、数据库、日志、导出文件及个人学习材料留在 Git 之外。
-- 项目不会自动扫描或上传个人数据。
-- 安装依赖时 `uv` 会从配置的软件源下载软件包；这不涉及上传个人学习数据。
-- `.gitignore` 用于防止误提交，不构成安全边界；提交前仍需检查暂存内容。
-- 数据读取和写入经由配置好的 Gateway 及其 capability 检查。
-
-完整数据流和存储规则见[隐私边界](docs/privacy-boundary.md)。
-
-## Installation / 安装
-
-### Core prerequisites / 核心前置条件
-
-项目核心运行时和 Gateway 不依赖 Codex Desktop。必需环境是 Python 3.11 或更高版本，以及 [`uv`](https://docs.astral.sh/uv/)；QMD、Node.js 和 OCR 组件按需安装：
-
-- 若启用 Study 检索，需自行安装 Node.js 和 QMD，并在私有配置中指定运行时与索引位置。
-- 若启用 OCR，运行 `uv sync --project . --extra pdf-ocr --no-editable` 安装 extra，并安装 Tesseract 和相应语言数据。默认安装不启用 OCR；PyMuPDF 有独立的 AGPL 或商业授权条件，见[许可证审计](docs/license-audit.md)。
-
-### Install / configure Gateway / 安装与配置 Gateway
-
-在仓库根目录创建私有 `config.local.toml` 并安装项目：
+From the repository root, create the private local configuration and install the project:
 
 ```powershell
 Copy-Item config.example.toml config.local.toml
 uv sync --project . --no-editable
 ```
 
-只在 Git 外编辑 `config.local.toml`，填写准备启用的数据位置和权限；示例配置默认只读。Windows 下保留 `--no-editable`：它安装 wheel，可避开 Python 3.11 在非 ASCII 路径的 editable `.pth` 文件解码问题。
+Edit `config.local.toml` outside Git to set the local data locations and capabilities you intend to enable. The example configuration is read-only by default. On Windows, keep `--no-editable`: it installs a wheel and avoids a Python 3.11 editable `.pth` decoding issue when the checkout path contains non-ASCII characters.
 
-项目通过本机 stdio MCP transport 提供 Gateway；没有 HTTP listener 或 public endpoint。Host 启动 Gateway 时可使用以下命令形式：
+An MCP Host starts the Gateway over stdio using the local configuration. The command form is:
 
 ```text
-uv run --no-sync --project <repository-path> python -m chatgpt_study_system.transports.mcp_stdio --config <absolute-config.local.toml-path>
+uv run --no-sync --project <repository-path> python -m chatgpt_study_system.transports.mcp_stdio --config <absolute-config-path>
 ```
 
-先完成 `uv sync`；`--no-sync` launcher 不会安装或更新依赖。依赖更新或 checkout 变更后重新运行 `uv sync`。各 Host 都可连接同一套 Gateway 实现和显式配置的数据层，具体 MCP 配置格式由 Host 决定。
+Run `uv sync` before the first launch and after changing the checkout or dependencies; `--no-sync` does not install or update dependencies. Host-specific command, argument, environment, and path fields depend on the client.
 
-### Connect Agent / Host / 连接 Agent / Host
+## Agent Hosts and validation
 
-#### Codex Desktop
+Codex Desktop, WorkBuddy, and Hermes connect to the same Gateway implementation and explicitly configured data layer. Their recorded validation has different scopes:
 
-`.codex/setup_mcp.py` 是 **Codex Desktop 专用的 Host setup helper**：它为该 Host 生成 Git 忽略的 `.codex/config.toml`，不是项目核心安装步骤。生成配置后，在 Codex Desktop 中信任此仓库并新建对话。Host 配置见 [Codex Host Setup](docs/codex-host-setup.md)，验收记录见[当前状态](docs/current-state.md)。
+| Host | Project validation record | Setup or evidence |
+| --- | --- | --- |
+| Codex Desktop | Native MCP History readback: **PASS** | [Host setup](docs/codex-host-setup.md) · [Current State](docs/current-state.md) |
+| WorkBuddy | P12 integration: **PASS**; P13 History GUI verification: **DEFERRED** | [P12 checkpoint](docs/p12-step2-workbuddy-checkpoint.md) · [Current State](docs/current-state.md) |
+| Hermes | Native MCP History readback: **PASS** | [Host setup](docs/hermes-host-setup.md) · [Current State](docs/current-state.md) |
+| Other local stdio MCP clients | Protocol-compatible; not individually validated by this project | Follow the client’s stdio MCP configuration instructions. |
 
-#### WorkBuddy
+`.codex/setup_mcp.py` is only a Codex Desktop Host setup helper. It generates the Git-ignored `.codex/config.toml`; it is not part of the core installation or a requirement for other Hosts.
 
-WorkBuddy 通过 local stdio MCP 连接同一 Gateway；配置与分阶段验收记录见 [WorkBuddy checkpoint](docs/p12-step2-workbuddy-checkpoint.md) 和[当前状态](docs/current-state.md)。
+## Current stable release
 
-#### Hermes
+The current stable release is **[v0.7.0 — History Completion & Recovery](docs/releases/v0.7.0.md)**. The final acquired-data closure records:
 
-Hermes 通过 local stdio MCP 连接同一 Gateway。Host 配置见 [Hermes Host Setup](docs/hermes-host-setup.md)，验收记录见[当前状态](docs/current-state.md)。
+| Measure | Result |
+| --- | ---: |
+| Sources / outcomes | 1,804 |
+| Canonical conversations | 487 |
+| Distinct canonical messages | 7,334 |
+| Wholly source-only records | 1,351 |
+| Bounded V1 original inputs | 443 |
+| V1-only unknown | 0 |
 
-#### Other stdio MCP clients
+See [Current State](docs/current-state.md) for Host, acquisition, and recovery details.
 
-支持启动本机 stdio MCP server 的其他 client，也可按上面的命令形式连接 Gateway；command、args、环境变量和路径字段按各自 client 的配置方式填写。协议上可接入不代表项目已逐个验证这些 Host；目前已有项目验证记录的是 Codex Desktop、WorkBuddy 和 Hermes。
+## Optional Components
 
-## Current release / 当前版本
+- **Study search:** Install Node.js and QMD separately, then configure their executable, collection, and index locations in the private config. They are not bundled with CogniVault.
+- **OCR:** Install Tesseract and the required language data. Enable the optional Python extra with `uv sync --project . --extra pdf-ocr --no-editable`. OCR output is derived text and does not replace the source page.
 
-当前正式版本是 **[v0.7.0 — History Completion & Recovery](docs/releases/v0.7.0.md)**。后续 acquisition closure 对账为 1,804 sources/outcomes、487 个 canonical conversations、7,334 条 distinct messages 和 1,351 条 wholly source-only records。完整统计、Host 状态和恢复证据见[当前状态](docs/current-state.md)。
+## Current Limitations
 
-## Known limitations / 当前限制
+- ChatGPT hosted MCP and Secure MCP Tunnel are not implemented; the available transport is local stdio MCP.
+- The official ChatGPT export remains `acquisition_pending`.
+- WorkBuddy P13 History GUI verification remains **DEFERRED**; this does not change its P12 integration result.
+- Caller and Agent identity is `reported / unverified`, not authenticated identity.
 
-- ChatGPT hosted MCP 和 Secure MCP Tunnel 尚未实现。
-- ChatGPT 官方 export 尚未到达；到达后才会执行增量、幂等 acquisition。
-- WorkBuddy 的 P13 History 专项 GUI verification 仍为 deferred；这不改变其 P12 integration PASS。
-- Caller / Agent identity 是 `reported / unverified`，不代表已认证身份。
-- QMD 搜索和 OCR 依赖用户在本机安装、配置可选软件。含糊的 History 来源保留为 source-only，不猜测生成 canonical messages。
+## Local data and privacy
 
-## Documentation / 文档导航
+StudyVault is the sole authoritative source for Study. Private configuration, databases, logs, exports, and personal learning materials stay outside Git. CogniVault does not scan personal directories, import chat history, or upload StudyVault data automatically. Reads and writes pass through the configured Gateway and its capability checks; original evidence remains distinct from derived History, document text, and versioned analysis. Installing dependencies downloads software packages from the configured package source, not personal study data. `.gitignore` helps prevent accidental commits but is not a security boundary.
 
-- [Current State](docs/current-state.md) — 当前发布、Host、acquisition 和 recovery 状态。
-- [Architecture](docs/architecture.md) — 稳定组件、数据边界和扩展点。
-- [Privacy Boundary](docs/privacy-boundary.md) — 本地数据和 capability 规则。
-- [History source ingestion](docs/history-source-ingestion.md) 与 [canonical normalization](docs/history-normalization.md)。
-- [Recovery](docs/p13-recovery.md) 与 [v0.7.0 Release Notes](docs/releases/v0.7.0.md)。
-- 历史检查点：[P11](docs/p11-real-migration-completion.md)、[P12 Step 1](docs/p12-step1-real-projection-checkpoint.md)、[P12 Step 2](docs/p12-step2-workbuddy-checkpoint.md)、[P12 Step 3](docs/p12-step3-hermes-checkpoint.md)、[P12 Step 4](docs/p12-step4-cross-agent-checkpoint.md) 和 [P13](docs/p13-history-completion-checkpoint.md)。
-- Host 配置：[Codex](docs/codex-host-setup.md) 与 [Hermes](docs/hermes-host-setup.md)。
+See the [Privacy Boundary](docs/privacy-boundary.md) for data and capability details.
+
+## License
+
+CogniVault is licensed under [Apache-2.0](LICENSE). The optional `pdf-ocr` extra includes PyMuPDF, which has separate AGPL or commercial licensing terms; see the [license audit](docs/license-audit.md) before enabling it.
+
+## Documentation
+
+- [Current State](docs/current-state.md) — Current release, Host, acquisition, and recovery status.
+- [Architecture](docs/architecture.md) — Stable components, data boundaries, and extension points.
+- [History source ingestion](docs/history-source-ingestion.md) and [canonical normalization](docs/history-normalization.md).
+- [Recovery](docs/p13-recovery.md).
+- Historical checkpoints: [P11](docs/p11-real-migration-completion.md), [P12](docs/p12-step4-cross-agent-checkpoint.md), and [P13](docs/p13-history-completion-checkpoint.md).
