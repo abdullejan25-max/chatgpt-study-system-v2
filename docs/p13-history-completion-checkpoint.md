@@ -355,3 +355,25 @@ version/stdio38/1. Wheel/sdist and intended-public-ancestry privacy are verified
 with real private markers kept solely in local audit inputs. Release: see
 [v0.7.0](releases/v0.7.0.md). Physical deletion is an owner-confirmed transaction,
 not an automatically passing Gate.
+
+## Final deletion-list freshness check
+
+After the v0.7.0 release checkpoint, exact file hashing and a complete bounded
+directory-set comparison found one growing legacy archive version and one file
+created before the producer freeze that was missing from the original list.
+Both were captured through native Gateway incremental import and exact replay.
+Prior evidence remains immutable; only two new unsupported/source-only outcomes
+were derived, and no canonical message was added. Current readback is 1,804
+sources/outcomes, 487 conversations, 7,334 messages, 494 views and 1,351 wholly
+source-only records. The final universe is 443 original inputs / 67,700,601 bytes;
+all original hashes and the complete archive directory set reconcile, unknown = 0.
+
+Logical retirement also guards the legacy collector entry point, so cached Host
+hook settings or manual invocation cannot resume the old writer. The exact
+original script is archived locally; its guarded invocation returns retired.
+Final complete mutable backup and isolated restore are PASS_NATIVE: 247
+files / 1,049,088,134 bytes, with exact source/canonical/manifest digests,
+ledger and formal Assets/Documents/Wrong Answer readback. Study is explicitly
+excluded; its previously verified full backup/isolated read remains retained. Private receipts and exact-file
+deletion manifests remain outside Git. Physical deletion still requires explicit
+owner confirmation.

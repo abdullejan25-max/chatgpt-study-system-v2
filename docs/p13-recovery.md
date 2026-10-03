@@ -85,3 +85,15 @@ Synthetic tests are engineering evidence. Production acceptance requires actual
 native Host calls, positive Agent usage/tool traces, durable private receipts,
 and returned verification states. Never inspect V2 DBs or backup stores directly
 from an Agent. A backup does not itself authorize V1 retirement or deletion.
+
+
+## Final acquired-data recovery closure
+
+The final bounded archive set is reconciled before the deletion decision. Native
+mutable backup/isolated restore validates 247 files / 1,049,088,134 bytes,
+1,804 sources/outcomes, 487 conversations, 7,334 messages and 1,351 source-only
+records. Whole digests, source provenance and ledger equality pass. Formal restored
+readback verifies 198 Assets, 29 Documents and 6 Wrong Answer sources / 7 analysis
+versions, including the known marked production fixture. This supplement explicitly
+excludes Study and accompanies the retained full 3,778-file verified Study backup.
+It is an isolated verification copy, not another authoritative data layer.

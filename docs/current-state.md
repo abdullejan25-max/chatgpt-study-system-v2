@@ -118,3 +118,14 @@ P13 bounded V1 audit额外导入26个source-only输入，producer freeze后442�
 237 files / 1,048,793,838 bytes，1,802 sources/outcomes；它排除Study，配合上面的完整
 Study备份使用。完整最新canonical数量不变，source-only retained=1,349。
 当前公开工程回归targeted380/1 skip、full828/12 skips；wheel clean-install synthetic9 PASS。
+
+
+## P13 final acquired-data closure
+
+最终完整范围对账为 1,804 sources/outcomes、487 conversations、7,334 messages，
+1,351 source-only；443 个 V1 原始输入 / 67,700,601 bytes 全部有证据映射，
+V1-only unknown=0，完整归档目录集合一致。旧 writer 入口已可恢复地停用。
+最终 mutable backup/isolated restore PASS_NATIVE：247 files / 1,049,088,134 bytes，
+覆盖最后增量、ledger 和 marked production synthetic fixture；原全量 Study/QMD
+backup/restore PASS 保留。ChatGPT acquisition_pending、WorkBuddy GUI DEFERRED
+保持不变；physical deletion 等待 owner explicit confirmation。
