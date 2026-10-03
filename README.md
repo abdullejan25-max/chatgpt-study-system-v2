@@ -1,136 +1,101 @@
 # ChatGPT Study System V2
 
-一个 local-first、Agent-agnostic 的个人学习基础设施。它通过统一的本地 Gateway 连接 Study、Personal History、Wrong Answers 和原始学习材料；不会自动发现、导入或上传个人资料。
+**Local-first、Agent-agnostic 的个人学习基础设施。** 让不同 Agent Host 通过同一个本地 Gateway 使用个人学习数据，同时由用户掌控数据位置和访问权限。
 
-## 设计与架构
+## What it is / 项目简介
 
-系统遵循 **Agent thinks; Gateway executes**：Agent 负责理解、推理和规划，Gateway 只执行明确、可验证且受权限控制的操作。Gateway 不运行第二个 LLM，也不提供任意 Shell。
+ChatGPT Study System V2 将 Study 学习资料、Personal History、Wrong Answers 错题和原始文档接入兼容的 Agent Host。Agent 负责理解需求、推理和选择工具；Gateway 执行明确、可验证并受权限控制的数据操作。
+
+系统不会自动扫描个人目录、导入聊天历史或上传 StudyVault。用户自行选择要配置的数据源，并明确发起导入。
+
+## Architecture / 核心架构
 
 ```text
-Agent
-  ├─ Workflow：规定某类任务的操作步骤，例如错题工作流
-  └─ MCP：为不同 Agent 提供同一套协议接口
-         ↓ stdio
-      Gateway：校验参数、权限、来源、事务、版本和 provenance
-         ↓
-      Adapters：Study / Personal History / Wrong Answers / Assets & Documents
-         ↓
-      明确配置的本机数据源
+User → Agent Host → MCP (local stdio) → Gateway → Adapters → Local data
 ```
 
-- **Study**：通过显式配置的 QMD collection 搜索学习资料。搜索使用隔离的临时副本；原始索引保持为用户管理的数据源。
-- **Personal History**：读取显式登记的本地 History store；原始来源证据与确定性生成的 canonical conversations/messages 分开保存。规范化只接受可靠结构，不能确定的记录继续 source-only；系统不会扫描聊天记录或自动导入历史。
-- **Legacy Sources**：读取经过显式迁移的旧来源文档，保留原始字节、类型与 provenance；聊天档案、旧错题笔记、派生事实和 Codex JSONL 与原始消息模型分开。`list_legacy_sources`、`search_legacy_sources`、`fetch_legacy_source` 提供只读检索和有界原文读取。
-- **Wrong Answers**：原始图片或文档作为证据，Agent 提供分析，Gateway 按权限保存来源和带版本的分析，并记录 provenance。不同 MCP Agent 使用同一套 `study-workflow://wrong-answer` 工作流。
-- **Assets & Documents**：Gateway 对明确提交的来源做边界检查、哈希与登记；原始证据和派生文字保持可区分。
+**Agent thinks; Gateway executes.** Gateway 校验请求、检查 capability 并记录 provenance。它不运行第二个 LLM，也不开放任意 Shell。
 
-更完整的组件职责和安全约束见 [架构说明](docs/architecture.md)、[隐私边界](docs/privacy-boundary.md) 和 [ADR](docs/adr/)；已验证的错题链路证据见 [Real Wrong Answer E2E checkpoint](docs/real-wrong-answer-e2e-checkpoint.md)。
+## Core data domains / 核心数据域
 
-`v0.2.0 — Legacy Migration` 的历史范围是 V1 来源迁移与 V2 cutover，证据见 [P11 completion](docs/p11-real-migration-completion.md)。P13 在正式 `v0.6.0` 基线上推进已取得来源的补齐与规范化，当前本地结果见 [P13 checkpoint](docs/p13-history-completion-checkpoint.md)、[source-only ingestion](docs/history-source-ingestion.md) 和 [canonical History](docs/history-normalization.md)。P13 发布范围见 [v0.7.0 release notes](docs/releases/v0.7.0.md)；旧错题的完整业务语义仍保留原有限制。
+- **Study** — 通过明确配置的 QMD collection 检索学习资料；搜索使用隔离的临时副本，原始资料和索引仍由用户管理。
+- **Personal History** — 保存原始来源证据，并以确定性方式生成派生的 canonical conversations 与 messages。
+- **Wrong Answers** — 保留题目原始证据，Agent 分析另行保存并版本化。
+- **Assets & Documents** — 显式登记原始文件及其派生文档文本。
+- **Legacy / Source Evidence** — 保留有明确类型的历史输入；无法安全规范化的内容仍作为 source-only 证据。
 
-## 安装
+## Key properties / 设计特点
 
-### 前置条件
+- **Local-first：** 私有数据和配置保存在用户选择的本机位置。
+- **保留来源：** 原始证据与规范化或分析后的数据分开保存。
+- **确定性处理：** Gateway 不猜测缺失的角色、顺序、时间或会话边界。
+- **可追溯：** 记录保留来源引用、provenance 和分析版本链。
+- **Capability-controlled：** Gateway 执行 read、ingest、write、projection、admin 权限检查。
+- **共享数据、各自对话：** 不同 Agent 可访问同一 Gateway 数据层，但不会因此共享对话上下文。
 
-- Python 3.11 或更新版本。
-- [`uv`](https://docs.astral.sh/uv/) 已安装并能从终端及 Codex Desktop 继承的 `PATH` 找到。
-- 若要搜索 QMD Study collection，还需安装受支持版本的 Node.js 和 QMD，并在本机配置中填写可执行文件及索引路径。该外部运行时不会由本项目安装或捆绑。
-- OCR 是可选能力，需要额外安装 `pdf-ocr` Python extra 和本机 Tesseract 语言数据；默认安装不启用 OCR。
+## Supported and verified Hosts / 已验收的 Host
 
-### 一次性本机设置
+| Host | 已验收状态 |
+| --- | --- |
+| Codex | Codex Desktop 原生 MCP History readback：**PASS**。 |
+| Hermes | 原生 MCP History readback：**PASS**。 |
+| WorkBuddy | P12 integration：**PASS**；P13 History 专项 GUI verification：**DEFERRED**。 |
 
-在新 clone 的仓库根目录运行：
+ChatGPT hosted MCP 与 Secure MCP Tunnel 尚未实现；ChatGPT 官方 export 仍为 `acquisition_pending`。详情见[当前状态](docs/current-state.md)。
+
+## Local data and privacy / 本地数据与隐私
+
+StudyVault 是 Study 的唯一权威来源。History、Assets、Documents 和 Wrong Answers 只使用私有配置中明确选定的本机数据位置。原始证据与派生 History、文档文本和版本化分析保持区分。
+
+- `config.local.toml`、`.codex/config.toml`、数据库、日志、导出文件及个人学习材料留在 Git 之外。
+- 项目不会自动扫描或上传个人数据。
+- 安装依赖时 `uv` 会从配置的软件源下载软件包；这不涉及上传个人学习数据。
+- `.gitignore` 用于防止误提交，不构成安全边界；提交前仍需检查暂存内容。
+- 数据读取和写入经由配置好的 Gateway 及其 capability 检查。
+
+完整数据流和存储规则见[隐私边界](docs/privacy-boundary.md)。
+
+## Installation / 安装
+
+需要 Python 3.11 或更高版本，以及 [`uv`](https://docs.astral.sh/uv/)。在仓库根目录创建本机配置并安装项目：
 
 ```powershell
 Copy-Item config.example.toml config.local.toml
 uv sync --project . --no-editable
 ```
 
-该命令安装核心默认依赖，不安装 PyMuPDF。`--no-editable` 让 uv 安装项目 wheel，避免 Windows Python 3.11 在含中文路径的 editable `.pth` 文件上遇到系统代码页解码错误。Codex MCP 使用 `uv run --no-sync` 启动已安装环境；首次设置和依赖更新后都先完成 `uv sync`。核心测试另加 `--extra dev`；只有主动启用 PDF/OCR 时才加 `--extra pdf-ocr`，其中的 PyMuPDF 继续受其独立许可证约束。
+编辑 `config.local.toml`，只填写准备启用的数据位置和权限。示例配置默认只读。Windows 下保留 `--no-editable`：它安装 wheel，可避开 Python 3.11 在非 ASCII 路径的 editable `.pth` 文件解码问题。
 
-macOS/Linux 可把第一条命令替换为 `cp config.example.toml config.local.toml`。编辑被 Git 忽略的 `config.local.toml`，填入自己本机的 Study/QMD 路径；只有确实要启用相应能力时，再配置 History、Asset store 和权限。默认配置示例仅启用 `read`，不会迁移现有数据，也不会选择个人数据目录。确认本机配置符合预期后，再运行：
+若使用 Codex Desktop，生成本机忽略配置：
 
 ```powershell
 python .codex/setup_mcp.py
 ```
 
-`.codex/setup_mcp.py` 会从自身位置定位仓库，并生成被忽略的 `.codex/config.toml`。生成配置使用本机 checkout 的显式绝对路径，并将 `PYTHONPATH` 指向该 checkout 的 `src`，避免 Codex Desktop 将 `cwd = "."` 解析到自身安装目录或依赖 editable install 的本机 locale 路径行为。模板中的 `required = true` 保证服务器启动失败会显式报错。运行脚本不会覆盖无法识别的现有本机配置。
+在信任该仓库的 Codex Desktop 窗口中新建对话，并调用 `health_report`。配置细节见 [Codex Host Setup](docs/codex-host-setup.md)。其他 MCP client 可通过本机 stdio 启动同一 Gateway；项目不开放公网服务端点。
 
-在 Codex Desktop 打开并信任该仓库，然后**新建对话**，确认 `study_system` MCP 已加载。先调用只读 `health_report`。如果刚更改了 `PATH`，重启 Codex Desktop 后再新建对话。完整说明见 [Codex Host setup](docs/codex-host-setup.md)。
+Codex launcher 使用 `uv run --no-sync`；首次安装及更新依赖后，先重新运行 `uv sync`。
 
-如不使用 Codex Desktop，可通过 stdio MCP client 启动同一 Gateway；本项目当前不启用 HTTP listener 或公开服务端点。
+Study 检索可选用外部安装的 QMD 和 Node.js；项目不安装或捆绑它们。OCR 需要额外安装 Tesseract 和语言数据。启用 `pdf-ocr` extra 的命令为 `uv sync --project . --extra pdf-ocr --no-editable`；其中 PyMuPDF 有独立的 AGPL 或商业授权条件，见 [许可证审计](docs/license-audit.md)。
 
-### 后续 v0.7.0 升级流程
+## Current release / 当前版本
 
-`v0.7.0 — History Completion & Recovery` 按以下顺序升级：
+当前正式版本是 **[v0.7.0 — History Completion & Recovery](docs/releases/v0.7.0.md)**。后续 acquisition closure 对账为 1,804 sources/outcomes、487 个 canonical conversations、7,334 条 distinct messages 和 1,351 条 wholly source-only records。完整统计、Host 状态和恢复证据见[当前状态](docs/current-state.md)。
 
-1. 通过已配置 Gateway 创建并验证私有备份，保留现有配置；恢复步骤见 [private recovery](docs/p13-recovery.md)。
-2. 切换到正式发布的 checkout，在仓库根目录运行 `uv sync --project . --frozen --no-editable`；需要的 optional extras 按既有配置保留。
-3. 在被忽略的私有 Gateway 配置中同步 `[gateway].version`，保留原有数据位置和 capability 设置。
-4. 重载各 Host 的 MCP，在新会话用原生 `study_system` 验证 `health_report`、来源检索、canonical History 读取与 no-result。
+## Known limitations / 当前限制
 
-隔离恢复副本只用于恢复验收，不能配置成第二份权威数据层。升级不会自动导入或删除历史来源。
+- 当前 transport 为本机 stdio MCP；ChatGPT hosted MCP 和 Secure MCP Tunnel 尚未实现。
+- ChatGPT 官方 export 尚未到达；到达后才会执行增量、幂等 acquisition。
+- WorkBuddy 的 P13 History 专项 GUI verification 仍为 deferred；这不改变其 P12 integration PASS。
+- Caller / Agent identity 是 `reported / unverified`，不代表已认证身份。
+- QMD 搜索和 OCR 依赖用户在本机安装、配置可选软件。含糊的 History 来源保留为 source-only，不猜测生成 canonical messages。
 
-## 测试
+## Documentation / 文档导航
 
-```powershell
-uv sync --project . --extra dev --no-editable
-uv run --no-sync --project . --extra dev pytest -q
-```
-
-测试使用人工编写的合成数据。Codex Host smoke、真实 QMD smoke 和受 Windows 文件系统权限限制的测试是 opt-in 或可能跳过；synthetic 测试不等于真实 Codex Desktop 新会话验证。
-
-## 数据与安全边界
-
-- `config.local.toml`、`.codex/config.toml`、数据库及 SQLite sidecar、日志、缓存、真实图片和 PDF 都属于本机数据，不应提交。
-- Gateway 只访问本机配置显式指定的来源；Capability 控制 `read`、`write`、`ingest`、`projection` 和 `admin` 操作。批量投影导出需要单独显式启用 `projection`，普通 `read` 不包含该权限。写入错题记录必须经 Gateway，不直接写数据库。
-- 项目运行时不会自动上传学习资料。首次安装 Python 依赖时，`uv` 会从配置的软件源下载软件包；这不是上传个人学习数据。
-- `.gitignore` 是防误提交措施，不是安全边界；提交前仍须检查 `git status` 和提交内容。
-- 不要把真实 StudyVault、History、教材、错题图片、聊天记录或数据库复制到仓库或测试夹具。
-
-## 当前限制
-
-- ChatGPT hosted MCP / Secure MCP Tunnel 尚未实现；当前 MCP 运行方式是本机 stdio。
-- QMD、Node 和 Study 索引需要用户自行安装并在私有配置中显式指定。
-- OCR 是可选本机能力，依赖 Tesseract 与语言数据；识别文字不能取代原始页面证据。
-- 本项目源代码按 Apache License 2.0 许可，SPDX 标识为 `Apache-2.0`。`pdf-ocr` extra 中的 PyMuPDF 使用其自身的 GNU AGPL v3 或 Artifex commercial license；项目 Apache-2.0 声明不会改变 PyMuPDF 的许可证，安装该 extra 前请确认适用条件。详见 [P10 License audit](docs/license-audit.md)。
-
-## 状态
-
-当前发布为 **`v0.7.0 — History Completion & Recovery`**；P12 的 Codex、WorkBuddy、Hermes Host PASS 保留。P13 工程与私有迁移：已验证 1,802 个来源、487 个 canonical conversations、7,334 条 distinct messages、494 个 source-specific views；1,349 个来源完全保留 source-only。
-
-ChatGPT 官方导出为 `acquisition_pending`，到达后做增量幂等补录。WorkBuddy 的 P13 History Host 验收为 `DEFERRED`，不阻塞后续工作。真实 V2 backup 与 isolated restore 均已获 `PASS_NATIVE`，来源/canonical/ledger、Study 和 Assets/Documents/Wrong Answers 恢复回读一致；V1 unique-data audit PASS，已逻辑退役并保留原始数据。生产 writable ingress 通过正式 Gateway 完成 marked synthetic native smoke 和 fresh Hermes 完整回读。V1 physical deletion 必须另获 owner 明确确认。当前证据与限制见 [当前状态](docs/current-state.md) 和 [P13 checkpoint](docs/p13-history-completion-checkpoint.md)；项目运行和 MCP 调用不会自动推送代码或上传个人学习资料。
-
-P11 与 P12 Step 1 的历史迁移、投影和人工 GUI 证据分别见 [P11 completion](docs/p11-real-migration-completion.md) 和 [P12 Step 1](docs/p12-step1-real-projection-checkpoint.md)。
-
-## Hermes Integration（v0.5.0）
-
-Hermes Agent v0.20.0 经原生 stdio MCP 接入同一 Gateway，22/22 Gate 已通过。
-真实 CLI Agent 的生产只读、三类 no-result、隔离 v1/v2、幂等/冲突、reported/unverified
-provenance、Host 退出/重启与 isolated Projection 证据见 [Hermes checkpoint](docs/p12-step3-hermes-checkpoint.md)。
-生产与隔离服务器不同名；Hermes Memory/profile disabled，session/runtime metadata 不作为 V2 权威层。
-配置和已验证 DeepSeek 会话入口见 [Host setup](docs/hermes-host-setup.md)，
-范围与发布检查见 [v0.5.0 notes](docs/releases/v0.5.0.md)。Desktop shell live reload/GUI restart
-未单独验收；Step 4 跨 Agent 矩阵与会话迁移不属于该 v0.5.0 发布范围，后续状态见上文。
-
-## WorkBuddy Integration（v0.4.0）
-
-P12 Step 2 的真实 WorkBuddy 验收与隔离 Projection 证据见
-[WorkBuddy Integration checkpoint](docs/p12-step2-workbuddy-checkpoint.md)。
-WorkBuddy 5.6.2 经正式 MCP 使用同一 Gateway；读、计数、存在性判断与写入均经过 Gateway。
-隔离 controlled-write、版本/幂等/冲突、reported/unverified provenance、真实重启和隔离 Projection Gate 全部 PASS。
-Basic Memory disabled；production 入口与隔离测试入口分开。WorkBuddy 聊天历史迁移不属于该 v0.4.0 发布范围；P13 本地来源与 Host 验收状态见上文。
-发布范围、验证与限制见 [v0.4.0 release notes](docs/releases/v0.4.0.md)。
-
-## Obsidian Visualization（v0.3.0 起）
-
-既有 Gateway → collector → renderer → writer 将真实数据投影到私有 Vault 的 `V2Projection`，通过 manifest 管理所有权与安全重建。Dashboard 提供四类 Sources、Wrong Answers、Knowledge Points、Error Types、Study 相对引用以及 Asset/Document logical refs。来源页面是元数据视图，不复制聊天正文、不推断消息角色或会话边界；P12 Step 1 验收时 canonical messages 为 0，后续 P13 canonical History 保持独立 derived layer。Study 保持单一权威来源，不复制或重写原文件。
-
-批量读取需在忽略的私有配置中显式启用 `projection`。在仓库根目录执行：
-
-```powershell
-$env:PYTHONPATH = Join-Path (Get-Location) "src"
-uv run --no-sync python -m chatgpt_study_system.obsidian_build --config config.local.toml --vault <existing-private-vault>
-```
-
-构建命令要求现有 Vault 包含配置的 Study root，且 Study 与 `V2Projection` 互不重叠。它验证文件回读、相对链接、第二次独立构建与 manifest 稳定性；未登记为 generated 的用户笔记不属于删除范围。普通写入失败可回滚，突然断电或进程终止不保证整个目录原子替换。发布范围与限制见 [v0.3.0 release notes](docs/releases/v0.3.0.md)。
+- [Current State](docs/current-state.md) — 当前发布、Host、acquisition 和 recovery 状态。
+- [Architecture](docs/architecture.md) — 稳定组件、数据边界和扩展点。
+- [Privacy Boundary](docs/privacy-boundary.md) — 本地数据和 capability 规则。
+- [History source ingestion](docs/history-source-ingestion.md) 与 [canonical normalization](docs/history-normalization.md)。
+- [Recovery](docs/p13-recovery.md) 与 [v0.7.0 Release Notes](docs/releases/v0.7.0.md)。
+- 历史检查点：[P11](docs/p11-real-migration-completion.md)、[P12 Step 1](docs/p12-step1-real-projection-checkpoint.md)、[P12 Step 2](docs/p12-step2-workbuddy-checkpoint.md)、[P12 Step 3](docs/p12-step3-hermes-checkpoint.md)、[P12 Step 4](docs/p12-step4-cross-agent-checkpoint.md) 和 [P13](docs/p13-history-completion-checkpoint.md)。
+- Host 配置：[Codex](docs/codex-host-setup.md) 与 [Hermes](docs/hermes-host-setup.md)。

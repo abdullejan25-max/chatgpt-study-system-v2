@@ -1,5 +1,7 @@
 # 项目路线图
 
+> 历史路线图快照，内容截至 2026-09-30。此页中的 P12 `PREPARATION` 表示当时的阶段状态，之后的发布和验收已继续推进。当前正式版本、状态和限制以 [Current State](current-state.md) 为准。
+
 ```text
 Phase 1：V1 审计 ✅
 Phase 2：ChatGPT-first V2 架构 ✅
