@@ -97,7 +97,7 @@ See [Current State](docs/current-state.md) for Host, acquisition, and recovery d
 
 ## Local data and privacy
 
-StudyVault is the sole authoritative source for Study. Private configuration, databases, logs, exports, and personal learning materials stay outside Git. CogniVault does not automatically scan personal directories, import chat history, or upload StudyVault data. Reads and writes pass through the configured Gateway and its capability checks; original evidence remains distinct from derived History, document text, and versioned analysis. Installing dependencies downloads software packages from the configured package source, not personal study data. `.gitignore` helps prevent accidental commits but is not a security boundary.
+StudyVault is the sole authoritative source for Study. Private configuration, databases, logs, exports, and personal learning materials stay outside Git. CogniVault does not automatically scan personal directories, import chat history, or upload StudyVault data. Agent-facing reads and writes pass through the configured Gateway and its capability checks; original evidence remains distinct from derived History, document text, and versioned analysis. Installing dependencies downloads software packages from the configured package source, not personal study data. `.gitignore` helps prevent accidental commits but is not a security boundary.
 
 See the [Privacy Boundary](docs/privacy-boundary.md) for data and capability details.
 
