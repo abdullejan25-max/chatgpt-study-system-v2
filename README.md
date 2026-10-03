@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="docs/assets/cognivault-logo.png" alt="CogniVault logo" width="420">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/cognivault-icon.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/cognivault-logo.png">
+    <img src="docs/assets/cognivault-logo.png" alt="CogniVault brand mark" width="300">
+  </picture>
 </p>
 
 <h1 align="center">CogniVault</h1>
@@ -57,9 +61,9 @@ Codex Desktop, WorkBuddy, and Hermes connect to the same Gateway implementation 
 
 | Host | Project validation record | Setup or evidence |
 | --- | --- | --- |
-| Codex Desktop | Native MCP History readback: **PASS** | [Host setup](docs/codex-host-setup.md) · [Current State](docs/current-state.md) |
+| Codex Desktop | Native MCP History read / no-result checks: **PASS** | [Host setup](docs/codex-host-setup.md) · [Current State](docs/current-state.md) |
 | WorkBuddy | P12 integration: **PASS**; P13 History GUI verification: **DEFERRED** | [P12 checkpoint](docs/p12-step2-workbuddy-checkpoint.md) · [Current State](docs/current-state.md) |
-| Hermes | Native MCP History readback: **PASS** | [Host setup](docs/hermes-host-setup.md) · [Current State](docs/current-state.md) |
+| Hermes | Native MCP History read / no-result checks: **PASS** | [Host setup](docs/hermes-host-setup.md) · [Current State](docs/current-state.md) |
 | Other local stdio MCP clients | Protocol-compatible; not individually validated by this project | Follow the client’s stdio MCP configuration instructions. |
 
 `.codex/setup_mcp.py` is only a Codex Desktop Host setup helper. It generates the Git-ignored `.codex/config.toml`; it is not part of the core installation or a requirement for other Hosts.
@@ -82,7 +86,7 @@ See [Current State](docs/current-state.md) for Host, acquisition, and recovery d
 ## Optional Components
 
 - **Study search:** Install Node.js and QMD separately, then configure their executable, collection, and index locations in the private config. They are not bundled with CogniVault.
-- **OCR:** Install Tesseract and the required language data. Enable the optional Python extra with `uv sync --project . --extra pdf-ocr --no-editable`. OCR output is derived text and does not replace the source page.
+- **OCR:** Only for scanned pages or PDFs without a usable text layer. Install Tesseract and the required language data, then enable the optional Python extra with `uv sync --project . --extra pdf-ocr --no-editable`. OCR output is derived text and does not replace the source page.
 
 ## Current Limitations
 
@@ -93,7 +97,7 @@ See [Current State](docs/current-state.md) for Host, acquisition, and recovery d
 
 ## Local data and privacy
 
-StudyVault is the sole authoritative source for Study. Private configuration, databases, logs, exports, and personal learning materials stay outside Git. CogniVault does not scan personal directories, import chat history, or upload StudyVault data automatically. Reads and writes pass through the configured Gateway and its capability checks; original evidence remains distinct from derived History, document text, and versioned analysis. Installing dependencies downloads software packages from the configured package source, not personal study data. `.gitignore` helps prevent accidental commits but is not a security boundary.
+StudyVault is the sole authoritative source for Study. Private configuration, databases, logs, exports, and personal learning materials stay outside Git. CogniVault does not automatically scan personal directories, import chat history, or upload StudyVault data. Reads and writes pass through the configured Gateway and its capability checks; original evidence remains distinct from derived History, document text, and versioned analysis. Installing dependencies downloads software packages from the configured package source, not personal study data. `.gitignore` helps prevent accidental commits but is not a security boundary.
 
 See the [Privacy Boundary](docs/privacy-boundary.md) for data and capability details.
 

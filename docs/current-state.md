@@ -19,8 +19,8 @@ Source-only 记录保留原始来源证据；没有足够依据生成的 canonic
 
 | Host | 当前证据 |
 | --- | --- |
-| Codex | Codex Desktop P13 History 原生 MCP 读取：**PASS**。 |
-| Hermes | P13 History 原生 MCP 读取：**PASS**。 |
+| Codex | Codex Desktop P13 History 原生 MCP 读取与无结果检查：**PASS**。 |
+| Hermes | P13 History 原生 MCP 读取与无结果检查：**PASS**。 |
 | WorkBuddy | P12 integration 仍为 **PASS**；P13 History 专项 GUI verification 为 **DEFERRED**。 |
 | ChatGPT hosted | Hosted MCP / Secure MCP Tunnel **尚未实现**；官方 ChatGPT export 为 **`acquisition_pending`**。 |
 

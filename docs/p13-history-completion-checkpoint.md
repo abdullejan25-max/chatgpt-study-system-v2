@@ -1,7 +1,7 @@
 # P13 — History Completion & Normalization checkpoint
 
 日期：2026-10-03。起点：**v0.6.0 / 02d1ed2**。
-P13 发布检查点状态：**来源 Phase A/B PASS；Phase C normalization/reconciliation PASS；Phase D 两个真实 Host PASS，WorkBuddy History DEFERRED；真实 V2 backup/isolated restore PASS_NATIVE；Phase E unique-data audit PASS / logically retired / data retained**。
+P13 发布检查点状态：**已取得来源 Phase A/B PASS；Phase C normalization/reconciliation PASS；Phase D 两个真实 Host PASS，WorkBuddy History DEFERRED；真实 V2 backup/isolated restore PASS_NATIVE；Phase E unique-data audit PASS / logically retired / data retained**。
 本页保留各阶段当时的检查结果与计数，不是当前状态摘要。v0.7.0 已正式发布；最终 acquisition closure 在本页末尾记录，当前汇总以 [Current State](current-state.md) 为准。
 
 ## 当前已取得的证据

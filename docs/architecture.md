@@ -1,6 +1,6 @@
 # Architecture
 
-ChatGPT Study System V2 是一个 local-first、Agent-agnostic 的学习数据层。Agent Host 负责理解语言、推理和决策；Gateway 负责访问已配置的数据，并执行有类型、受权限控制的操作。
+CogniVault 是一个 local-first、Agent-agnostic 的学习与记忆数据层。Agent Host 负责理解语言、推理和决策；Gateway 负责访问已配置的数据，并执行有类型、受权限控制的操作。
 
 ## System flow
 
