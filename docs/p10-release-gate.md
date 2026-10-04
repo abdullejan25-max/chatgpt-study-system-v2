@@ -37,7 +37,7 @@
 
 旧开发 history 的扫描曾发现历史开发提交包含机器账户安装路径；那些提交只保留在本地开发仓库，不会成为 public `main` 的祖先。发布采用单独的 release candidate Git repository，并从最终候选树创建无父提交的 root commit；不 rewrite、force-push 或上传旧 branches。
 
-公开仓库为 [`abdullejan25-max/chatgpt-study-system-v2`](https://github.com/abdullejan25-max/chatgpt-study-system-v2)，visibility 为 public，default branch 为 `main`。只显式 push 了 `main`，clone URL 为 `https://github.com/abdullejan25-max/chatgpt-study-system-v2.git`。公开 `main` root 为 `cc2ee4e9477a266a047d803822ba82de86e81024`，该提交没有 parent；旧开发 commit `c413b4375de807e1ff2f39c6e3b3b1b402fd9940` 不在 GitHub clone 的对象库中。`v0.1.0 — Initial Public Release` 已于 2026-09-27 发布，tag 与该公开 `main` 当前指向 `64d7849`。
+公开仓库为 [`abdullejan25-max/chatgpt-study-system-v2`](https://github.com/abdullejan25-max/cognivault)，visibility 为 public，default branch 为 `main`。只显式 push 了 `main`，clone URL 为 `https://github.com/abdullejan25-max/chatgpt-study-system-v2.git`。公开 `main` root 为 `cc2ee4e9477a266a047d803822ba82de86e81024`，该提交没有 parent；旧开发 commit `c413b4375de807e1ff2f39c6e3b3b1b402fd9940` 不在 GitHub clone 的对象库中。`v0.1.0 — Initial Public Release` 已于 2026-09-27 发布，tag 与该公开 `main` 当前指向 `64d7849`。
 
 ## Security regression review
 

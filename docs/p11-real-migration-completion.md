@@ -59,7 +59,7 @@ This is fresh stdio transport/Gateway evidence. The already-running MCP connecti
 
 The final default/dev environment suite passed **605 tests, 12 skipped**. Skips identify Windows symlink/POSIX limitations, opt-in Host/QMD smokes and the non-default PyMuPDF extra; the actual MCP/Study retrieval above was run separately. The source distribution and wheel build passed. Default installation excludes PyMuPDF, and the wheel includes the legacy domain, both apply services and the canonical wrong-answer workflow resource. All 200 members across the two package artifacts passed a private-path/runtime/binary-material audit.
 
-Publication uses a normal fast-forward into `main`, verification on the merged tree, a normal push, an annotated `v0.2.0` tag and the [v0.2.0 GitHub Release](https://github.com/abdullejan25-max/chatgpt-study-system-v2/releases/tag/v0.2.0). Tag and remote commit identity are verified after publication. `v0.1.0` and private refs are not rewritten.
+Publication uses a normal fast-forward into `main`, verification on the merged tree, a normal push, an annotated `v0.2.0` tag and the [v0.2.0 GitHub Release](https://github.com/abdullejan25-max/cognivault/releases/tag/v0.2.0). Tag and remote commit identity are verified after publication. `v0.1.0` and private refs are not rewritten.
 
 ## P11 Gate
 
