@@ -1,5 +1,7 @@
 # 72-Hour Autonomous Continuation Status
 
+> 历史运行快照，最后更新于 2026-09-30。下文的 P11 `BLOCKED` 与 P12 preparation 只描述当时状态，不是当前项目状态。后续迁移、Host 验收和 v0.7.0 发布已在 [Current State](current-state.md) 及对应 checkpoint 中记录；请以它们为准。
+
 更新时间：2026-09-30
 
 ## 当前状态

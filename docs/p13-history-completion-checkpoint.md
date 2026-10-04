@@ -1,8 +1,8 @@
 # P13 — History Completion & Normalization checkpoint
 
 日期：2026-10-03。起点：**v0.6.0 / 02d1ed2**。
-当前状态：**已取得来源 Phase A/B PASS；Phase C normalization/reconciliation PASS；Phase D 两个真实 Host PASS，WorkBuddy History DEFERRED；真实 V2 backup/isolated restore PASS_NATIVE；Phase E unique-data audit PASS / logically retired / data retained**。
-这是持续推进 checkpoint，不是 P13 完成报告，也不是 v0.7.0 release。
+P13 发布检查点状态：**已取得来源 Phase A/B PASS；Phase C normalization/reconciliation PASS；Phase D 两个真实 Host PASS，WorkBuddy History DEFERRED；真实 V2 backup/isolated restore PASS_NATIVE；Phase E unique-data audit PASS / logically retired / data retained**。
+本页保留各阶段当时的检查结果与计数，不是当前状态摘要。v0.7.0 已正式发布；最终 acquisition closure 在本页末尾记录，当前汇总以 [Current State](current-state.md) 为准。
 
 ## 当前已取得的证据
 
@@ -309,14 +309,14 @@ candidate 隐私扫描通过；实际来源路径、指纹/member names 与真�
 fresh installed wheel 的两次 synthetic CLI plan identity 相同，未访问生产。
 没有 bump、tag、push 或 Release；工程改动仅提交本地 P13 branch。
 
-## V1 audit incremental reconciliation (current)
+## V1 audit incremental reconciliation at release checkpoint
 
-P11 accepted accounting is reused. A bounded current audit found seven previously
+P11 accepted accounting is reused. A bounded release-checkpoint audit found seven previously
 skipped Personal files and 19 later archive files. All 26 are source-only imported
 through native Gateway, exact rerun reuses all 26, errors=0. Only these new inputs
 received deterministic unsupported outcomes; the earlier normalization was not
-rerun. Current source index/outcomes=1,802; conversations=487/messages=7,334/views=494
-remain unchanged. Unsupported outcomes=1,316 and wholly source-only retained=1,349.
+rerun. At this release checkpoint, source index/outcomes=1,802; conversations=487/messages=7,334/views=494
+remained unchanged. Unsupported outcomes=1,316 and wholly source-only retained=1,349.
 Categories: basic_memory378/codex120/gemini1/hermes67/v1 93/workbuddy1,143.
 
 V1-only unknown=0 after freezing the legacy Basic Memory archive writer. Exact
@@ -330,8 +330,10 @@ Production native synthetic smoke + fresh Hermes exact readback are PASS; final 
 
 ## Final non-destructive completion
 
+This describes the state before the final deletion-list freshness validation below; its counts are retained as a historical checkpoint.
+
 V1 audit PASS; source-only increment26 exact rerun26 reused/errors0; no full
-Gemini or existing normalization rerun. Current logical sources/outcomes1,802,
+Gemini or existing normalization rerun. At that checkpoint, logical sources/outcomes1,802,
 conversations487/messages7,334/source-only1,349. Two raw DBs are retained separately.
 V1-only unknown=0 after producer freeze. V1 is logically retired/data retained:
 6 legacy Basic Memory writer hooks disabled with exact private config rollback,

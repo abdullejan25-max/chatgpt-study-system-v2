@@ -1,131 +1,76 @@
-# 当前状态
+# Current State
 
-## P13 — History Completion & Recovery（v0.7.0）
+最近核对：2026-10-04。本页是当前运行与发布状态的主要依据。当前正式稳定版本为 **[v0.7.0 — History Completion & Recovery](releases/v0.7.0.md)**；下列 acquisition 与 recovery closure 统计在该版本首次发布后完成。
 
-正式发布为 **`v0.7.0 — History Completion & Recovery`**。P13 私有数据始终
-本地保存；既有 P11/P12 PASS 保留，历史数字见下文。
+## Current release status
 
-已取得来源的 source-only completion、dedup、幂等重跑与 deterministic normalization
-已验证：1,802 个 persisted sources、487 个 canonical conversations、7,334 条 distinct
-messages、494 个 source-specific views，1,349 个来源完全保留 source-only。
-原始证据不被 canonical 覆盖，未知角色、时间、顺序或会话边界继续保留不确定状态。
-Codex Desktop 与 Hermes native Agent 的同一 History 读取和 no-result 已 PASS。
+| 指标 | 最终已取得数据 closure |
+| --- | ---: |
+| Sources / outcomes | 1,804 |
+| Canonical conversations（规范化对话） | 487 |
+| Distinct canonical messages（去重消息） | 7,334 |
+| 完全 source-only 的记录 | 1,351 |
+| 有界 V1 原始输入 | 443 |
+| V1-only unknown | 0 |
 
-ChatGPT 官方导出为 `acquisition_pending`，不作为当前 blocker；到达后做增量幂等补录。
-WorkBuddy 的 P13 History Host 验收为 `DEFERRED`，不阻塞后续推进，既有 P12 WorkBuddy
-integration 与 cross-agent PASS 不变。这不将 deferred 验收冒充为 P13 Host PASS。
+Source-only 记录保留原始来源证据；没有足够依据生成的 canonical messages 不会被补造。详细对账见 [P13 checkpoint](p13-history-completion-checkpoint.md)。
 
-真实 V2 backup 与 isolated restore 状态均为 **`PASS_NATIVE`**：
-3,778 files / 44,380,473,111 bytes。实际配置的原生 MCP 调用、完整 Host tool trace
-与正数 Agent usage 支持这些结果；manifest、全部 logical digests 与 ledger equality
-校验通过。恢复后的 1,776 sources、487 conversations、7,334 messages、494 views、
-1,776 source outcomes 与 1,323 source-only retained 均与原目标一致。
+## Host status
 
-Isolated Study read verified；Assets 197、Documents 29、Wrong Answer sources 5 /
-analyses 5 的正式有界回读与 whole logical digests 均 PASS。真实 native capacity plan
-纳入 copy、temp、WAL 与显式 reserve，余量取 4 GiB 和 10% 计算值中的较大者，
-确认当前空间足够。私有 manifest、checksum、ledger、配置和原始数据全部留在 Git 外。
-**V1 unique-data audit PASS / logically retired / data retained**。恢复副本只用于隔离验收，
-不成为第二份权威数据层；V1 原始数据保留，6 个旧 Basic Memory writer hooks 已可恢复停用。
-生产 writable ingress 已通过 Codex native synthetic smoke 与 fresh Hermes 完整
-回读；source/v1/v2 重放、stale conflict、原字节、provenance/版本链通过。V1 physical deletion 必须等待 owner 单独明确确认。
+| Host | 当前证据 |
+| --- | --- |
+| Codex | Codex Desktop P13 History 原生 MCP 读取与无结果检查：**PASS**。 |
+| Hermes | P13 History 原生 MCP 读取与无结果检查：**PASS**。 |
+| WorkBuddy | P12 integration 仍为 **PASS**；P13 History 专项 GUI verification 为 **DEFERRED**。 |
+| ChatGPT hosted | Hosted MCP / Secure MCP Tunnel **尚未实现**；官方 ChatGPT export 为 **`acquisition_pending`**。 |
 
-当前 Gate 以 [P13 checkpoint](p13-history-completion-checkpoint.md) 为准；通用协议见
-[source-only ingestion](history-source-ingestion.md)、[canonical History](history-normalization.md)
-和 [private recovery](p13-recovery.md)。后续 v0.7.0 升级顺序见
-[README 升级流程](../README.md#后续-v070-升级流程)：先备份，再 frozen/non-editable
-安装、同步私有 Gateway version、重载 Host 并用原生 MCP 验证。
+WorkBuddy 的 P12 结果不代表 P13 History GUI 验收。另有一项生产 writable ingress 的正式 Gateway synthetic acceptance 已通过；该结果不代表真实用户数据验收。Host 证据见 [P12 checkpoints](p12-step4-cross-agent-checkpoint.md) 和 [production ingress 报告](production-ingress.md)。
 
-## P12 Step 4 — Cross-Agent Integration（v0.6.0，25/25 Gate PASS）
+## History acquisition
 
-从 live v0.5.0 main/tag 继续，真实 Hermes 0.20.0 → WorkBuddy 5.7.3 → Codex CLI
-0.159.2 fresh sessions 通过同一 shared isolated Gateway 完成 Document/source/v1、
-独立发现并追加 v2、exact replay、实际 stale CONFLICT、末读无 v3 和 no-result。
-A/B 退出后 C 原始 Asset/document/page/source/v1/v2 全 DTO exact-equal；历史
-provenance/timestamps/refs/supersession 未改变，identity 仍 caller-reported/unverified。
+- 已取得的输入以 source evidence 形式保留。Canonical conversations 与 messages 是确定性生成的派生层，不替换或改写原始证据。
+- 只有来源结构、角色和顺序有可靠依据时才执行规范化；含糊或不支持的记录保留为 source-only。
+- ChatGPT 官方 export 仍是 `acquisition_pending`。取得后计划增量、幂等补录；完成前不表述为已获取。
+- 稳定处理约定见 [source ingestion](history-source-ingestion.md) 与 [canonical normalization](history-normalization.md)。
 
-最终三 Host 数据访问只用 native MCP；不共享上下文或人工转贴 DTO。旧失败尝试
-保留且不计 PASS：Hermes 首轮文档/marker 不完整；WorkBuddy trust 前 script fallback
-与 Memory 副本；Codex 初轮把 list 失败误当 workflow 不可读。仅补最小 Host 路由
-指引，不重构 Gateway；生产配置与旧已验收 server definitions 保留。
+## Recovery
 
-现有 scoped Projection 两次生成14 Markdown，Markdown/manifest byte-identical。
-版本同步为 0.6.0；targeted144 passed/4 skipped，full622 passed/12 skipped。
-实际 public169/wheel42/sdist170 privacy、独立 clean install/stdio、diff 已通过。
-最终 commit/tag push前审计与正常发布/远端核验按已授权流程执行，最终远端回执
-记录于正式 GitHub Release。完整证据和已知 Host 展示限制见
-[Step 4 checkpoint](p12-step4-cross-agent-checkpoint.md)。不重验既有单 Host Gate。
+以下两项恢复检查对应不同阶段与范围，文件数和字节数不能合并计算。
 
-## P12 Step 3 — Hermes Integration（v0.5.0，22/22 Gate PASS）
+| 恢复阶段 | 结果 | 范围 |
+| --- | --- | --- |
+| 早期完整备份与 isolated restore | **PASS_NATIVE** — 3,778 files / 44,380,473,111 bytes | 当时的完整静态快照，包含 Study/QMD 和已配置的数据域。 |
+| 最终 mutable supplement 与 isolated restore | **PASS_NATIVE** — 247 files / 1,049,088,134 bytes | 覆盖最终获取数据变化、ledger 和 mutable-domain readback；明确排除 Study，与早期完整备份配套。 |
 
-从 v0.4.0/b75c62d checkpoint 继续，不重复已有 8 项 PASS。真实 Hermes Agent
-v0.20.0 (2026.8.3) 使用内置 deepseek / deepseek-v4-pro / high 入口，原生 stdio
-执行 production read-only 与独立 isolated controlled-write。官方 Host trace 证明
-仅 Gateway 数据访问、三类 no-result，隔离对象仅 v1/v2，exact idempotency replay
-与 stale CONFLICT 正常；身份仍 reported/unverified，Memory/profile disabled。
-当前 22/22 Gate PASS，restart 与 scoped Projection 已通过。初次 restart 因 Agent
-抄错 source ID 返回 INVALID_ARGUMENT，该轮不计 PASS，后续已用 Gateway search 回收实际 ID，并通过完整 DTO exact comparison。
-发布版本为 0.5.0。针对性回归 89 passed / 2 skipped，全量 622 passed / 12 skipped；
-完整历史与发布验证见 [Hermes checkpoint](p12-step3-hermes-checkpoint.md) 和
-[v0.5.0 release notes](releases/v0.5.0.md)。远端验收回执在正式 Release 中记录。
+最终 mutable restore 验证 source/canonical digests、provenance、ledger equality，以及恢复后经 Gateway 对 mutable domains 的正式读取。Isolated restore 副本用于验证恢复能力；Study 的权威数据仍由原 StudyVault 提供。恢复流程与边界见 [private recovery](p13-recovery.md)。
 
-## P12 Step 2 — WorkBuddy Integration（v0.4.0，21/21 Gate PASS）
+## V1 retirement
 
-真实 WorkBuddy 5.6.2 只读、隔离 controlled-write 及重启持久性由用户验收；
-Gateway 补充回读确认同一测试 Source 和 versions 1/2，未创建 v3。
-独立临时 MCP 名称避免托管 production 入口的同名解析问题，Basic Memory disabled。
-所有读/计数/存在性/写入均要求 Gateway-only；最初 direct SQLite 验收作废。
+- Unique-data audit 为 **PASS**：443 个有界原始输入全部有映射，`V1-only unknown = 0`。
+- V1 已逻辑退役；原始数据库、来源和 cold archives 仍保留。
+- Legacy Basic Memory writer hooks 已可恢复地停用，legacy collector 入口也有防止重新启用的保护。
+- 尚未执行物理删除；删除必须另获 owner 明确确认。
+- StudyVault 仍是 Study 的唯一权威来源。V1 退役和 isolated recovery 不会建立第二份 Study 权威数据。
 
-隔离 Projection 经 Gateway → collector → renderer → writer 生成 14 个 Markdown，
-latest v2、supersession、document refs、空 Study relations 和 provenance 正确；
-两次 Markdown/manifest 字节稳定，未访问 production 或真实 StudyVault。
-发布回归 targeted 65 passed / 1 skipped，full 617 passed / 12 skipped；
-package、Gateway 配置与 MCP metadata 同步到 0.4.0，独立 installed-package stdio smoke 通过。
-公开候选树 159 files、wheel 42 files、sdist 169 files 的隐私/metadata 审计通过；
-实际新增 Git objects 在 commit 后、push 前按 v0.3.0..HEAD 审计。
-完整证据以 [Step 2 checkpoint](p12-step2-workbuddy-checkpoint.md) 与
-[v0.4.0 release notes](releases/v0.4.0.md) 为准。
-下文 P11 / Step 1 版本与验证数字是历史基线，不代表当前 package 版本。
+退役审计与删除边界见 [V1 retirement evidence](p13-v1-retirement.md)。
 
-P11 历史 checkpoint：P1–P10 已完成；**P11 V1 来源迁移与 V2 cutover Gate：PASS**。P11 发布版本为 `0.2.0`；[正式 tag/Release](https://github.com/abdullejan25-max/chatgpt-study-system-v2/releases/tag/v0.2.0) 对应该次迁移范围。最终默认/dev 环境测试为 605 passed、12 skipped；完整验收见 [P11 Real Migration Completion](p11-real-migration-completion.md)。
+## Current limitations
 
-V1 既有 1,209 项对账：150 项新增、1,052 项复用、7 项 skip、0 error。537 个 Study Markdown 与 511 个 Documents 原地复用。55 篇聊天档案、28 篇错题档案、1 条派生事实以明确类型保留原始字节；70 张图片中新增 66 个 Asset、复用 4 个内容重复。另有 82 个已验证 Codex JSONL 来源文件迁入，独立于 V1 对账。来源文档总数为 166，不能当作会话或消息数量。
+- 当前 MCP transport 是本机 stdio；Hosted ChatGPT MCP 和 Secure MCP Tunnel 尚未实现。
+- ChatGPT 官方 export 尚未到达，获取仍待处理。
+- WorkBuddy 的 P13 History 专项 GUI verification 仍为 deferred；既有 P12 integration 结果有效。
+- Caller / Agent identity 为 `reported / unverified`，不等于身份认证。
+- Study 搜索需用户选装 QMD 和 Node.js；OCR 是可选能力，需要 Tesseract 和语言数据。OCR 文本属于派生数据，不能代替原始证据。
 
-全部来源/原图回读及同源重跑通过：166 个文档和 70 张图重跑新增均为零，ID 和原 imported_at 保持稳定。DB/WAL/原始 blobs 快照与隔离恢复通过；官方 MCP SDK 的两次全新 stdio 进程验证 History sqlite/ready、166 次按 ID 回读、跨来源检索、无结果 guard、97 个图引用及重启持久性。Study 检索返回 3 个结果；Study/Personal 原件的 root、大小和 mtime 前后保持一致，本次未重复 42GB 扫描。
+## Historical milestones
 
-旧错题有 97 个明确文档图片引用，覆盖 70 张图；完整业务语义仍有 28 篇 unresolved。未猜测题目、答案、图片角色或分析；现有 active Wrong Answer 为 5 个 Source、5 个 Analysis，未改变。Atomic Fact 是 derived source，Codex 是 source-only JSONL；canonical raw History message import 为 0。
+以下仅概述各版本范围；详细验收证据保留在对应历史 checkpoint 与 Release Notes 中。
 
-P11 cutover 时，私有配置选择 V2 为本项目权威运行系统。V1 未删除；[Deletion Candidate Report](v1-deletion-candidates.md) 将 Study 保留为权威来源，将原件和备份保留为档案。该次 cutover 的旧 Codex MCP 连接缓存 not_configured 配置与旧工具列表，需重连；这是历史 Host 状态，当前 P13 原生读取结果见上文。
+- **v0.2.0** — V1 来源迁移与 V2 cutover；[P11 completion](p11-real-migration-completion.md)。
+- **v0.3.0** — Obsidian projection；[P12 Step 1](p12-step1-real-projection-checkpoint.md)。
+- **v0.4.0** — WorkBuddy integration；[P12 Step 2](p12-step2-workbuddy-checkpoint.md)。
+- **v0.5.0** — Hermes integration；[P12 Step 3](p12-step3-hermes-checkpoint.md)。
+- **v0.6.0** — Cross-Agent integration；[P12 Step 4](p12-step4-cross-agent-checkpoint.md)。
+- **v0.7.0** — History completion and recovery；[Release Notes](releases/v0.7.0.md) 与 [P13 checkpoint](p13-history-completion-checkpoint.md)。
 
-P11 完成时，ChatGPT/Gemini 的私有 registry 保留 WAITING_FOR_USER；Hermes/WorkBuddy 后续来源规范化和客户端验证 deferred，不冒充迁移完成，也不作为该次 V1 迁移 blocker。P12 Obsidian、WorkBuddy、Hermes 与合成跨客户端成果当时仅为准备状态；见 [P12 Host Compatibility](p12-host-compatibility.md) 与 [P12 Obsidian Reality Audit](p12-obsidian-reality-audit.md)。这些历史状态由后续 P12/P13 checkpoint 续接。
-
-架构保持 Agent thinks; Gateway executes。新增 migration 是本机内部、受领域校验的确定性写路径；新增 MCP API 只有来源读取，未开放 arbitrary SQL 或通用 Agent import。真实配置、数据、journal、源 hash 和恢复材料均留在 Git 外。v0.1.0 与旧发布历史未修改。
-
-## P12 Step 1 — Obsidian Visualization
-
-**历史 Gate：PASS；发布版本 `0.3.0`。** 复用既有 collector、renderer 和 manifest-owned writer，新增 opt-in `legacy_sources` metadata 分页与现有 Vault 构建入口。166 个来源按 82 / 55 / 28 / 1 分类；该次验收 canonical messages 为 0；5 个 Wrong Answer Source 与 5 个 Analysis 未改变。
-
-真实私有 Vault 生成 184 个 Markdown 文件及 manifest；逐文件 UTF-8 回读、相对链接和第二次独立构建字节一致。当前 Study root 为 1,146 files / 564 Markdown，索引引用原文件，大小/mtime 前后不变，不复制 Study。2026-10-01 用户人工确认 Dashboard、Sources、Wrong Answers、Knowledge Points、Error Types、Study 和关系图谱正常，V1/V2 共存边界清楚，无明显乱码、断链、重复页、私人路径泄露或原文异常。
-
-Fresh official MCP stdio 正常；Codex Host resources/list 的兼容问题独立 deferred，不阻塞投影。旧 P12 preparation 文档是历史快照；本次 Step 1 证据以 [真实投影检查点](p12-step1-real-projection-checkpoint.md) 与 [v0.3.0 notes](releases/v0.3.0.md) 为准。WorkBuddy/Hermes/Cross-Agent、消息规范化、V1 删除及增量重设计均未纳入本次范围。
-
-## Final release verification (2026-10-01)
-
-The default/dev full suite passed **614 tests, 12 skipped**. Skips cover existing platform/symlink, opt-in Host/QMD and optional PDF/OCR conditions; actual fresh official MCP and real-Vault checks were run separately. Wheel and source distribution build passed. Package audits confirm version `0.3.0`, Apache-2.0 license metadata/LICENSE, canonical workflow data and optional-only PyMuPDF; no private config, Vault, images, databases or raw exports are included. The public tree and new Git objects are audited before push. Real 0.3.0 Gateway health and stable 166-source/184-file projection were revalidated after installation.
-
-P13 bounded V1 audit额外导入26个source-only输入，producer freeze后442个原始输入
-均有映射，V1-only unknown=0。补充 mutable-domain backup/isolated readback均PASS_NATIVE：
-237 files / 1,048,793,838 bytes，1,802 sources/outcomes；它排除Study，配合上面的完整
-Study备份使用。完整最新canonical数量不变，source-only retained=1,349。
-当前公开工程回归targeted380/1 skip、full828/12 skips；wheel clean-install synthetic9 PASS。
-
-
-## P13 final acquired-data closure
-
-最终完整范围对账为 1,804 sources/outcomes、487 conversations、7,334 messages，
-1,351 source-only；443 个 V1 原始输入 / 67,700,601 bytes 全部有证据映射，
-V1-only unknown=0，完整归档目录集合一致。旧 writer 入口已可恢复地停用。
-最终 mutable backup/isolated restore PASS_NATIVE：247 files / 1,049,088,134 bytes，
-覆盖最后增量、ledger 和 marked production synthetic fixture；原全量 Study/QMD
-backup/restore PASS 保留。ChatGPT acquisition_pending、WorkBuddy GUI DEFERRED
-保持不变；physical deletion 等待 owner explicit confirmation。
+稳定组件职责见 [Architecture](architecture.md)，本机数据处理规则见 [Privacy Boundary](privacy-boundary.md)。
